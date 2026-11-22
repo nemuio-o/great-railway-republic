@@ -4075,18 +4075,27 @@ function getDistrictName(faction, stage, meters) {
     const list = FACTION_DISTRICTS[faction.id] || FACTION_DISTRICTS.endless;
     const idx = Math.min(list.length - 1, Math.floor((stage - 1) / 10));
     const base = list[idx];
-    // 同一10ステージ内でも細かく地名が変わるよう、キロ程で区切った小地名を足す
-    const km = Math.floor(meters / 1000);
+    // 同一10ステージ内でも細かく地名が変わるよう、累計キロ程で区切った小地名を足す
+    const totalM = getTotalMeters(faction, stage, meters);
+    const km = Math.floor(totalM / 1000);
     const sub = ['起点', '市街', '丘陵', '橋梁', '隧道', '平原', '海峡', '終端'][km % 8];
     return `${base}・${sub}`;
 }
 
-// ステージごとの走行距離。1ステージ = 1,000m、ボスは終端 950m 付近に出現
+// 進軍距離の扱い:
+//   marchMeters      … 現在のステージ内の進捗（0〜STAGE_LENGTH_M）
+//   getTotalMeters() … 勢力のスタート地点からの累計距離（ステージをまたいで加算）
+// 表示は累計側を使い、「この勢力でどこまで進んだか」が分かるようにする。
 const STAGE_LENGTH_M = 1000;
 const BOSS_SPAWN_M = 950;
 
+function getTotalMeters(faction, stage, metersInStage) {
+    const completed = Math.max(0, (stage || 1) - 1) * STAGE_LENGTH_M;
+    return completed + Math.max(0, metersInStage || 0);
+}
+
 function getStageDistanceLabel(faction, stage, meters) {
-    return `${Math.floor(meters).toLocaleString()} m / ${STAGE_LENGTH_M} m`;
+    return `${Math.floor(getTotalMeters(faction, stage, meters)).toLocaleString()} m / ${(faction.stageCount || 30) * STAGE_LENGTH_M} m`;
 }
 
 function getMaxAliveEnemies() {
@@ -4105,9 +4114,15 @@ function getMaxAliveEnemies() {
 const ENEMY_TIER_HP = 2.6;
 const ENEMY_TIER_DMG = 2.6;
 const ENEMY_TIER_REWARD = 2.16;
-const ENEMY_STAGE_HP = 0.09;
-const ENEMY_STAGE_DMG = 0.05;
+// ステージ内の伸び。緩すぎると初期装備のまま STAGE20 まで到達できてしまうため、
+// 1ステージあたり HP +22% / 攻撃 +11% まで引き上げた。
+const ENEMY_STAGE_HP = 0.22;
+const ENEMY_STAGE_DMG = 0.11;
 const ENEMY_STAGE_REWARD = 0.09;
+// ボス種別の重さ（中ボス・ネームド・大ボス共通の係数）。
+// テンプレHPがネームドで突出しているため、係数で平準化して
+// 「STAGE5は余裕 / STAGE10で強化が必要 / STAGE20は要周回」の段階を作る。
+const ENEMY_BOSS_HP_SCALE = 0.28;
 const EARLY_TIER_COUNT = 2;
 const EARLY_HP_SCALE = 0.35;
 const EARLY_DMG_SCALE = 0.55;
@@ -4116,14 +4131,43 @@ function getFactionTier(faction) {
     return Math.max(0, FACTIONS.findIndex(f => f.id === faction.id));
 }
 
-function getEnemyFactionMult(faction) {
+// チュートリアル（国連警察）の序盤カーブ。
+// 初期装備（レールガン1両＋ティファレト）では STAGE 2 まで突破でき、
+// STAGE 3 から強化しないと通せない、という段差を作る。
+// 全10ステージに急峻な指数を掛けると ST10 で天文学的数値になるため、
+// STAGE 3 以降は +45%/STAGE の線形に切り替えて暴走を防ぐ。
+const TUTORIAL_HARD_START = 3;
+const TUTORIAL_EARLY_GROWTH = 0.35;
+const TUTORIAL_LATE_GROWTH = 0.75;
+
+function getTutorialStageMult(stage) {
+    if (stage < TUTORIAL_HARD_START) return TUTORIAL_EARLY_GROWTH;
+    // ST3 で一気に 3.5倍 へ跳ね上げ、以降は加算で伸ばす
+    const steps = stage - TUTORIAL_HARD_START;
+    return TUTORIAL_EARLY_GROWTH * (10 * (1 + steps * TUTORIAL_LATE_GROWTH));
+}
+
+function getEnemyFactionMult(faction, tmpl) {
     const tier = getFactionTier(faction);
     const early = tier < EARLY_TIER_COUNT;
-    const stageHp = faction.isEndless ? ENEMY_STAGE_HP * 1.4 : ENEMY_STAGE_HP;
-    const stageDmg = faction.isEndless ? ENEMY_STAGE_DMG * 1.4 : ENEMY_STAGE_DMG;
+    const stageHp = faction.isEndless ? ENEMY_STAGE_HP * 1.2 : ENEMY_STAGE_HP;
+    const stageDmg = faction.isEndless ? ENEMY_STAGE_DMG * 1.2 : ENEMY_STAGE_DMG;
+    const bossScale = (tmpl && tmpl.isBoss) ? ENEMY_BOSS_HP_SCALE : 1;
+
+    let hpMult, dmgMult;
+    if (faction.isTutorial) {
+        // チュートリアルは専用カーブ（ST1-2は緩く、ST3以降で急峻に）
+        const tut = getTutorialStageMult(state.stage);
+        hpMult = tut * bossScale;
+        dmgMult = Math.sqrt(tut);
+    } else {
+        hpMult = Math.pow(ENEMY_TIER_HP, tier) * (1 + (state.stage - 1) * stageHp) * (early ? EARLY_HP_SCALE : 1) * bossScale;
+        dmgMult = Math.pow(ENEMY_TIER_DMG, tier) * (1 + (state.stage - 1) * stageDmg) * (early ? EARLY_DMG_SCALE : 1);
+    }
+
     return {
-        hpMult: Math.pow(ENEMY_TIER_HP, tier) * (1 + (state.stage - 1) * stageHp) * (early ? EARLY_HP_SCALE : 1),
-        dmgMult: Math.pow(ENEMY_TIER_DMG, tier) * (1 + (state.stage - 1) * stageDmg) * (early ? EARLY_DMG_SCALE : 1),
+        hpMult,
+        dmgMult,
         rewardMult: Math.pow(ENEMY_TIER_REWARD, tier) * (1 + (state.stage - 1) * ENEMY_STAGE_REWARD)
     };
 }
@@ -4137,7 +4181,7 @@ function spawnEnemyUnit(typeId) {
     const h = canvas.height || 260;
     const sephPassive = getSephirahPassiveEffects();
     const pr = getPrestigeEnemyScaling();
-    const fm = getEnemyFactionMult(faction);
+    const fm = getEnemyFactionMult(faction, tmpl);
 
     const finalHp = Math.max(40, Math.round(tmpl.hp * fm.hpMult * weather.enemyHpMult * pr.hpMult));
     const finalDmg = Math.max(5, Math.round(tmpl.damage * fm.dmgMult * pr.dmgMult));
@@ -4361,7 +4405,7 @@ function handleStageVictory() {
 
     const faction = getCurrentFaction();
     // ステージクリア報酬も、敵の勢力倍率と同じ報酬補正で伸ばす
-    const clearBonus = Math.round((40 + state.stage * 22) * getEnemyFactionMult(faction).rewardMult * getPrestigeGoldMult() * getActiveSkillGoldMult() * getPrestigeEnemyScaling().rewardMult);
+    const clearBonus = Math.round((40 + state.stage * 22) * getEnemyFactionMult(faction, null).rewardMult * getPrestigeGoldMult() * getActiveSkillGoldMult() * getPrestigeEnemyScaling().rewardMult);
     state.gold += clearBonus;
 
     state.hp = state.maxHp;
@@ -6318,9 +6362,9 @@ function updateHeaderUI() {
     const maxStEl = document.getElementById('ui-max-stage-label');
     if (maxStEl) maxStEl.textContent = faction.isEndless ? '/∞' : `/${faction.stageCount}`;
 
-    // 進軍距離と地名を更新する
+    // 進軍距離と地名を更新する（距離は勢力スタートからの累計）
     const distEl = document.getElementById('ui-distance');
-    if (distEl) distEl.textContent = `${Math.floor(marchMeters).toLocaleString()} m`;
+    if (distEl) distEl.textContent = `${Math.floor(getTotalMeters(faction, state.stage, marchMeters)).toLocaleString()} m`;
     const districtEl = document.getElementById('ui-district');
     if (districtEl) districtEl.textContent = getDistrictName(faction, state.stage, marchMeters);
 
@@ -6352,7 +6396,7 @@ function updateHeaderUI() {
     if (waveText && startBtn) {
         const district = getDistrictName(faction, state.stage, 0).split('・')[0];
         if (state.inWave) {
-            waveText.textContent = `${Math.floor(marchMeters)}m 進軍中...`;
+            waveText.textContent = `${Math.floor(getTotalMeters(faction, state.stage, marchMeters)).toLocaleString()}m 進軍中...`;
             startBtn.classList.add('opacity-75');
         } else {
             waveText.textContent = `${district} 出撃`;
