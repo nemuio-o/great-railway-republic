@@ -413,7 +413,7 @@
                     </div>
                 </div>
 
-                <div id="toast-box" class="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-slate-950/95 border-2 border-amber-500 text-amber-200 px-5 py-1.5 rounded shadow-2xl text-xs sm:text-sm font-bold transition-opacity duration-300 opacity-0 pointer-events-none z-30 whitespace-nowrap">
+                <div id="toast-box" class="absolute left-1/2 -translate-x-1/2 bottom-16 sm:bottom-4 max-w-[calc(100%-24px)] sm:max-w-[440px] bg-slate-950/95 border-2 border-amber-500 text-amber-200 px-3 py-1.5 rounded shadow-2xl text-[11px] sm:text-xs font-bold leading-snug text-center transition-opacity duration-300 opacity-0 pointer-events-none z-30">
                     メッセージ
                 </div>
             </main>
@@ -919,14 +919,14 @@
                             <span id="ui-prestige-count" class="text-xs tech-font text-amber-300 bg-slate-900 px-2 py-0.5 rounded border border-amber-600/50">転生回数: 0回</span>
                         </div>
                         <p class="text-[11px] text-slate-300 leading-relaxed">
-                            進行度を初期化し<strong class="text-emerald-300">「セフィロトの木の欠片」</strong>を獲得。解放済み戦線・ビーコンキー・収集品・暗黒世界は維持され、<strong class="text-cyan-300">最後にプレイしていた勢力の STAGE 1</strong> から再開します。
+                            進行度を初期化し<strong class="text-emerald-300">「セフィロトの木の欠片」</strong>を獲得。解放済み戦線・ビーコンキー・収集品・暗黒世界は維持され、<strong class="text-cyan-300">国連防衛軍 STAGE 1（国連警察は制圧済み）</strong>から再開します。
                         </p>
                         <div class="text-xs tech-font text-emerald-200 flex flex-wrap items-center gap-x-3 gap-y-1">
                             <span>所持欠片: <strong id="prestige-current-shards" class="text-base text-emerald-300">0</strong> 個</span>
                             <span class="text-slate-500">|</span>
                             <span>転生獲得: <strong id="prestige-gain-shards" class="text-base text-amber-300">+0</strong> 個</span>
                             <span class="text-slate-500">|</span>
-                            <span>再開地点: <strong id="prestige-resume-target" class="text-cyan-300">国連警察 STAGE 1</strong></span>
+                            <span>再開地点: <strong id="prestige-resume-target" class="text-cyan-300">国連防衛軍 STAGE 1</strong></span>
                         </div>
                         <div class="text-[11px] tech-font text-sky-300/90">
                             ゲーム速度解禁: <strong id="prestige-speed-status" class="text-sky-200">1x〜5x</strong>
@@ -936,7 +936,7 @@
                         <button id="btn-do-prestige" onclick="openPrestigeConfirmModal()" class="bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 text-slate-950 font-black px-4 py-2 rounded-lg shadow-lg border border-emerald-300 text-xs transition">
                             🌳 プレステージを実行する
                         </button>
-                        <span class="text-[10px] text-slate-400">※国連防衛軍 STAGE 5以上で実行可能</span>
+                        <span class="text-[10px] text-slate-400">※アメリカ合衆国 大ボス（STAGE 30）突破で実行可能</span>
                     </div>
                 </div>
 
@@ -973,6 +973,20 @@
                 </div>
 
                 <div id="dex-subview-boss" class="flex flex-col gap-3">
+                    <div class="bg-slate-900/80 border border-slate-700 rounded p-2.5 flex flex-wrap items-center justify-between gap-2">
+                        <div class="text-[11px] text-slate-300">
+                            <span class="font-bold text-amber-300">🎬 ボス演出設定</span>
+                            <span class="text-slate-400 ml-2">一度遭遇したボスの登場演出を、次回からカットできます。</span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <button id="dex-toggle-skip-seen" onclick="toggleSkipSeenBossCutscene()" class="px-2.5 py-1 rounded text-[11px] font-bold border transition">
+                                遭遇済み演出: OFF
+                            </button>
+                            <button id="dex-toggle-mute-boss" onclick="toggleMuteBossCutscene()" class="px-2.5 py-1 rounded text-[11px] font-bold border transition">
+                                演出SE: ON
+                            </button>
+                        </div>
+                    </div>
                     <div id="bossdex-filter-bar" class="flex flex-wrap gap-1.5"></div>
                     <div id="bossdex-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3"></div>
                 </div>
@@ -2114,79 +2128,80 @@ const ENEMY_TYPES = {
     destroyer: { id: 'destroyer', name: '沿海域駆逐艦', attr: 'SEA', hp: 880, speed: 0.72, reward: 36, damage: 45, color: '#2dd4bf', radius: 18 },
 
     // 天候特殊ボス（4種）
-    wboss_clear: { id: 'wboss_clear', name: '【天候ボス】灼熱の太陽機神・ヘリオス', attr: 'AIR', hp: 4200, speed: 0.34, reward: 320, damage: 130, color: '#fbbf24', radius: 38, isBoss: true, isWeatherBoss: true, weatherKey: 'clear' },
-    wboss_rain:  { id: 'wboss_rain',  name: '【天候ボス】豪雨の深海巨獣・レヴィアタン', attr: 'SEA', hp: 4600, speed: 0.32, reward: 340, damage: 140, color: '#38bdf8', radius: 40, isBoss: true, isWeatherBoss: true, weatherKey: 'rain' },
-    wboss_snow:  { id: 'wboss_snow',  name: '【天候ボス】氷結の白銀機竜・フェンリル', attr: 'LAND', hp: 4500, speed: 0.36, reward: 340, damage: 135, color: '#67e8f9', radius: 38, isBoss: true, isWeatherBoss: true, weatherKey: 'snow' },
-    wboss_storm: { id: 'wboss_storm', name: '【天候ボス】雷嵐の天空裁定者・インドラ', attr: 'AIR', hp: 5000, speed: 0.35, reward: 380, damage: 155, color: '#c084fc', radius: 42, isBoss: true, isWeatherBoss: true, weatherKey: 'storm' },
+    wboss_clear: { id: 'wboss_clear', name: '【天候ボス】灼熱の太陽機神・ヘリオス', attr: 'AIR', hp: 3780, speed: 0.34, reward: 320, damage: 117, color: '#fbbf24', radius: 38, isBoss: true, isWeatherBoss: true, weatherKey: 'clear' },
+    wboss_rain:  { id: 'wboss_rain',  name: '【天候ボス】豪雨の深海巨獣・レヴィアタン', attr: 'SEA', hp: 4140, speed: 0.32, reward: 340, damage: 126, color: '#38bdf8', radius: 40, isBoss: true, isWeatherBoss: true, weatherKey: 'rain' },
+    wboss_snow:  { id: 'wboss_snow',  name: '【天候ボス】氷結の白銀機竜・フェンリル', attr: 'LAND', hp: 4050, speed: 0.36, reward: 340, damage: 122, color: '#67e8f9', radius: 38, isBoss: true, isWeatherBoss: true, weatherKey: 'snow' },
+    wboss_storm: { id: 'wboss_storm', name: '【天候ボス】雷嵐の天空裁定者・インドラ', attr: 'AIR', hp: 4500, speed: 0.35, reward: 380, damage: 140, color: '#c084fc', radius: 42, isBoss: true, isWeatherBoss: true, weatherKey: 'storm' },
 
-    pol_mid: { id: 'pol_mid', name: '【中ボス】機動隊重装放水戦車ライオット', attr: 'LAND', hp: 1350, speed: 0.44, reward: 95, damage: 48, color: '#38bdf8', radius: 28, isBoss: true },
-    pol_final: { id: 'pol_final', name: '【大ボス】国連治安維持司令・ケルベロス', attr: 'LAND', hp: 3200, speed: 0.36, reward: 260, damage: 95, color: '#60a5fa', radius: 36, isBoss: true, isGrandBoss: true },
+    pol_mid: { id: 'pol_mid', name: '【中ボス】機動隊重装放水戦車ライオット', attr: 'LAND', hp: 1215, speed: 0.44, reward: 95, damage: 43, color: '#38bdf8', radius: 28, isBoss: true },
+    pol_final: { id: 'pol_final', name: '【大ボス】国連治安維持司令・ケルベロス', attr: 'LAND', hp: 2880, speed: 0.36, reward: 260, damage: 86, color: '#60a5fa', radius: 36, isBoss: true, isGrandBoss: true },
 
-    un_mid: { id: 'un_mid', name: '【中ボス】陸上巡洋戦艦ベヒーモス', attr: 'LAND', hp: 4400, speed: 0.38, reward: 180, damage: 140, color: '#f97316', radius: 32, isBoss: true },
-    un_n10: { id: 'un_n10', name: '【ネームド】空母機動艦隊司令・提督ネルソン', attr: 'SEA', hp: 10500, speed: 0.34, reward: 400, damage: 230, color: '#14b8a6', radius: 38, isBoss: true },
-    un_n20: { id: 'un_n20', name: '【ネームド】天空の覇者・ヴァルキュリア隊長', attr: 'AIR', hp: 18500, speed: 0.48, reward: 720, damage: 340, color: '#60a5fa', radius: 34, isBoss: true },
-    un_final: { id: 'un_final', name: '【大ボス】国連軌道防衛総司令・メタトロン', attr: 'AIR', hp: 46000, speed: 0.28, reward: 1800, damage: 580, color: '#f43f5e', radius: 44, isBoss: true, isGrandBoss: true },
+    un_mid: { id: 'un_mid', name: '【中ボス】陸上巡洋戦艦ベヒーモス', attr: 'LAND', hp: 3960, speed: 0.38, reward: 180, damage: 126, color: '#f97316', radius: 32, isBoss: true },
+    un_n10: { id: 'un_n10', name: '【ネームド】空母機動艦隊司令・提督ネルソン', attr: 'SEA', hp: 9450, speed: 0.34, reward: 400, damage: 207, color: '#14b8a6', radius: 38, isBoss: true },
+    un_n20: { id: 'un_n20', name: '【ネームド】天空の覇者・ヴァルキュリア隊長', attr: 'AIR', hp: 16650, speed: 0.48, reward: 720, damage: 306, color: '#60a5fa', radius: 34, isBoss: true },
+    un_final: { id: 'un_final', name: '【大ボス】国連軌道防衛総司令・メタトロン', attr: 'AIR', hp: 27600, speed: 0.28, reward: 1800, damage: 522, color: '#f43f5e', radius: 44, isBoss: true, isGrandBoss: true },
 
-    usa_mid: { id: 'usa_mid', name: '【中ボス】M1X2 エイブラムス・タイタン', attr: 'LAND', hp: 5600, speed: 0.42, reward: 220, damage: 160, color: '#3b82f6', radius: 32, isBoss: true },
-    usa_n10: { id: 'usa_n10', name: '【ネームド】超原子力空母ルーズベルト', attr: 'SEA', hp: 12500, speed: 0.34, reward: 480, damage: 250, color: '#2563eb', radius: 40, isBoss: true },
-    usa_n20: { id: 'usa_n20', name: '【ネームド】ステルス戦略爆撃機 B-21X', attr: 'AIR', hp: 22000, speed: 0.52, reward: 850, damage: 360, color: '#60a5fa', radius: 36, isBoss: true },
-    usa_final: { id: 'usa_final', name: '【大ボス】自由の軌道決戦要塞・リバティプライム', attr: 'LAND', hp: 54000, speed: 0.26, reward: 2200, damage: 620, color: '#ef4444', radius: 46, isBoss: true, isGrandBoss: true },
+    usa_mid: { id: 'usa_mid', name: '【中ボス】M1X2 エイブラムス・タイタン', attr: 'LAND', hp: 5040, speed: 0.42, reward: 220, damage: 144, color: '#3b82f6', radius: 32, isBoss: true },
+    usa_n10: { id: 'usa_n10', name: '【ネームド】超原子力空母ルーズベルト', attr: 'SEA', hp: 11250, speed: 0.34, reward: 480, damage: 225, color: '#2563eb', radius: 40, isBoss: true },
+    usa_n20: { id: 'usa_n20', name: '【ネームド】ステルス戦略爆撃機 B-21X', attr: 'AIR', hp: 19800, speed: 0.52, reward: 850, damage: 324, color: '#60a5fa', radius: 36, isBoss: true },
+    usa_final: { id: 'usa_final', name: '【大ボス】自由の軌道決戦要塞・リバティプライム', attr: 'LAND', hp: 48600, speed: 0.26, reward: 2200, damage: 558, color: '#ef4444', radius: 46, isBoss: true, isGrandBoss: true },
 
-    chn_mid: { id: 'chn_mid', name: '【中ボス】99式改・炎龍重戦車', attr: 'LAND', hp: 6500, speed: 0.4, reward: 270, damage: 175, color: '#dc2626', radius: 32, isBoss: true },
-    chn_n10: { id: 'chn_n10', name: '【ネームド】電磁カタパルト巨艦・遼寧改', attr: 'SEA', hp: 14200, speed: 0.34, reward: 580, damage: 280, color: '#ef4444', radius: 40, isBoss: true },
-    chn_n20: { id: 'chn_n20', name: '【ネームド】極超音速戦略機・神龍（シェンロン）', attr: 'AIR', hp: 25500, speed: 0.56, reward: 980, damage: 400, color: '#f59e0b', radius: 36, isBoss: true },
-    chn_final: { id: 'chn_final', name: '【大ボス】大陸横断軌道レールガン・天帝', attr: 'LAND', hp: 64000, speed: 0.24, reward: 2600, damage: 680, color: '#fbbf24', radius: 46, isBoss: true, isGrandBoss: true },
+    chn_mid: { id: 'chn_mid', name: '【中ボス】99式改・炎龍重戦車', attr: 'LAND', hp: 5850, speed: 0.4, reward: 270, damage: 158, color: '#dc2626', radius: 32, isBoss: true },
+    chn_n10: { id: 'chn_n10', name: '【ネームド】電磁カタパルト巨艦・遼寧改', attr: 'SEA', hp: 12780, speed: 0.34, reward: 580, damage: 252, color: '#ef4444', radius: 40, isBoss: true },
+    chn_n20: { id: 'chn_n20', name: '【ネームド】極超音速戦略機・神龍（シェンロン）', attr: 'AIR', hp: 22950, speed: 0.56, reward: 980, damage: 360, color: '#f59e0b', radius: 36, isBoss: true },
+    chn_final: { id: 'chn_final', name: '【大ボス】大陸横断軌道レールガン・天帝', attr: 'LAND', hp: 57600, speed: 0.24, reward: 2600, damage: 612, color: '#fbbf24', radius: 46, isBoss: true, isGrandBoss: true },
 
-    isl_mid: { id: 'isl_mid', name: '【中ボス】砂漠の重機動要塞・イフリート', attr: 'LAND', hp: 7400, speed: 0.45, reward: 310, damage: 190, color: '#10b981', radius: 32, isBoss: true },
-    isl_n10: { id: 'isl_n10', name: '【ネームド】紅海艦隊総旗艦・サラディン', attr: 'SEA', hp: 16000, speed: 0.36, reward: 660, damage: 300, color: '#059669', radius: 40, isBoss: true },
-    isl_n20: { id: 'isl_n20', name: '【ネームド】砂塵の巨鳥・ロック鳥重爆撃機', attr: 'AIR', hp: 28500, speed: 0.5, reward: 1100, damage: 430, color: '#fbbf24', radius: 38, isBoss: true },
-    isl_final: { id: 'isl_final', name: '【大ボス】黄金の空中宮殿・バビロン・コア', attr: 'AIR', hp: 75000, speed: 0.26, reward: 3200, damage: 740, color: '#f59e0b', radius: 48, isBoss: true, isGrandBoss: true },
+    isl_mid: { id: 'isl_mid', name: '【中ボス】砂漠の重機動要塞・イフリート', attr: 'LAND', hp: 6660, speed: 0.45, reward: 310, damage: 171, color: '#10b981', radius: 32, isBoss: true },
+    isl_n10: { id: 'isl_n10', name: '【ネームド】紅海艦隊総旗艦・サラディン', attr: 'SEA', hp: 14400, speed: 0.36, reward: 660, damage: 270, color: '#059669', radius: 40, isBoss: true },
+    isl_n20: { id: 'isl_n20', name: '【ネームド】砂塵の巨鳥・ロック鳥重爆撃機', attr: 'AIR', hp: 25650, speed: 0.5, reward: 1100, damage: 387, color: '#fbbf24', radius: 38, isBoss: true },
+    isl_final: { id: 'isl_final', name: '【大ボス】黄金の空中宮殿・バビロン・コア', attr: 'AIR', hp: 67500, speed: 0.26, reward: 3200, damage: 666, color: '#f59e0b', radius: 48, isBoss: true, isGrandBoss: true },
 
-    rus_mid: { id: 'rus_mid', name: '【中ボス】超重自走列車砲・ドーラ改', attr: 'LAND', hp: 8800, speed: 0.36, reward: 380, damage: 210, color: '#94a3b8', radius: 34, isBoss: true },
-    rus_n10: { id: 'rus_n10', name: '【ネームド】重原子力巡洋戦艦・ピョートル大帝', attr: 'SEA', hp: 18500, speed: 0.32, reward: 780, damage: 330, color: '#38bdf8', radius: 40, isBoss: true },
-    rus_n20: { id: 'rus_n20', name: '【ネームド】超重戦略爆撃機・ツァーリ', attr: 'AIR', hp: 32000, speed: 0.46, reward: 1300, damage: 480, color: '#e2e8f0', radius: 38, isBoss: true },
-    rus_final: { id: 'rus_final', name: '【大ボス】冬将軍・氷結軌道要塞モローズ', attr: 'AIR', hp: 86000, speed: 0.24, reward: 3800, damage: 820, color: '#7dd3fc', radius: 48, isBoss: true, isGrandBoss: true },
+    rus_mid: { id: 'rus_mid', name: '【中ボス】超重自走列車砲・ドーラ改', attr: 'LAND', hp: 7920, speed: 0.36, reward: 380, damage: 189, color: '#94a3b8', radius: 34, isBoss: true },
+    rus_n10: { id: 'rus_n10', name: '【ネームド】重原子力巡洋戦艦・ピョートル大帝', attr: 'SEA', hp: 16650, speed: 0.32, reward: 780, damage: 297, color: '#38bdf8', radius: 40, isBoss: true },
+    rus_n20: { id: 'rus_n20', name: '【ネームド】超重戦略爆撃機・ツァーリ', attr: 'AIR', hp: 28800, speed: 0.46, reward: 1300, damage: 432, color: '#e2e8f0', radius: 38, isBoss: true },
+    rus_final: { id: 'rus_final', name: '【大ボス】冬将軍・氷結軌道要塞モローズ', attr: 'AIR', hp: 77400, speed: 0.24, reward: 3800, damage: 738, color: '#7dd3fc', radius: 48, isBoss: true, isGrandBoss: true },
 
-    eu_mid: { id: 'eu_mid', name: '【中ボス】レオパルト3X・パラディン', attr: 'LAND', hp: 10200, speed: 0.44, reward: 450, damage: 240, color: '#6366f1', radius: 34, isBoss: true },
-    eu_n10: { id: 'eu_n10', name: '【ネームド】超大型強襲揚陸艦・シャルルマーニュ', attr: 'SEA', hp: 21500, speed: 0.34, reward: 920, damage: 370, color: '#818cf8', radius: 42, isBoss: true },
-    eu_n20: { id: 'eu_n20', name: '【ネームド】成層圏迎撃機・エクスカリバー', attr: 'AIR', hp: 37000, speed: 0.58, reward: 1500, damage: 520, color: '#c084fc', radius: 38, isBoss: true },
-    eu_final: { id: 'eu_final', name: '【大ボス】円卓軌道防衛システム・アーサー王', attr: 'AIR', hp: 105000, speed: 0.28, reward: 4500, damage: 950, color: '#fbbf24', radius: 50, isBoss: true, isGrandBoss: true },
+    eu_mid: { id: 'eu_mid', name: '【中ボス】レオパルト3X・パラディン', attr: 'LAND', hp: 9180, speed: 0.44, reward: 450, damage: 216, color: '#6366f1', radius: 34, isBoss: true },
+    eu_n10: { id: 'eu_n10', name: '【ネームド】超大型強襲揚陸艦・シャルルマーニュ', attr: 'SEA', hp: 19350, speed: 0.34, reward: 920, damage: 333, color: '#818cf8', radius: 42, isBoss: true },
+    eu_n20: { id: 'eu_n20', name: '【ネームド】成層圏迎撃機・エクスカリバー', attr: 'AIR', hp: 33300, speed: 0.58, reward: 1500, damage: 468, color: '#c084fc', radius: 38, isBoss: true },
+    eu_final: { id: 'eu_final', name: '【大ボス】円卓軌道防衛システム・アーサー王', attr: 'AIR', hp: 94500, speed: 0.28, reward: 4500, damage: 855, color: '#fbbf24', radius: 50, isBoss: true, isGrandBoss: true },
 
-    ter_mid: { id: 'ter_mid', name: '【中ボス】軌道降下重機甲・ガイア・タイタン', attr: 'LAND', hp: 13500, speed: 0.45, reward: 580, damage: 290, color: '#22d3ee', radius: 36, isBoss: true },
-    ter_n10: { id: 'ter_n10', name: '【ネームド】成層圏浮遊戦艦・テラ・インヴィクタ', attr: 'SEA', hp: 28000, speed: 0.35, reward: 1200, damage: 440, color: '#06b6d4', radius: 44, isBoss: true },
-    ter_n20: { id: 'ter_n20', name: '【ネームド】恒星間迎撃機・アストラル・セイバー', attr: 'AIR', hp: 48000, speed: 0.62, reward: 1950, damage: 610, color: '#67e8f9', radius: 40, isBoss: true },
-    ter_final: { id: 'ter_final', name: '【大ボス】地球惑星連邦最高防衛中枢・ユグドラシル', attr: 'AIR', hp: 145000, speed: 0.28, reward: 6000, damage: 1150, color: '#34d399', radius: 52, isBoss: true, isGrandBoss: true },
+    ter_mid: { id: 'ter_mid', name: '【中ボス】軌道降下重機甲・ガイア・タイタン', attr: 'LAND', hp: 12150, speed: 0.45, reward: 580, damage: 261, color: '#22d3ee', radius: 36, isBoss: true },
+    ter_n10: { id: 'ter_n10', name: '【ネームド】成層圏浮遊戦艦・テラ・インヴィクタ', attr: 'SEA', hp: 25200, speed: 0.35, reward: 1200, damage: 396, color: '#06b6d4', radius: 44, isBoss: true },
+    ter_n20: { id: 'ter_n20', name: '【ネームド】恒星間迎撃機・アストラル・セイバー', attr: 'AIR', hp: 43200, speed: 0.62, reward: 1950, damage: 549, color: '#67e8f9', radius: 40, isBoss: true },
+    ter_final: { id: 'ter_final', name: '【大ボス】地球惑星連邦最高防衛中枢・ユグドラシル', attr: 'AIR', hp: 130500, speed: 0.28, reward: 6000, damage: 1035, color: '#34d399', radius: 52, isBoss: true, isGrandBoss: true },
 
     // 世界企業連合
-    corp_mid: { id: 'corp_mid', name: '【中ボス】民間警備自律重機・タイタンPM-9', attr: 'LAND', hp: 18500, speed: 0.48, reward: 780, damage: 360, color: '#eab308', radius: 36, isBoss: true },
-    corp_n10: { id: 'corp_n10', name: '【ネームド】海上データセンター巨艦・ネオ・アトランティス', attr: 'SEA', hp: 38000, speed: 0.36, reward: 1650, damage: 550, color: '#f59e0b', radius: 44, isBoss: true },
-    corp_n20: { id: 'corp_n20', name: '【ネームド】成層圏アルゴリズム衛星・オラクルX', attr: 'AIR', hp: 65000, speed: 0.64, reward: 2600, damage: 760, color: '#fde047', radius: 42, isBoss: true },
-    corp_final: { id: 'corp_final', name: '【大ボス】世界企業連合最高取締役AI・クロノスCEO', attr: 'AIR', hp: 195000, speed: 0.30, reward: 8200, damage: 1450, color: '#fbbf24', radius: 54, isBoss: true, isGrandBoss: true },
+    corp_mid: { id: 'corp_mid', name: '【中ボス】民間警備自律重機・タイタンPM-9', attr: 'LAND', hp: 16650, speed: 0.48, reward: 780, damage: 324, color: '#eab308', radius: 36, isBoss: true },
+    corp_n10: { id: 'corp_n10', name: '【ネームド】海上データセンター巨艦・ネオ・アトランティス', attr: 'SEA', hp: 34200, speed: 0.36, reward: 1650, damage: 495, color: '#f59e0b', radius: 44, isBoss: true },
+    corp_n20: { id: 'corp_n20', name: '【ネームド】成層圏アルゴリズム衛星・オラクルX', attr: 'AIR', hp: 58500, speed: 0.64, reward: 2600, damage: 684, color: '#fde047', radius: 42, isBoss: true },
+    corp_final: { id: 'corp_final', name: '【大ボス】世界企業連合最高取締役AI・クロノスCEO', attr: 'AIR', hp: 175500, speed: 0.30, reward: 8200, damage: 1305, color: '#fbbf24', radius: 54, isBoss: true, isGrandBoss: true },
 
     // Gewinner（企業連合と同時に出現する過激テロリスト組織）
-    gew_mid: { id: 'gew_mid', name: '【中ボス】ゲヴィナー爆装自走列車・ファントム', attr: 'LAND', hp: 20500, speed: 0.52, reward: 860, damage: 410, color: '#f43f5e', radius: 36, isBoss: true },
-    gew_n10: { id: 'gew_n10', name: '【ネームド】深海隠密強襲潜航艦・リヴァイアサン黒', attr: 'SEA', hp: 42000, speed: 0.40, reward: 1850, damage: 620, color: '#e11d48', radius: 44, isBoss: true },
-    gew_n20: { id: 'gew_n20', name: '【ネームド】成層圏ジャミング母艦・イクリプス', attr: 'AIR', hp: 72000, speed: 0.66, reward: 2900, damage: 850, color: '#fb7185', radius: 42, isBoss: true },
-    gew_final: { id: 'gew_final', name: '【大ボス】Gewinner最高指導者・黒衣のヴィクター', attr: 'LAND', hp: 220000, speed: 0.34, reward: 9500, damage: 1650, color: '#ef4444', radius: 54, isBoss: true, isGrandBoss: true },
+    gew_mid: { id: 'gew_mid', name: '【中ボス】ゲヴィナー爆装自走列車・ファントム', attr: 'LAND', hp: 18450, speed: 0.52, reward: 860, damage: 369, color: '#f43f5e', radius: 36, isBoss: true },
+    gew_n10: { id: 'gew_n10', name: '【ネームド】深海隠密強襲潜航艦・リヴァイアサン黒', attr: 'SEA', hp: 37800, speed: 0.40, reward: 1850, damage: 558, color: '#e11d48', radius: 44, isBoss: true },
+    gew_n20: { id: 'gew_n20', name: '【ネームド】成層圏ジャミング母艦・イクリプス', attr: 'AIR', hp: 64800, speed: 0.66, reward: 2900, damage: 765, color: '#fb7185', radius: 42, isBoss: true },
+    gew_final: { id: 'gew_final', name: '【大ボス】Gewinner最高指導者・黒衣のヴィクター', attr: 'LAND', hp: 198000, speed: 0.34, reward: 9500, damage: 1485, color: '#ef4444', radius: 54, isBoss: true, isGrandBoss: true },
 
     // Gewinner南極基地（全ビーコンキー所持で解放）
-    ant_mid: { id: 'ant_mid', name: '【中ボス】南極氷床掘削重機・ヨルムンガンド', attr: 'LAND', hp: 28000, speed: 0.50, reward: 1200, damage: 520, color: '#38bdf8', radius: 38, isBoss: true },
-    ant_n10: { id: 'ant_n10', name: '【ネームド】氷海砕氷核ミサイル艦・ニヴルヘイム', attr: 'SEA', hp: 58000, speed: 0.38, reward: 2500, damage: 790, color: '#0284c7', radius: 46, isBoss: true },
-    ant_n20: { id: 'ant_n20', name: '【ネームド】極光次元干渉機・ラグナロク・ゼロ', attr: 'AIR', hp: 96000, speed: 0.68, reward: 3900, damage: 1080, color: '#818cf8', radius: 44, isBoss: true },
-    ant_final: { id: 'ant_final', name: '【大ボス】南極次元ゲート守護神・アポフィスΩ', attr: 'AIR', hp: 290000, speed: 0.32, reward: 13000, damage: 2100, color: '#c084fc', radius: 58, isBoss: true, isGrandBoss: true },
+    ant_mid: { id: 'ant_mid', name: '【中ボス】南極氷床掘削重機・ヨルムンガンド', attr: 'LAND', hp: 25200, speed: 0.50, reward: 1200, damage: 468, color: '#38bdf8', radius: 38, isBoss: true },
+    ant_n10: { id: 'ant_n10', name: '【ネームド】氷海砕氷核ミサイル艦・ニヴルヘイム', attr: 'SEA', hp: 52200, speed: 0.38, reward: 2500, damage: 711, color: '#0284c7', radius: 46, isBoss: true },
+    ant_n20: { id: 'ant_n20', name: '【ネームド】極光次元干渉機・ラグナロク・ゼロ', attr: 'AIR', hp: 86400, speed: 0.68, reward: 3900, damage: 972, color: '#818cf8', radius: 44, isBoss: true },
+    ant_final: { id: 'ant_final', name: '【大ボス】南極次元ゲート守護神・アポフィスΩ', attr: 'AIR', hp: 261000, speed: 0.32, reward: 13000, damage: 1890, color: '#c084fc', radius: 58, isBoss: true, isGrandBoss: true },
 
     // 新勢力：暗黒世界最初の勢力「Gewinnerビーコン基地」
-    gwb_mid: { id: 'gwb_mid', name: '【暗黒中ボス】反転次元哨戒戦車・タナトス', attr: 'LAND', hp: 35000, speed: 0.52, reward: 1550, damage: 640, color: '#f43f5e', radius: 38, isBoss: true },
-    gwb_n10: { id: 'gwb_n10', name: '【暗黒ネームド】黒海次元潜航母艦・エレボス', attr: 'SEA', hp: 72000, speed: 0.40, reward: 3100, damage: 960, color: '#a855f7', radius: 46, isBoss: true },
-    gwb_n20: { id: 'gwb_n20', name: '【暗黒ネームド】異次元ビーコン防衛衛星・アザトース', attr: 'AIR', hp: 118000, speed: 0.68, reward: 4800, damage: 1320, color: '#e879f9', radius: 44, isBoss: true },
-    gwb_final: { id: 'gwb_final', name: '【暗黒大ボス】Gewinnerビーコン基地総司令・暗黒卿ヴィクターΩ', attr: 'AIR', hp: 360000, speed: 0.34, reward: 16500, damage: 2500, color: '#f43f5e', radius: 58, isBoss: true, isGrandBoss: true },
+    gwb_mid: { id: 'gwb_mid', name: '【暗黒中ボス】反転次元哨戒戦車・タナトス', attr: 'LAND', hp: 31500, speed: 0.52, reward: 1550, damage: 576, color: '#f43f5e', radius: 38, isBoss: true },
+    gwb_n10: { id: 'gwb_n10', name: '【暗黒ネームド】黒海次元潜航母艦・エレボス', attr: 'SEA', hp: 64800, speed: 0.40, reward: 3100, damage: 864, color: '#a855f7', radius: 46, isBoss: true },
+    gwb_n20: { id: 'gwb_n20', name: '【暗黒ネームド】異次元ビーコン防衛衛星・アザトース', attr: 'AIR', hp: 106200, speed: 0.68, reward: 4800, damage: 1188, color: '#e879f9', radius: 44, isBoss: true },
+    gwb_final: { id: 'gwb_final', name: '【暗黒大ボス】Gewinnerビーコン基地総司令・暗黒卿ヴィクターΩ', attr: 'AIR', hp: 324000, speed: 0.34, reward: 16500, damage: 2250, color: '#f43f5e', radius: 58, isBoss: true, isGrandBoss: true },
 
     // 暗黒世界・クリフォト中枢
-    drk_mid: { id: 'drk_mid', name: '【暗黒中ボス】深淵の黒鉄装甲獣・ベヒモス・オルタ', attr: 'LAND', hp: 48000, speed: 0.54, reward: 2200, damage: 880, color: '#a855f7', radius: 40, isBoss: true },
-    drk_n10: { id: 'drk_n10', name: '【暗黒ネームド】虚無海溝の魔艦・カオス・アビス', attr: 'SEA', hp: 98000, speed: 0.42, reward: 4300, damage: 1300, color: '#9333ea', radius: 48, isBoss: true },
-    drk_n20: { id: 'drk_n20', name: '【暗黒ネームド】堕天の黒翼熾天使・ルシファー・ノワール', attr: 'AIR', hp: 165000, speed: 0.72, reward: 6600, damage: 1780, color: '#e879f9', radius: 46, isBoss: true },
-    drk_final: { id: 'drk_final', name: '【暗黒大ボス】暗黒世界統治神・クリフォトの王', attr: 'AIR', hp: 520000, speed: 0.35, reward: 24000, damage: 3400, color: '#f43f5e', radius: 60, isBoss: true, isGrandBoss: true }
+    drk_mid: { id: 'drk_mid', name: '【暗黒中ボス】深淵の黒鉄装甲獣・ベヒモス・オルタ', attr: 'LAND', hp: 43200, speed: 0.54, reward: 2200, damage: 792, color: '#a855f7', radius: 40, isBoss: true },
+    drk_n10: { id: 'drk_n10', name: '【暗黒ネームド】虚無海溝の魔艦・カオス・アビス', attr: 'SEA', hp: 88200, speed: 0.42, reward: 4300, damage: 1170, color: '#9333ea', radius: 48, isBoss: true },
+    drk_n20: { id: 'drk_n20', name: '【暗黒ネームド】堕天の黒翼熾天使・ルシファー・ノワール', attr: 'AIR', hp: 148500, speed: 0.72, reward: 6600, damage: 1602, color: '#e879f9', radius: 46, isBoss: true },
+    drk_final: { id: 'drk_final', name: '【暗黒大ボス】暗黒世界統治神・クリフォトの王', attr: 'AIR', hp: 468000, speed: 0.35, reward: 24000, damage: 3060, color: '#f43f5e', radius: 60, isBoss: true, isGrandBoss: true }
 };
+
 
 // 全13大ボスの固有特別必殺技マスターデータ（出現時＆一定時間経過で定期発動）
 const GRAND_BOSS_ULTIMATES = {
@@ -2751,8 +2766,8 @@ const SEPHIROTH_TREE_NODES = [
         color: '#fde047',
         borderHex: '#ca8a04',
         baseCost: 5, costMult: 1.75,
-        desc: '戦術指令の栄光を司る加護。司令部アクティブスキルの威力・効果量および再装填速度を強化します。',
-        bonusText: (lv) => `戦術スキル効果 +${lv * 30}% ＆ CT短縮 ${Math.min(45, lv * 6)}%`
+        desc: '戦術指令の栄光を司る加護。装甲強化（体力強化）1レベルあたりの最大耐久力の上昇幅を永続的に拡張します。',
+        bonusText: (lv) => `体力強化の上昇幅 +${lv * 20}%`
     },
     {
         id: 'yesod',
@@ -2829,6 +2844,8 @@ let state = {
     },
     bossRecords: {},
     bossDexFilter: 'all',
+    muteBossCutscene: false,
+    skipSeenBossCutscene: false,
     equippedEscorts: [],
     escortLevels: {},
     soldEscorts: [],
@@ -2870,8 +2887,8 @@ const TACTICAL_SKILLS = [
         baseUpgradeCost: 350,
         costMult: 1.48,
         desc: '全車両の砲塔が一斉に超出力砲撃を放ち、戦場内の全敵ユニットへ壊滅的な砲撃ダメージを与える。',
-        getPowerMult: (lv) => (2.2 + (lv - 1) * 0.55) * getHodSkillEffectMult(),
-        getEffectSummary: (lv) => `全敵へ搭載総火力 ×${((2.2 + (lv - 1) * 0.55) * getHodSkillEffectMult()).toFixed(2)} 倍の集中砲撃`
+        getPowerMult: (lv) => (2.2 + (lv - 1) * 0.55),
+        getEffectSummary: (lv) => `全敵へ搭載総火力 ×${((2.2 + (lv - 1) * 0.55)).toFixed(2)} 倍の集中砲撃`
     },
     {
         id: 'overdrive',
@@ -2886,12 +2903,12 @@ const TACTICAL_SKILLS = [
         baseUpgradeCost: 380,
         costMult: 1.48,
         desc: '一定時間、全車両の兵器炉心を限界稼働させ、攻撃力と装填速度を劇的に引き上げる。',
-        getAtkBonus: (lv) => (0.80 + (lv - 1) * 0.25) * getHodSkillEffectMult(),
-        getSpeedBonus: (lv) => (0.45 + (lv - 1) * 0.10) * getHodSkillEffectMult(),
+        getAtkBonus: (lv) => (0.80 + (lv - 1) * 0.25),
+        getSpeedBonus: (lv) => (0.45 + (lv - 1) * 0.10),
         getEffectSummary: (lv) => {
             const sec = (Math.min(1800, 600 + (lv - 1) * 45) / 60).toFixed(1);
-            const atk = Math.round((0.80 + (lv - 1) * 0.25) * getHodSkillEffectMult() * 100);
-            const spd = Math.round((0.45 + (lv - 1) * 0.10) * getHodSkillEffectMult() * 100);
+            const atk = Math.round((0.80 + (lv - 1) * 0.25) * 100);
+            const spd = Math.round((0.45 + (lv - 1) * 0.10) * 100);
             return `${sec}秒間：攻撃力 +${atk}% ／ 装填速度 +${spd}%`;
         }
     },
@@ -2908,10 +2925,10 @@ const TACTICAL_SKILLS = [
         baseUpgradeCost: 420,
         costMult: 1.5,
         desc: '一定時間、撃破した敵部隊から戦時物資・資金を強制徴発し、獲得資金倍率を大幅に上昇させる。',
-        getGoldBonus: (lv) => (1.00 + (lv - 1) * 0.35) * getHodSkillEffectMult(),
+        getGoldBonus: (lv) => (1.00 + (lv - 1) * 0.35),
         getEffectSummary: (lv) => {
             const sec = (Math.min(2100, 720 + (lv - 1) * 45) / 60).toFixed(1);
-            const gld = Math.round((1.00 + (lv - 1) * 0.35) * getHodSkillEffectMult() * 100);
+            const gld = Math.round((1.00 + (lv - 1) * 0.35) * 100);
             return `${sec}秒間：敵撃破時の獲得資金 +${gld}%`;
         }
     },
@@ -2928,10 +2945,10 @@ const TACTICAL_SKILLS = [
         baseUpgradeCost: 340,
         costMult: 1.45,
         desc: '装甲列車の耐久値を即時修復すると同時に、一定時間、受けるダメージを半減する電磁障壁を展開する。',
-        getHealRatio: (lv) => Math.min(0.95, (0.20 + (lv - 1) * 0.05) * getHodSkillEffectMult()),
+        getHealRatio: (lv) => Math.min(0.95, (0.20 + (lv - 1) * 0.05)),
         getEffectSummary: (lv) => {
             const sec = (Math.min(1500, 480 + (lv - 1) * 35) / 60).toFixed(1);
-            const heal = Math.min(95, Math.round((0.20 + (lv - 1) * 0.05) * getHodSkillEffectMult() * 100));
+            const heal = Math.min(95, Math.round((0.20 + (lv - 1) * 0.05) * 100));
             return `HP ${heal}% 即時修復 ＋ ${sec}秒間 被ダメージ50%軽減`;
         }
     }
@@ -2984,6 +3001,28 @@ function advanceSkillTimers() {
     if (changed && state.activeTab === 'skills' && typeof updateSkillsTabUI === 'function') {
         updateSkillsTabUI();
     }
+}
+
+// スキルごとのレベル上限（全効果が頭打ちになる地点）。null は上限なし。
+// 攻撃力・獲得資金の倍率は上限がなく伸び続けるため、上限があるのは効果時間と修復率を持つ shield のみ。
+const SKILL_MAX_LEVEL = {
+    salvo: null,
+    overdrive: null,
+    goldrush: null,
+    shield: 31       // 効果時間25秒に到達（修復率はLv16で95%上限）
+};
+
+// 一部の効果だけが上限に達しているスキルの注意書き
+function getSkillCapNote(skillId) {
+    if (skillId === 'shield' && getSkillLevel('shield') >= 16) {
+        return '※修復率は95%で上限（効果時間はLv31まで伸びます）';
+    }
+    return '';
+}
+
+function isSkillMaxed(skillId) {
+    const cap = SKILL_MAX_LEVEL[skillId];
+    return typeof cap === 'number' && getSkillLevel(skillId) >= cap;
 }
 
 function getSkillLevel(skillId) {
@@ -3071,11 +3110,8 @@ function getMaxEscortSlots() {
 function getNetzachEscortMult() {
     return 1 + getTreeLv('netzach') * 0.50;
 }
-function getHodSkillEffectMult() {
-    return 1 + getTreeLv('hod') * 0.30;
-}
-function getHodSkillCdMult() {
-    return Math.max(0.55, 1 - Math.min(0.45, getTreeLv('hod') * 0.06));
+function getHodArmorHpMult() {
+    return 1 + getTreeLv('hod') * 0.20;
 }
 function getBinahBossDmgMult() {
     return 1 + getTreeLv('binah') * 0.40;
@@ -3161,8 +3197,12 @@ function getSephirahUpgradeCost(sephId) {
 function getArmorUpgradeCost() {
     return Math.floor(200 * Math.pow(1.5, Math.min(80, state.armorLevel - 1)));
 }
+function calcMaxHpForArmor(armorLevel) {
+    const armorSteps = Math.max(0, armorLevel - 1);
+    return Math.round((1000 + armorSteps * 1000 * getHodArmorHpMult()) * getPrestigeHpMult());
+}
 function calcMaxHp() {
-    return Math.round((1000 + (state.armorLevel - 1) * 350) * getPrestigeHpMult());
+    return calcMaxHpForArmor(state.armorLevel);
 }
 function getCurrentFaction() {
     return FACTIONS.find(f => f.id === state.currentFactionId) || FACTIONS[0];
@@ -3270,7 +3310,7 @@ function triggerGrandBossEntrance(bossTmpl, faction) {
     void card.offsetWidth;
     card.classList.add('grand-boss-cutin-active');
 
-    SoundEngine.playGrandBossEntrance();
+    if (!state.muteBossCutscene) SoundEngine.playGrandBossEntrance();
     screenShake = Math.max(screenShake, 18);
 
     grandBossCutinTimeout = setTimeout(() => {
@@ -3348,7 +3388,7 @@ function triggerCutin({ tag, title, sub, speech, themeColor, isBoss = false, bos
     content.classList.add('cutin-content-active');
 
     if (isBoss) {
-        SoundEngine.playBossWarning();
+        if (!state.muteBossCutscene) SoundEngine.playBossWarning();
         screenShake = Math.max(screenShake, 12);
     } else {
         SoundEngine.playFactionEntry();
@@ -3578,13 +3618,18 @@ function startWave() {
     const bossIdInWave = spawnedWeatherBossId || queue.find(id => ENEMY_TYPES[id] && ENEMY_TYPES[id].isBoss);
     if (bossIdInWave) {
         const bTmpl = ENEMY_TYPES[bossIdInWave];
+        const alreadySeen = !!(state.bossRecords[bossIdInWave] && state.bossRecords[bossIdInWave].seen);
         if (!state.bossRecords[bossIdInWave]) {
             state.bossRecords[bossIdInWave] = { seen: true, defeated: 0 };
         } else {
             state.bossRecords[bossIdInWave].seen = true;
         }
 
-        if (bTmpl.isGrandBoss) {
+        // 図鑑設定「一度見たボスの演出をカット」が有効な場合は、遭遇済みボスの演出を省略する
+        const skipCutscene = alreadySeen && state.skipSeenBossCutscene;
+        if (skipCutscene) {
+            // 演出なし
+        } else if (bTmpl.isGrandBoss) {
             triggerGrandBossEntrance(bTmpl, faction);
         } else {
             triggerCutin({
@@ -3602,6 +3647,13 @@ function startWave() {
 
     showEnemyPreviewTemporarily(spawnedWeatherBossId);
     updateHeaderUI();
+}
+
+// 大ボス必殺技の最終ダメージ。計算結果が5桁（10,000以上）に達する場合は半減させる。
+function calcGrandBossUltimateDamage(boss, ult) {
+    const raw = boss.damage * ult.dmgMult * getActiveSkillDamageTakenMult();
+    const adjusted = raw >= 10000 ? raw * 0.5 : raw;
+    return Math.max(1, Math.round(adjusted));
 }
 
 // 大ボスの特別必殺技発動（出現時＆時間経過で定期発動）
@@ -3644,7 +3696,7 @@ function triggerGrandBossUltimate(boss, isEntranceCast = false) {
 
     if (targetEscort) {
         // 鹵獲個体単体への攻撃（列車本体は無傷）
-        escortDmg = Math.max(1, Math.round(boss.damage * ult.dmgMult * getActiveSkillDamageTakenMult()));
+        escortDmg = calcGrandBossUltimateDamage(boss, ult);
         targetEscort.hp = Math.max(0, targetEscort.hp - escortDmg);
         floatingTexts.push({
             x: targetEscort.x,
@@ -3655,12 +3707,18 @@ function triggerGrandBossUltimate(boss, isEntranceCast = false) {
         });
         if (targetEscort.hp <= 0) {
             targetEscort.hp = 0;
-            showToast(`💥 大ボス必殺技「${ult.name}」により鹵獲護衛機「${targetEscort.name}」が大破しました！`);
+            floatingTexts.push({
+                x: targetEscort.x,
+                y: targetEscort.y - targetEscort.radius - 28,
+                text: '💥 大破',
+                color: '#f43f5e',
+                life: 64
+            });
+            showToast(`💥 護衛機「${targetEscort.name}」大破`);
         }
     } else {
         // 護衛機がいなければ本体へ
-        const rawTrainDmg = boss.damage * ult.dmgMult * getActiveSkillDamageTakenMult();
-        finalTrainDmg = Math.max(1, Math.round(rawTrainDmg));
+        finalTrainDmg = calcGrandBossUltimateDamage(boss, ult);
         state.hp = Math.max(0, state.hp - finalTrainDmg);
 
         floatingTexts.push({
@@ -4413,7 +4471,14 @@ function updateSimulation() {
                 });
                 if (blocker.hp <= 0) {
                     blocker.hp = 0;
-                    showToast(`💥 護衛機「${blocker.name}」が大破しました！`);
+                    floatingTexts.push({
+                        x: blocker.x,
+                        y: blocker.y - blocker.radius - 26,
+                        text: '💥 大破',
+                        color: '#f43f5e',
+                        life: 64
+                    });
+                    showToast(`💥 護衛機「${blocker.name}」大破`);
                 }
             }
             continue;
@@ -6293,7 +6358,7 @@ function renderRDTab() {
     const btnEl = document.getElementById('btn-upgrade-armor');
     if (lvEl) lvEl.textContent = `Lv.${state.armorLevel}`;
     if (valEl) valEl.textContent = state.maxHp.toLocaleString();
-    if (nextEl) nextEl.textContent = Math.round((1000 + state.armorLevel * 350) * getPrestigeHpMult()).toLocaleString();
+    if (nextEl) nextEl.textContent = calcMaxHpForArmor(state.armorLevel + 1).toLocaleString();
     if (btnEl) btnEl.textContent = `強化する (${getArmorUpgradeCost().toLocaleString()} G)`;
 
     const grid = document.getElementById('rd-weapons-grid');
@@ -6443,6 +6508,7 @@ function renderSkillsTab() {
     TACTICAL_SKILLS.forEach(sk => {
         const lv = getSkillLevel(sk.id);
         const upgCost = getSkillUpgradeCost(sk.id);
+        const maxed = isSkillMaxed(sk.id);
 
         const card = document.createElement('div');
         card.id = `skill-card-${sk.id}`;
@@ -6457,13 +6523,14 @@ function renderSkillsTab() {
                 <div id="skill-summary-${sk.id}" class="bg-slate-900/90 border border-slate-700 rounded p-2 mt-2 text-[11px] text-amber-200 font-bold">
                     ${sk.getEffectSummary(lv)}
                 </div>
+                ${getSkillCapNote(sk.id) ? `<div class="text-[10px] text-slate-400 mt-1">${getSkillCapNote(sk.id)}</div>` : ''}
             </div>
             <div class="space-y-1.5">
                 <button id="skill-act-btn-${sk.id}" onclick="activateTacticalSkill('${sk.id}')" class="w-full ${sk.btnBg} font-black py-2 rounded text-xs tech-font border border-slate-600 transition cursor-pointer">
                     ▶ 今すぐ発動
                 </button>
-                <button id="skill-upg-btn-${sk.id}" onclick="upgradeTacticalSkill('${sk.id}')" class="w-full bg-slate-700 hover:bg-slate-600 text-amber-300 font-bold py-1.5 rounded text-xs tech-font transition cursor-pointer">
-                    出力強化 Lv.${lv + 1} (${upgCost.toLocaleString()} G)
+                <button id="skill-upg-btn-${sk.id}" onclick="upgradeTacticalSkill('${sk.id}')" ${maxed ? 'disabled' : ''} class="w-full ${maxed ? 'bg-slate-900 text-slate-500 cursor-not-allowed' : 'bg-slate-700 hover:bg-slate-600 text-amber-300 cursor-pointer'} font-bold py-1.5 rounded text-xs tech-font transition">
+                    ${maxed ? '⚡ MAX LEVEL（効果上限到達）' : `出力強化 Lv.${lv + 1} (${upgCost.toLocaleString()} G)`}
                 </button>
             </div>
         `;
@@ -6509,7 +6576,7 @@ function activateTacticalSkill(skillId) {
     if (isCutsceneActive()) return;
 
     const lv = getSkillLevel(skillId);
-    rt.cd = Math.max(120, Math.round(sk.cooldownFrames * getHodSkillCdMult()));
+    rt.cd = Math.max(120, Math.round(sk.cooldownFrames * 1));
     if (sk.getDurationFrames) {
         rt.active = sk.getDurationFrames(lv);
     }
@@ -6543,6 +6610,10 @@ function activateTacticalSkill(skillId) {
 function upgradeTacticalSkill(skillId) {
     const sk = TACTICAL_SKILLS.find(s => s.id === skillId);
     if (!sk) return;
+    if (isSkillMaxed(skillId)) {
+        showToast('このスキルは効果上限に到達しています');
+        return;
+    }
     if (!state.skillLevels || typeof state.skillLevels !== 'object') {
         state.skillLevels = { salvo: 1, overdrive: 1, goldrush: 1, shield: 1 };
     }
@@ -6562,8 +6633,14 @@ function upgradeTacticalSkill(skillId) {
     if (lvBadge) lvBadge.textContent = `Lv.${nextLv}`;
     if (summaryEl) summaryEl.textContent = sk.getEffectSummary(nextLv);
     if (upgBtn) {
-        const nextCost = getSkillUpgradeCost(skillId);
-        upgBtn.textContent = `出力強化 Lv.${nextLv + 1} (${nextCost.toLocaleString()} G)`;
+        if (isSkillMaxed(skillId)) {
+            upgBtn.textContent = '⚡ MAX LEVEL（効果上限到達）';
+            upgBtn.disabled = true;
+            upgBtn.className = 'w-full bg-slate-900 text-slate-500 cursor-not-allowed font-bold py-1.5 rounded text-xs tech-font transition';
+        } else {
+            const nextCost = getSkillUpgradeCost(skillId);
+            upgBtn.textContent = `出力強化 Lv.${nextLv + 1} (${nextCost.toLocaleString()} G)`;
+        }
     }
 
     SoundEngine.playUI('upgrade');
@@ -6903,13 +6980,12 @@ function renderPrestigeTab() {
     const resumeEl = document.getElementById('prestige-resume-target');
     const btnEl = document.getElementById('btn-do-prestige');
     const gain = calcPrestigeGainShards();
-    const canPrestige = (state.maxReachedStages['un'] || 1) >= 5 || state.clearedFactions.length >= 2 || state.prestigeCount > 0;
-    const curFaction = getCurrentFaction();
+    const canPrestige = state.maxReachedStages['usa'] >= 30 || state.clearedFactions.includes('usa') || state.prestigeCount > 0;
 
     if (countEl) countEl.textContent = `転生回数: ${state.prestigeCount}回`;
     if (curEl) curEl.textContent = state.sephirothShards.toLocaleString();
     if (gainEl) gainEl.textContent = `+${gain.toLocaleString()}`;
-    if (resumeEl) resumeEl.textContent = `${curFaction.name} STAGE 1`;
+    if (resumeEl) resumeEl.textContent = '国連防衛軍 STAGE 1';
     if (btnEl) btnEl.disabled = !canPrestige || gain <= 0;
 
     const speedStatusEl = document.getElementById('prestige-speed-status');
@@ -7046,7 +7122,6 @@ function openPrestigeConfirmModal() {
     const execBtn = document.getElementById('prestige-confirm-execute');
     if (!modal || !body || !execBtn) return;
 
-    const curFaction = getCurrentFaction();
     body.innerHTML = `
         <p>現在の戦線進行をリセットし、新たな輪廻へと旅立ちます。</p>
         <div class="bg-emerald-950/70 border border-emerald-500 p-3 rounded text-center">
@@ -7055,11 +7130,12 @@ function openPrestigeConfirmModal() {
         </div>
         <div class="bg-slate-800 p-3 rounded border border-slate-700 text-xs space-y-1">
             <div class="text-red-300 font-bold">【リセットされる項目】</div>
-            <div>・所持資金、ステージ・勢力進行（${curFaction.name} STAGE 1へ）</div>
+            <div>・所持資金、ステージ・勢力進行（<strong class="text-cyan-300">国連防衛軍 STAGE 1</strong>へ）</div>
             <div>・兵装の開発状態・レベル、セフィラの雇用状態・レベル、車体装甲レベル</div>
             <div class="text-emerald-300 font-bold pt-1">【永続引き継ぎされる項目】</div>
             <div>・セフィロトの木の欠片、欠片による永続強化レベル（出撃枠含む）、ボス図鑑・鹵獲記録</div>
             <div>・解放済み戦線・ビーコンキー・収集品・暗黒世界</div>
+            <div class="text-cyan-300">・国連警察は制圧済み扱い（STAGE 1〜10をスキップ）</div>
         </div>
         <div class="text-[11px] text-amber-300/90">※欠片は「まだ欠片化していない進行度」の分だけ付与されます。同じ進行度から重複して獲得することはできません。</div>
     `;
@@ -7081,17 +7157,17 @@ function executePrestige() {
     closePrestigeConfirmModal();
     if (gain <= 0) return;
 
-    const resumeFactionId = state.currentFactionId || 'pol';
-    if (!state.unlockedFactions.includes(resumeFactionId)) {
-        state.unlockedFactions.push(resumeFactionId);
-    }
+    // 再開地点は常に国連防衛軍 STAGE 1（国連警察は制圧済み扱いでスキップ）
+    const resumeFactionId = 'un';
+    if (!state.unlockedFactions.includes('un')) state.unlockedFactions.push('un');
+    if (!state.clearedFactions.includes('pol')) state.clearedFactions.push('pol');
 
     state.sephirothShards += gain;
     state.prestigeCount += 1;
 
     state.currentFactionId = resumeFactionId;
     state.factionStages = { pol: 1, un: 1, usa: 1, chn: 1, isl: 1, rus: 1, eu: 1, ter: 1, corp: 1, gew: 1, ant: 1, endless: 1, gew_beacon: 1, dark_abyss: 1, dark_endless: 1 };
-    state.maxReachedStages = { pol: 1, un: 1, usa: 1, chn: 1, isl: 1, rus: 1, eu: 1, ter: 1, corp: 1, gew: 1, ant: 1, endless: 1, gew_beacon: 1, dark_abyss: 1, dark_endless: 1 };
+    state.maxReachedStages = { pol: 10, un: 1, usa: 1, chn: 1, isl: 1, rus: 1, eu: 1, ter: 1, corp: 1, gew: 1, ant: 1, endless: 1, gew_beacon: 1, dark_abyss: 1, dark_endless: 1 };
     state.stage = 1;
     rollStageWeather(1, resumeFactionId, false);
 
@@ -7190,7 +7266,43 @@ function renderDexTab() {
     }
 }
 
+function toggleSkipSeenBossCutscene() {
+    state.skipSeenBossCutscene = !state.skipSeenBossCutscene;
+    renderBossCutsceneToggles();
+    showToast(state.skipSeenBossCutscene
+        ? '🎬 遭遇済みボスの登場演出をカットします'
+        : '🎬 ボスの登場演出を毎回表示します');
+    saveGame(true);
+}
+
+function toggleMuteBossCutscene() {
+    state.muteBossCutscene = !state.muteBossCutscene;
+    renderBossCutsceneToggles();
+    showToast(state.muteBossCutscene ? '🔇 ボス演出のSEをミュートしました' : '🔊 ボス演出のSEをONにしました');
+    saveGame(true);
+}
+
+function renderBossCutsceneToggles() {
+    const skipBtn = document.getElementById('dex-toggle-skip-seen');
+    if (skipBtn) {
+        const on = !!state.skipSeenBossCutscene;
+        skipBtn.textContent = `遭遇済み演出: ${on ? 'カット' : 'OFF'}`;
+        skipBtn.className = on
+            ? 'px-2.5 py-1 rounded text-[11px] font-bold border-2 border-emerald-400 bg-emerald-950/80 text-emerald-200 transition'
+            : 'px-2.5 py-1 rounded text-[11px] font-bold border border-slate-600 bg-slate-900 text-slate-300 hover:border-slate-400 transition';
+    }
+    const muteBtn = document.getElementById('dex-toggle-mute-boss');
+    if (muteBtn) {
+        const muted = !!state.muteBossCutscene;
+        muteBtn.textContent = `演出SE: ${muted ? 'ミュート' : 'ON'}`;
+        muteBtn.className = muted
+            ? 'px-2.5 py-1 rounded text-[11px] font-bold border-2 border-amber-400 bg-amber-950/80 text-amber-200 transition'
+            : 'px-2.5 py-1 rounded text-[11px] font-bold border border-slate-600 bg-slate-900 text-slate-300 hover:border-slate-400 transition';
+    }
+}
+
 function renderBossDexGrid() {
+    renderBossCutsceneToggles();
     const visibleBossIds = getVisibleBossIdsForDex();
     const filterBar = document.getElementById('bossdex-filter-bar');
     if (filterBar) {
@@ -7491,6 +7603,8 @@ function loadGame() {
         if (!state.weaponLevels || typeof state.weaponLevels !== 'object') state.weaponLevels = {};
         if (!state.sephirahLevels || typeof state.sephirahLevels !== 'object') state.sephirahLevels = {};
         if (!state.bossRecords || typeof state.bossRecords !== 'object') state.bossRecords = {};
+        if (typeof state.muteBossCutscene !== 'boolean') state.muteBossCutscene = false;
+        if (typeof state.skipSeenBossCutscene !== 'boolean') state.skipSeenBossCutscene = false;
         if (!state.escortLevels || typeof state.escortLevels !== 'object') state.escortLevels = {};
         if (!state.relics || typeof state.relics !== 'object') state.relics = {};
         if (!Array.isArray(state.unlockedWeapons)) state.unlockedWeapons = ['railgun_tiphareth', 'mg_vulcan', 'aa_flak'];
