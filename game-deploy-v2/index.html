@@ -3603,13 +3603,13 @@ function getStageWaveConfig(faction, stage) {
             if (faction.world === 'dark') return k.startsWith('drk_') || k.startsWith('gwb_');
             return !k.startsWith('drk_') && !k.startsWith('gwb_');
         });
-        const darkBonus = faction.world === 'dark' ? 4 : 0;
-        const bossCount = Math.min(7, 2 + Math.floor(stage / 3));
-        addUnit('infantry', 6 + darkBonus + Math.floor(stage * 0.8));
-        addUnit('tank', 4 + Math.floor(darkBonus * 0.6) + Math.floor(stage * 0.6));
-        addUnit('jet', 4 + Math.floor(darkBonus * 0.6) + Math.floor(stage * 0.6));
-        addUnit('gunship', 3 + Math.floor(darkBonus * 0.5) + Math.floor(stage * 0.5));
-        addUnit('destroyer', 3 + Math.floor(darkBonus * 0.5) + Math.floor(stage * 0.45));
+        const darkBonus = faction.world === 'dark' ? 3 : 0;
+        const bossCount = Math.min(5, 2 + Math.floor(stage / 4));
+        addUnit('infantry', 5 + darkBonus + Math.floor(stage * 0.45));
+        addUnit('tank', 3 + Math.floor(darkBonus * 0.6) + Math.floor(stage * 0.32));
+        addUnit('jet', 3 + Math.floor(darkBonus * 0.6) + Math.floor(stage * 0.32));
+        addUnit('gunship', 2 + Math.floor(darkBonus * 0.5) + Math.floor(stage * 0.26));
+        addUnit('destroyer', 2 + Math.floor(darkBonus * 0.5) + Math.floor(stage * 0.24));
         for (let i = 0; i < bossCount; i++) {
             const pick = allBossIds[(stage * 3 + i * 5) % allBossIds.length];
             addUnit(pick, 1);
@@ -3636,11 +3636,12 @@ function getStageWaveConfig(faction, stage) {
         return { queue, previewCounts };
     }
 
-    const infCount = 4 + Math.floor(tierFactor * 0.85) + Math.floor(stage * 0.42);
-    const jetCount = (stage >= 2 || tierFactor >= 1) ? (2 + Math.floor(tierFactor * 0.55) + Math.floor(stage * 0.28)) : 0;
-    const tankCount = (stage >= 3 || tierFactor >= 1) ? (1 + Math.floor(tierFactor * 0.55) + Math.floor(stage * 0.26)) : 0;
-    const gunshipCount = (stage >= 5 || tierFactor >= 2) ? (1 + Math.floor(tierFactor * 0.45) + Math.floor(Math.max(0, stage - 3) * 0.22)) : 0;
-    const destroyerCount = (stage >= 7 || tierFactor >= 2) ? (1 + Math.floor(tierFactor * 0.40) + Math.floor(Math.max(0, stage - 5) * 0.20)) : 0;
+    // 1ウェーブあたりの総数。終盤でも 40体前後に収め、処理落ちを避ける。
+    const infCount = 4 + Math.floor(Math.min(6, tierFactor * 0.5)) + Math.floor(stage * 0.26);
+    const jetCount = (stage >= 2 || tierFactor >= 1) ? (2 + Math.floor(Math.min(4, tierFactor * 0.35)) + Math.floor(stage * 0.18)) : 0;
+    const tankCount = (stage >= 3 || tierFactor >= 1) ? (1 + Math.floor(Math.min(4, tierFactor * 0.35)) + Math.floor(stage * 0.17)) : 0;
+    const gunshipCount = (stage >= 5 || tierFactor >= 2) ? (1 + Math.floor(Math.min(3, tierFactor * 0.3)) + Math.floor(Math.max(0, stage - 3) * 0.14)) : 0;
+    const destroyerCount = (stage >= 7 || tierFactor >= 2) ? (1 + Math.floor(Math.min(3, tierFactor * 0.28)) + Math.floor(Math.max(0, stage - 5) * 0.13)) : 0;
 
     const maxWaves = Math.max(infCount, jetCount, tankCount, gunshipCount, destroyerCount);
     for (let w = 0; w < maxWaves; w++) {
@@ -3988,6 +3989,16 @@ function getPrestigeEnemyScaling() {
     return { hpMult, dmgMult, rewardMult };
 }
 
+// 画面に同時滞在させる敵の上限。ボスは別枠で1〜2体まで許容する。
+// 端末性能に左右されにくいよう、基準値は控えめにしている。
+const MAX_ALIVE_ENEMIES_BASE = 18;
+
+function getMaxAliveEnemies() {
+    const faction = getCurrentFaction();
+    // 無限戦区は敵の湧きが速いので少しだけ枠を広げる
+    return MAX_ALIVE_ENEMIES_BASE + (faction.isEndless ? 6 : 0);
+}
+
 function spawnEnemyUnit(typeId) {
     const tmpl = ENEMY_TYPES[typeId];
     if (!tmpl) return;
@@ -3998,11 +4009,12 @@ function spawnEnemyUnit(typeId) {
     const sephPassive = getSephirahPassiveEffects();
     const pr = getPrestigeEnemyScaling();
 
-    const stageScale = 1 + (state.stage - 1) * (faction.isEndless ? 0.42 : 0.28);
-    const endlessLoopBonus = faction.isEndless ? Math.pow(1.22, Math.floor((state.stage - 1) / 5)) : 1.0;
+    // ステージ内のHP伸びを緩め、終盤で1体あたりの処理時間が膨らみすぎないようにする
+    const stageScale = 1 + (state.stage - 1) * (faction.isEndless ? 0.30 : 0.20);
+    const endlessLoopBonus = faction.isEndless ? Math.pow(1.15, Math.floor((state.stage - 1) / 5)) : 1.0;
 
     const finalHp = Math.max(40, Math.round(tmpl.hp * faction.powerMult * stageScale * endlessLoopBonus * weather.enemyHpMult * pr.hpMult));
-    const finalDmg = Math.max(5, Math.round(tmpl.damage * Math.pow(faction.powerMult, 0.78) * (1 + (state.stage - 1) * 0.16) * pr.dmgMult));
+    const finalDmg = Math.max(5, Math.round(tmpl.damage * Math.pow(faction.powerMult, 0.78) * (1 + (state.stage - 1) * 0.12) * pr.dmgMult));
     const finalReward = Math.max(5, Math.round(tmpl.reward * faction.rewardMult * (1 + (state.stage - 1) * 0.18) * getPrestigeGoldMult() * sephPassive.goldMult * pr.rewardMult));
 
     let yPos = h * 0.70;
@@ -4490,12 +4502,20 @@ function updateSimulation() {
     if (waveSpawnQueue.length > 0) {
         spawnTimer--;
         if (spawnTimer <= 0) {
-            const nextType = waveSpawnQueue.shift();
-            spawnEnemyUnit(nextType);
-            const faction = getCurrentFaction();
-            const fIdx = Math.max(0, FACTIONS.findIndex(f => f.id === faction.id));
-            const regularGap = Math.max(20, 38 - Math.floor(fIdx * 1.1) - Math.floor(state.stage * 0.35));
-            spawnTimer = ENEMY_TYPES[nextType]?.isBoss ? 70 : regularGap;
+            // 画面に同時滞在できる敵数に上限を設ける。
+            // 終盤は総数が100体を超えるため、無制限に湧かせると描画と当たり判定が破綻する。
+            const maxAlive = getMaxAliveEnemies();
+            if (enemies.length < maxAlive) {
+                const nextType = waveSpawnQueue.shift();
+                spawnEnemyUnit(nextType);
+                const faction = getCurrentFaction();
+                const fIdx = Math.max(0, FACTIONS.findIndex(f => f.id === faction.id));
+                const regularGap = Math.max(14, 30 - Math.floor(fIdx * 1.1) - Math.floor(state.stage * 0.35));
+                spawnTimer = ENEMY_TYPES[nextType]?.isBoss ? 55 : regularGap;
+            } else {
+                // 上限に達している間は湧き待ち（キューは減らさない）
+                spawnTimer = 8;
+            }
         }
     }
 
