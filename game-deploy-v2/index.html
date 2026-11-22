@@ -962,12 +962,15 @@
                         <div class="text-[11px] tech-font text-sky-300/90">
                             ゲーム速度解禁: <strong id="prestige-speed-status" class="text-sky-200">1x〜5x</strong>
                         </div>
+                        <div id="prestige-scale-status" class="text-[11px] tech-font text-rose-300/90">
+                            敵: HP×1.00 / 攻撃×1.00 ・ 報酬×1.00
+                        </div>
                     </div>
                     <div class="flex flex-col items-end gap-1">
                         <button id="btn-do-prestige" onclick="openPrestigeConfirmModal()" class="bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 text-slate-950 font-black px-4 py-2 rounded-lg shadow-lg border border-emerald-300 text-xs transition">
                             🌳 プレステージを実行する
                         </button>
-                        <span class="text-[10px] text-slate-400">※アメリカ合衆国 大ボス（STAGE 30）突破で実行可能</span>
+                        <span id="prestige-requirement" class="text-[10px] tech-font text-amber-300">次の条件: アメリカ合衆国 大ボス突破</span>
                     </div>
                 </div>
 
@@ -3320,11 +3323,16 @@ function getRelicRegenRatio() {
     return Math.min(1.0, getCollectibleBonus('regen'));
 }
 
-// 兵器強化成長率。転生（プレステージ）を重ねるごとに1回あたりの上昇幅が1.5倍ずつ逓増する。
-// 転生0回: +45% / 1回: +67.5% / 2回: +101.25% …（上限はLv上限側の min(80, ...) で頭打ち）
+// 兵器強化成長率（1Lvあたりの上昇幅）。
+// 転生ごとに +3% ずつ加算し、+45%〜+120% の範囲に収める（最大 転生25回）。
+// 以前の指数逓増（1.5^転生回数）は数回の転生で数十倍に膨らみ、数値が破綻していた。
+const WEAPON_GROWTH_BASE = 0.45;
+const WEAPON_GROWTH_PER_PRESTIGE = 0.03;
+const WEAPON_GROWTH_CAP = 1.20;
+
 function getWeaponGrowthPerLevel() {
-    const prestige = Math.max(0, Math.min(30, Number(state.prestigeCount) || 0));
-    return 0.45 * Math.pow(1.5, prestige);
+    const prestige = Math.max(0, Number(state.prestigeCount) || 0);
+    return Math.min(WEAPON_GROWTH_CAP, WEAPON_GROWTH_BASE + prestige * WEAPON_GROWTH_PER_PRESTIGE);
 }
 
 function getWeaponDamageAtLevel(weaponId, level) {
@@ -3959,6 +3967,27 @@ function triggerGrandBossUltimate(boss, isEntranceCast = false) {
     }
 }
 
+// 転生回数による敵戦力の補正。
+// 方針: 「転生するほど、ぎりぎり有利」になる程度に留める。
+//   HP     +2%/転生（転生50回で×2.0）      … 兵器成長(+3%/転生)より小さい
+//   攻撃   +3%/転生（最大HPの伸び +1000/Lv より十分緩い）
+//   報酬  +10%/転生（敵HPの伸びを大きく上回る）
+// 実際の効率（転生0=1.00基準）:
+//   撃破効率(火力÷敵HP) は転生20回あたりでピーク(×1.48)、以降は緩やかに減衰(転生50で×1.17)
+//   総合効率(撃破×報酬) は単調に増加(転生50で×7.0) ため、周回するほど得になる
+const PRESTIGE_ENEMY_HP_RATE = 0.02;
+const PRESTIGE_ENEMY_DMG_RATE = 0.03;
+const PRESTIGE_ENEMY_REWARD_RATE = 0.10;
+const PRESTIGE_ENEMY_SCALE_CAP = 50;
+
+function getPrestigeEnemyScaling() {
+    const p = Math.min(PRESTIGE_ENEMY_SCALE_CAP, Math.max(0, Number(state.prestigeCount) || 0));
+    const hpMult = 1 + p * PRESTIGE_ENEMY_HP_RATE;
+    const dmgMult = 1 + p * PRESTIGE_ENEMY_DMG_RATE;
+    const rewardMult = 1 + p * PRESTIGE_ENEMY_REWARD_RATE;
+    return { hpMult, dmgMult, rewardMult };
+}
+
 function spawnEnemyUnit(typeId) {
     const tmpl = ENEMY_TYPES[typeId];
     if (!tmpl) return;
@@ -3967,13 +3996,14 @@ function spawnEnemyUnit(typeId) {
     const w = canvas.width || 800;
     const h = canvas.height || 260;
     const sephPassive = getSephirahPassiveEffects();
+    const pr = getPrestigeEnemyScaling();
 
     const stageScale = 1 + (state.stage - 1) * (faction.isEndless ? 0.42 : 0.28);
     const endlessLoopBonus = faction.isEndless ? Math.pow(1.22, Math.floor((state.stage - 1) / 5)) : 1.0;
 
-    const finalHp = Math.max(40, Math.round(tmpl.hp * faction.powerMult * stageScale * endlessLoopBonus * weather.enemyHpMult));
-    const finalDmg = Math.max(5, Math.round(tmpl.damage * Math.pow(faction.powerMult, 0.78) * (1 + (state.stage - 1) * 0.16)));
-    const finalReward = Math.max(5, Math.round(tmpl.reward * faction.rewardMult * (1 + (state.stage - 1) * 0.18) * getPrestigeGoldMult() * sephPassive.goldMult));
+    const finalHp = Math.max(40, Math.round(tmpl.hp * faction.powerMult * stageScale * endlessLoopBonus * weather.enemyHpMult * pr.hpMult));
+    const finalDmg = Math.max(5, Math.round(tmpl.damage * Math.pow(faction.powerMult, 0.78) * (1 + (state.stage - 1) * 0.16) * pr.dmgMult));
+    const finalReward = Math.max(5, Math.round(tmpl.reward * faction.rewardMult * (1 + (state.stage - 1) * 0.18) * getPrestigeGoldMult() * sephPassive.goldMult * pr.rewardMult));
 
     let yPos = h * 0.70;
     if (tmpl.attr === 'AIR') {
@@ -4192,7 +4222,8 @@ function handleStageVictory() {
     SoundEngine.playStageClear();
 
     const faction = getCurrentFaction();
-    const clearBonus = Math.round((40 + state.stage * 22) * faction.rewardMult * getPrestigeGoldMult() * getActiveSkillGoldMult());
+    // ステージクリア報酬も、転生に伴う敵戦力の上昇分を吸収できるよう同じ倍率を掛ける
+    const clearBonus = Math.round((40 + state.stage * 22) * faction.rewardMult * getPrestigeGoldMult() * getActiveSkillGoldMult() * getPrestigeEnemyScaling().rewardMult);
     state.gold += clearBonus;
 
     state.hp = state.maxHp;
@@ -7206,6 +7237,29 @@ function selectSephirothTreeNode(nodeId) {
     state.selectedSephirothTreeNode = nodeId;
     renderPrestigeTab();
 }
+// 転生（プレステージ）の実行条件。転生回数を重ねるほど要求戦線が1つ先へ進む。
+// 例: 0〜1回目=アメリカ大ボス / 2回目=中華 / 3回目=イスラム / …
+const PRESTIGE_REQUIRE_FACTIONS = ['usa', 'chn', 'isl', 'rus', 'eu', 'ter', 'corp', 'gew', 'ant'];
+
+function getPrestigeRequirement() {
+    const step = Math.max(0, Math.floor((Number(state.prestigeCount) || 0) / 2));
+    const factionId = PRESTIGE_REQUIRE_FACTIONS[Math.min(step, PRESTIGE_REQUIRE_FACTIONS.length - 1)];
+    const faction = FACTIONS.find(f => f.id === factionId);
+    const requiredStage = faction ? faction.stageCount : 30;
+    return {
+        factionId,
+        factionName: faction ? faction.name : 'アメリカ合衆国',
+        requiredStage,
+        reached: state.maxReachedStages[factionId] || 1,
+        cleared: state.clearedFactions.includes(factionId)
+    };
+}
+
+function canPrestigeNow() {
+    const req = getPrestigeRequirement();
+    return req.cleared || req.reached >= req.requiredStage;
+}
+
 
 function renderPrestigeTab() {
     const countEl = document.getElementById('ui-prestige-count');
@@ -7214,7 +7268,8 @@ function renderPrestigeTab() {
     const resumeEl = document.getElementById('prestige-resume-target');
     const btnEl = document.getElementById('btn-do-prestige');
     const gain = calcPrestigeGainShards();
-    const canPrestige = state.maxReachedStages['usa'] >= 30 || state.clearedFactions.includes('usa') || state.prestigeCount > 0;
+    const req = getPrestigeRequirement();
+    const canPrestige = canPrestigeNow();
 
     if (countEl) countEl.textContent = `転生回数: ${state.prestigeCount}回`;
     if (curEl) curEl.textContent = state.sephirothShards.toLocaleString();
@@ -7222,11 +7277,30 @@ function renderPrestigeTab() {
     if (resumeEl) resumeEl.textContent = '国連防衛軍 STAGE 1';
     if (btnEl) btnEl.disabled = !canPrestige || gain <= 0;
 
+    // 転生条件は回数ごとに要求戦線が進む。未達なら現在の進捗を添えて表示する。
+    const reqEl = document.getElementById('prestige-requirement');
+    if (reqEl) {
+        const progress = req.cleared ? '制圧済み' : `到達 ST.${req.reached}/${req.requiredStage}`;
+        reqEl.textContent = canPrestige
+            ? `条件達成: ${req.factionName}（${progress}）`
+            : `次の条件: ${req.factionName} 大ボス突破（${progress}）`;
+        reqEl.className = canPrestige
+            ? 'text-[10px] tech-font text-emerald-300'
+            : 'text-[10px] tech-font text-amber-300';
+    }
+
     const speedStatusEl = document.getElementById('prestige-speed-status');
     if (speedStatusEl) {
         const maxSpeed = getAvailableSpeeds()[getAvailableSpeeds().length - 1];
         const nextLock = state.prestigeCount < 20 ? '（転生20回で10x解禁）' : state.prestigeCount < 50 ? '（転生50回で20x解禁）' : '（最大解放済み）';
         speedStatusEl.textContent = `最大 ${maxSpeed}x ${nextLock}`;
+    }
+
+    // 転生回数に応じた敵戦力と報酬の補正を可視化する
+    const scaleEl = document.getElementById('prestige-scale-status');
+    if (scaleEl) {
+        const pr = getPrestigeEnemyScaling();
+        scaleEl.textContent = `敵: HP×${pr.hpMult.toFixed(2)} / 攻撃×${pr.dmgMult.toFixed(2)} ・ 報酬×${pr.rewardMult.toFixed(2)}`;
     }
 
     const treeStage = document.getElementById('sephiroth-tree-stage');
@@ -7354,6 +7428,11 @@ function buyPrestigeUpgrade(id) {
 
 function openPrestigeConfirmModal() {
     const gain = calcPrestigeGainShards();
+    if (!canPrestigeNow()) {
+        const req = getPrestigeRequirement();
+        showToast(`転生には「${req.factionName}」の大ボス突破が必要です`);
+        return;
+    }
     if (gain <= 0) {
         showToast('新たに獲得できるセフィロトの木の欠片がありません。進行度を伸ばしてください。');
         return;
@@ -7396,7 +7475,7 @@ function closePrestigeConfirmModal() {
 function executePrestige() {
     const gain = calcPrestigeGainShards();
     closePrestigeConfirmModal();
-    if (gain <= 0) return;
+    if (!canPrestigeNow() || gain <= 0) return;
 
     // 再開地点は常に国連防衛軍 STAGE 1（国連警察は制圧済み扱いでスキップ）
     const resumeFactionId = 'un';
