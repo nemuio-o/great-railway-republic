@@ -4113,27 +4113,17 @@ function getMaxAliveEnemies() {
 }
 
 // ============================================================
-// 敵の勢力倍率（新しいバランス基準）
-// 旧 powerMult（0.65〜180,000 の巨大な指数）を廃止し、
-// 勢力順に HP・攻撃 ×2.6 で伸ばす方式に統一した。
+// 敵の勢力倍率
+// 旧 powerMult（0.65〜180,000 の巨大な指数）は廃止。
+// 勢力の強さは getFactionPowerMult()、ステージ内の伸びは
+// getCommonStageMult() が受け持つ。ここには共通の係数だけ置く。
 // 報酬は ×2.16（コスト1.08^10 とほぼ一致）で、毎勢力およそ10Lv分の強化が買える。
-// 最初の2勢力（チュートリアル＋国連防衛軍）だけは強化前のため個別に緩和する。
 // ============================================================
-const ENEMY_TIER_HP = 2.6;
-const ENEMY_TIER_DMG = 2.6;
 const ENEMY_TIER_REWARD = 2.16;
-// ステージ内の伸び。緩すぎると初期装備のまま STAGE20 まで到達できてしまうため、
-// 1ステージあたり HP +22% / 攻撃 +11% まで引き上げた。
-const ENEMY_STAGE_HP = 0.22;
-const ENEMY_STAGE_DMG = 0.11;
 const ENEMY_STAGE_REWARD = 0.09;
 // ボス種別の重さ（中ボス・ネームド・大ボス共通の係数）。
-// テンプレHPがネームドで突出しているため、係数で平準化して
-// 「STAGE5は余裕 / STAGE10で強化が必要 / STAGE20は要周回」の段階を作る。
+// テンプレHPがネームドで突出しているため、係数で平準化する。
 const ENEMY_BOSS_HP_SCALE = 0.28;
-const EARLY_TIER_COUNT = 2;
-const EARLY_HP_SCALE = 0.35;
-const EARLY_DMG_SCALE = 0.55;
 
 function getFactionTier(faction) {
     return Math.max(0, FACTIONS.findIndex(f => f.id === faction.id));
@@ -4143,41 +4133,67 @@ function getFactionTier(faction) {
 // 初期装備（レールガン1両＋ティファレト）では STAGE 2 まで突破でき、
 // STAGE 3 から強化しないと通せない、という段差を作る。
 // 全10ステージに急峻な指数を掛けると ST10 で天文学的数値になるため、
-// STAGE 3 以降は +45%/STAGE の線形に切り替えて暴走を防ぐ。
+// STAGE 3 以降は +56%/STAGE の線形に切り替えて暴走を防ぐ。
 const TUTORIAL_HARD_START = 3;
 const TUTORIAL_EARLY_GROWTH = 0.35;
 const TUTORIAL_LATE_GROWTH = 1.6;
 
 function getTutorialStageMult(stage) {
     if (stage < TUTORIAL_HARD_START) return TUTORIAL_EARLY_GROWTH;
-    // ST3 で一気に 3.5倍 へ跳ね上げ、以降は +56%/STAGE で伸ばす。
+    // ST3 で一気に 10倍 へ跳ね上げ、以降は加算で伸ばす。
     // ST4 以降は初期装備では到底削り切れない HP になる。
     const steps = stage - TUTORIAL_HARD_START;
     return TUTORIAL_EARLY_GROWTH * (10 * (1 + steps * TUTORIAL_LATE_GROWTH));
 }
 
-function getEnemyFactionMult(faction, tmpl) {
+// 全勢力共通の序盤カーブ。
+// チュートリアルと同じ「ST1-2は緩い → ST3で段差 → 以降は緩やかに」を適用する。
+// ただし30ステージある勢力で ST3 に大きな段差を置くと ST20 以降が破綻するため、
+// ST3 は base の4倍に抑え、以降は毎ステージ ×1.14（上限12倍）で伸ばす。
+// これで「ST1-3は軽い / ST5で強化が必要 / ST30は周回前提」が全勢力で揃う。
+const COMMON_HARD_START = 3;
+const COMMON_EARLY_GROWTH = 0.40;
+const COMMON_STAGE_STEP = 1.14;
+const COMMON_STAGE_CAP = 12;
+
+function getCommonStageMult(stage) {
+    if (stage < COMMON_HARD_START) return COMMON_EARLY_GROWTH;
+    const steps = stage - COMMON_HARD_START;
+    return Math.min(COMMON_STAGE_CAP, COMMON_EARLY_GROWTH * 4 * Math.pow(COMMON_STAGE_STEP, steps));
+}
+
+// 勢力ごとの強さ。装備が育つ前提で、1勢力ごとに ×2.15。
+// tier1→2 は装備の伸びが大きい時期なので追加で ×1.6 補正する。
+const FACTION_TIER_MULT = 2.15;
+const TIER2_EXTRA = 1.6;
+
+function getFactionPowerMult(faction) {
     const tier = getFactionTier(faction);
-    const early = tier < EARLY_TIER_COUNT;
-    const stageHp = faction.isEndless ? ENEMY_STAGE_HP * 1.2 : ENEMY_STAGE_HP;
-    const stageDmg = faction.isEndless ? ENEMY_STAGE_DMG * 1.2 : ENEMY_STAGE_DMG;
+    if (tier <= 0) return 1;
+    let m = Math.pow(FACTION_TIER_MULT, Math.max(0, tier - 1));
+    if (tier >= 2) m *= TIER2_EXTRA;
+    return m;
+}
+
+function getEnemyFactionMult(faction, tmpl) {
     const bossScale = (tmpl && tmpl.isBoss) ? ENEMY_BOSS_HP_SCALE : 1;
 
     let hpMult, dmgMult;
     if (faction.isTutorial) {
-        // チュートリアルは専用カーブ（ST1-2は緩く、ST3以降で急峻に）
         const tut = getTutorialStageMult(state.stage);
         hpMult = tut * bossScale;
         dmgMult = Math.sqrt(tut);
     } else {
-        hpMult = Math.pow(ENEMY_TIER_HP, tier) * (1 + (state.stage - 1) * stageHp) * (early ? EARLY_HP_SCALE : 1) * bossScale;
-        dmgMult = Math.pow(ENEMY_TIER_DMG, tier) * (1 + (state.stage - 1) * stageDmg) * (early ? EARLY_DMG_SCALE : 1);
+        const power = getFactionPowerMult(faction);
+        const stageMult = getCommonStageMult(state.stage);
+        hpMult = power * stageMult * bossScale;
+        dmgMult = Math.pow(power, 0.55) * Math.sqrt(stageMult) * 0.85;
     }
 
     return {
         hpMult,
         dmgMult,
-        rewardMult: Math.pow(ENEMY_TIER_REWARD, tier) * (1 + (state.stage - 1) * ENEMY_STAGE_REWARD)
+        rewardMult: Math.pow(ENEMY_TIER_REWARD, getFactionTier(faction)) * (1 + (state.stage - 1) * ENEMY_STAGE_REWARD)
     };
 }
 
@@ -7363,7 +7379,7 @@ function renderWorldTab() {
                 ${bKey ? `<div class="text-[10px] mt-1 ${state.beaconKeys[bKey.id] ? 'text-cyan-300 font-bold' : 'text-slate-400'}">🔑 制圧報酬レリック: ${bKey.name} ${state.beaconKeys[bKey.id] ? '（入手済）' : ''}</div>` : ''}
                 <div class="flex justify-between items-center text-[11px] tech-font mt-1.5">
                     <span class="text-amber-300">到達: STAGE ${maxSt}${f.isEndless ? '' : `/${f.stageCount}`}</span>
-                    <span class="text-red-300">敵: HP×${Math.round(Math.pow(ENEMY_TIER_HP, getFactionTier(f)) * (getFactionTier(f) < EARLY_TIER_COUNT ? EARLY_HP_SCALE : 1)).toLocaleString()} / 報酬×${Math.round(Math.pow(ENEMY_TIER_REWARD, getFactionTier(f))).toLocaleString()}</span>
+                    <span class="text-red-300">敵: HP×${Math.round(getFactionPowerMult(f)).toLocaleString()} / 報酬×${Math.round(Math.pow(ENEMY_TIER_REWARD, getFactionTier(f))).toLocaleString()}</span>
                 </div>
             </div>
             <div>
