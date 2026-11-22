@@ -3268,7 +3268,9 @@ function getEscortStatsAtLevel(bossId, lv) {
     const lvMult = 1 + (level - 1) * 0.42;
     const netzachMult = getNetzachEscortMult();
     const maxHp = Math.floor((base.hp * 0.75 + 850) * lvMult * getPrestigeHpMult() * netzachMult);
-    const dmg = Math.floor((base.damage * 0.48 + 36) * lvMult * getPrestigeAtkMult() * getEffectiveWeatherAllyAtkMult() * netzachMult);
+    // 天候の攻撃倍率は発射時（updateAllyEscorts 内部）に一度だけ掛ける。
+    // ここで掛けると発射時と二重掛けになるため、生成時のステータスには含めない。
+    const dmg = Math.floor((base.damage * 0.48 + 36) * lvMult * getPrestigeAtkMult() * netzachMult);
     const cooldown = base.attr === 'AIR' ? 38 : base.attr === 'SEA' ? 55 : 46;
     const moveSpeed = Math.max(0.55, (base.speed || 0.4) * 1.45);
     return {
@@ -3318,11 +3320,22 @@ function getRelicRegenRatio() {
     return Math.min(1.0, getCollectibleBonus('regen'));
 }
 
-function getWeaponDamage(weaponId) {
+// 兵器強化成長率。転生（プレステージ）を重ねるごとに1回あたりの上昇幅が1.5倍ずつ逓増する。
+// 転生0回: +45% / 1回: +67.5% / 2回: +101.25% …（上限はLv上限側の min(80, ...) で頭打ち）
+function getWeaponGrowthPerLevel() {
+    const prestige = Math.max(0, Math.min(30, Number(state.prestigeCount) || 0));
+    return 0.45 * Math.pow(1.5, prestige);
+}
+
+function getWeaponDamageAtLevel(weaponId, level) {
     const w = WEAPONS[weaponId];
     if (!w) return 0;
-    const lv = state.weaponLevels[weaponId] || 1;
-    return Math.round(w.damage * (1 + (lv - 1) * 0.45) * getPrestigeAtkMult());
+    const lv = Math.max(1, Math.floor(level) || 1);
+    return Math.round(w.damage * (1 + (lv - 1) * getWeaponGrowthPerLevel()) * getPrestigeAtkMult());
+}
+
+function getWeaponDamage(weaponId) {
+    return getWeaponDamageAtLevel(weaponId, state.weaponLevels[weaponId] || 1);
 }
 function getWeaponUpgradeCost(weaponId) {
     const w = WEAPONS[weaponId];
@@ -4003,6 +4016,32 @@ function getCarX(carIndex) {
     return leadX - carIndex * spacing;
 }
 
+// 一斉斉射用: 兵装の3属性倍率の平均
+function avgWeaponMult(weapon) {
+    const m = weapon && weapon.multipliers;
+    if (!m) return 1;
+    return (m.LAND + m.SEA + m.AIR) / 3;
+}
+
+// 一斉斉射用: 敵の属性に対する「斉射の代表倍率」。
+// 編成全体で最も火力の高い兵装の倍率を、その属性の攻撃倍率として扱う。
+function getSalvoAttrMultForEnemy(attr) {
+    if (!attr) return 1;
+    let best = 1;
+    let bestPower = -1;
+    state.cars.forEach(car => {
+        const st = getCarEffectiveStats(car);
+        if (!st) return;
+        const m = st.weapon.multipliers && st.weapon.multipliers[attr];
+        if (typeof m !== 'number') return;
+        if (st.damage > bestPower) {
+            bestPower = st.damage;
+            best = m;
+        }
+    });
+    return best;
+}
+
 function getCarEffectiveStats(car) {
     if (!car.weaponId) return null;
     const w = WEAPONS[car.weaponId];
@@ -4039,6 +4078,7 @@ function fireCarWeapon(car, stats, target) {
     const sephPassive = getSephirahPassiveEffects();
     const chokmahBonus = getChokmahTreeCritBonus();
     const isCrit = Math.random() < sephPassive.critRate;
+    // コクマーの加護は「会心倍率 +0.25倍/Lv」の加算扱い（カード表記と一致させる）。
     const finalShotDmg = isCrit ? Math.round(stats.damage * (sephPassive.critMult + chokmahBonus.critMultBonus)) : stats.damage;
 
     projectiles.push({
@@ -4059,10 +4099,15 @@ function fireCarWeapon(car, stats, target) {
     });
 }
 
+// ダメージ適用の唯一の出口。呼び出し側は属性倍率・天候・クリティカルを積んだ「素の値」を渡す。
+// ここでは異常値の防御（NaN/負数/非有限）とビナーの対ボス補正、最小1保証だけを行う。
 function damageEnemy(enemy, dmg, hitColor = '#fbbf24') {
     if (!enemy || enemy.hp <= 0) return;
+    const base = Number(dmg);
+    if (!Number.isFinite(base) || base <= 0) return;
     const bossBonusMult = enemy.isBoss ? getBinahBossDmgMult() : 1.0;
-    const finalDmg = Math.max(1, Math.round(dmg * bossBonusMult));
+    const scaled = Number.isFinite(bossBonusMult) ? base * bossBonusMult : base;
+    const finalDmg = Math.max(1, Math.round(scaled));
     enemy.hp -= finalDmg;
 
     floatingTexts.push({
@@ -4622,7 +4667,9 @@ function updateSimulation() {
         if (blocker) {
             e.attackCd = (e.attackCd || 0) - 1;
             if (e.attackCd <= 0) {
-                blocker.hp -= e.damage;
+                // 列車本体への被弾と同じく、電磁障壁を適用してから最小1ダメージで丸める
+                const escortTaken = Math.max(1, Math.round(e.damage * getActiveSkillDamageTakenMult()));
+                blocker.hp = Math.max(0, blocker.hp - escortTaken);
                 e.attackCd = 45;
                 particles.push({
                     x: blocker.x + blocker.radius * 0.5,
@@ -6544,8 +6591,8 @@ function renderRDTab() {
         const lv = state.weaponLevels[w.id] || 1;
         const dmg = getWeaponDamage(w.id);
         const upgCost = getWeaponUpgradeCost(w.id);
-        // 威力はレベル1段ごとに +45% の線形成長（getWeaponDamage と同式）
-        const nextDmg = Math.round(w.damage * (1 + lv * 0.45) * getPrestigeAtkMult());
+        // 次のレベルの威力（getWeaponDamageAtLevel と同式）
+        const nextDmg = getWeaponDamageAtLevel(w.id, lv + 1);
 
         const card = document.createElement('div');
         card.className = `bg-slate-800 border ${unlocked ? 'border-amber-600/60' : 'border-slate-700'} rounded-lg p-3 flex flex-col justify-between gap-2`;
@@ -6773,17 +6820,26 @@ function activateTacticalSkill(skillId) {
     SoundEngine.playUI('launch');
 
     if (skillId === 'salvo') {
+        // 車両ごとに属性倍率が異なるため、まず搭載火力の合計と「平均属性倍率」を出す。
+        // そのうえで敵1体ごとに、その属性への攻撃倍率が平均より高いか低いかで補正する。
         let totalPower = 0;
+        let weightedMultSum = 0;
         state.cars.forEach(c => {
             const st = getCarEffectiveStats(c);
-            if (st) totalPower += st.damage;
+            if (!st) return;
+            totalPower += st.damage;
+            weightedMultSum += st.damage * avgWeaponMult(st.weapon);
         });
-        const blastDmg = Math.max(80, Math.round(totalPower * sk.getPowerMult(lv)));
+        const weaponAvgMult = totalPower > 0 ? weightedMultSum / totalPower : 1;
+        const baseBlast = Math.max(80, Math.round(totalPower * sk.getPowerMult(lv)));
+
         enemies.forEach(e => {
-            if (e.hp > 0) damageEnemy(e, blastDmg, '#ef4444');
+            if (e.hp <= 0) return;
+            const attrRatio = weaponAvgMult > 0 ? getSalvoAttrMultForEnemy(e.attr) / weaponAvgMult : 1;
+            damageEnemy(e, Math.max(1, Math.round(baseBlast * attrRatio)), '#ef4444');
         });
         screenShake = 14;
-        showToast(`🔥 全車両一斉斉射！戦場の全敵へ ${blastDmg.toLocaleString()} ダメージ！`);
+        showToast(`🔥 全車両一斉斉射！戦場の全敵へ 約 ${baseBlast.toLocaleString()} ダメージ！`);
     } else if (skillId === 'shield') {
         const healAmt = Math.round(state.maxHp * sk.getHealRatio(lv));
         state.hp = Math.min(state.maxHp, state.hp + healAmt);
