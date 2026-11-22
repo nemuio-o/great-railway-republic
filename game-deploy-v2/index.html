@@ -244,7 +244,7 @@
                         <span id="loop-indicator" class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
                         <span>周回</span>
                     </button>
-                    <button id="btn-speed" onclick="toggleSpeed()" title="ゲーム速度切替 (1x/2x/3x/5x)" class="px-1.5 sm:px-2 py-1 text-[10px] sm:text-[11px] font-bold text-amber-400 hover:bg-slate-800 transition">1x</button>
+                    <button id="btn-speed" onclick="toggleSpeed()" title="ゲーム速度切替" class="px-1.5 sm:px-2 py-1 text-[10px] sm:text-[11px] font-bold text-amber-400 hover:bg-slate-800 transition">1x</button>
                 </div>
 
                 <button id="btn-se-toggle" onclick="toggleSoundEffect()" title="効果音（SE）のON/OFF切り替え" class="bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/60 px-1.5 sm:px-2 py-1 rounded text-[10px] sm:text-[11px] font-bold transition">🔊</button>
@@ -928,6 +928,9 @@
                             <span class="text-slate-500">|</span>
                             <span>再開地点: <strong id="prestige-resume-target" class="text-cyan-300">国連警察 STAGE 1</strong></span>
                         </div>
+                        <div class="text-[11px] tech-font text-sky-300/90">
+                            ゲーム速度解禁: <strong id="prestige-speed-status" class="text-sky-200">1x〜5x</strong>
+                        </div>
                     </div>
                     <div class="flex flex-col items-end gap-1">
                         <button id="btn-do-prestige" onclick="openPrestigeConfirmModal()" class="bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 text-slate-950 font-black px-4 py-2 rounded-lg shadow-lg border border-emerald-300 text-xs transition">
@@ -1103,6 +1106,25 @@
                         閉じる
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- プレステージ実行確認モーダル -->
+    <div id="prestige-confirm-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 border-2 border-emerald-600 rounded-lg max-w-lg w-full p-5 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-emerald-700/60 pb-2">
+                <h3 class="text-lg font-bold text-emerald-300">🌳 セフィロトの樹 昇華（プレステージ）確認</h3>
+                <button onclick="closePrestigeConfirmModal()" class="text-slate-400 hover:text-white text-xl font-bold px-2">×</button>
+            </div>
+            <div id="prestige-confirm-body" class="text-sm text-slate-300 leading-relaxed space-y-3"></div>
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-700">
+                <button onclick="closePrestigeConfirmModal()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold px-4 py-2 rounded text-xs sm:text-sm transition">
+                    キャンセル
+                </button>
+                <button id="prestige-confirm-execute" onclick="executePrestige()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black px-5 py-2 rounded shadow-lg text-xs sm:text-sm transition">
+                    🌳 転生を実行する
+                </button>
             </div>
         </div>
     </div>
@@ -5782,6 +5804,8 @@ function syncPlaybackControlsUI() {
     const btnSpeed = document.getElementById('btn-speed');
     if (btnSpeed) {
         btnSpeed.textContent = `${state.gameSpeed}x`;
+        const maxSpeed = getAvailableSpeeds()[getAvailableSpeeds().length - 1];
+        btnSpeed.title = `ゲーム速度切替 (1x〜${maxSpeed}x${state.prestigeCount < 20 ? ' / 転生20回で10x解禁' : state.prestigeCount < 50 ? ' / 転生50回で20x解禁' : ''})`;
     }
 }
 
@@ -5801,10 +5825,17 @@ function toggleLoopStage() {
     saveGame(true);
 }
 
-function toggleSpeed() {
+function getAvailableSpeeds() {
     const speeds = [1, 2, 3, 5];
+    if (state.prestigeCount >= 20) speeds.push(10);
+    if (state.prestigeCount >= 50) speeds.push(20);
+    return speeds;
+}
+
+function toggleSpeed() {
+    const speeds = getAvailableSpeeds();
     const idx = speeds.indexOf(state.gameSpeed);
-    state.gameSpeed = speeds[(idx + 1) % speeds.length];
+    state.gameSpeed = idx === -1 ? speeds[0] : speeds[(idx + 1) % speeds.length];
     syncPlaybackControlsUI();
     saveGame(true);
 }
@@ -6840,17 +6871,24 @@ function switchFaction(factionId, isAutoAdvance = false) {
 }
 
 // --- タブ: プレステージ（セフィロトの樹 デザイン＆10ノード配置） ---
+// 獲得欠片は「今回の周回で到達した進行度」のみから算出する。
+// 解放済み勢力・制圧済み勢力（clearedFactions）は永続データでプレステージ後も残るため、
+// これらを加算に含めると周回せずにプレステージを連打するだけで欠片が無限に増えてしまう。
+// 周回を重ねるほど僅かに効率が上がる（転生回数1回につき+2%、最大30回で+60%）ことで、
+// 何度も走り直す動機を残しつつ、連打による無限増殖は起こらないようにしている。
+function getPrestigeRerunMultiplier() {
+    const count = Math.max(0, Math.min(30, Number(state.prestigeCount) || 0));
+    return 1 + count * 0.02;
+}
+
 function calcPrestigeGainShards() {
     let score = 0;
     FACTIONS.forEach((f, idx) => {
         if (f.isTutorial) return;
         const reached = state.maxReachedStages[f.id] || 1;
-        if (reached > 1 || state.clearedFactions.includes(f.id)) {
-            score += (reached - 1) * (1 + idx * 0.65);
-            if (state.clearedFactions.includes(f.id)) score += 12 * idx;
-        }
+        if (reached > 1) score += (reached - 1) * (1 + idx * 0.65);
     });
-    return Math.floor(score * 0.45);
+    return Math.floor(score * 0.45 * getPrestigeRerunMultiplier());
 }
 
 function selectSephirothTreeNode(nodeId) {
@@ -6873,6 +6911,13 @@ function renderPrestigeTab() {
     if (gainEl) gainEl.textContent = `+${gain.toLocaleString()}`;
     if (resumeEl) resumeEl.textContent = `${curFaction.name} STAGE 1`;
     if (btnEl) btnEl.disabled = !canPrestige || gain <= 0;
+
+    const speedStatusEl = document.getElementById('prestige-speed-status');
+    if (speedStatusEl) {
+        const maxSpeed = getAvailableSpeeds()[getAvailableSpeeds().length - 1];
+        const nextLock = state.prestigeCount < 20 ? '（転生20回で10x解禁）' : state.prestigeCount < 50 ? '（転生50回で20x解禁）' : '（最大解放済み）';
+        speedStatusEl.textContent = `最大 ${maxSpeed}x ${nextLock}`;
+    }
 
     const treeStage = document.getElementById('sephiroth-tree-stage');
     const inspector = document.getElementById('sephiroth-node-inspector');
@@ -6976,9 +7021,13 @@ function buyPrestigeUpgrade(id) {
         return;
     }
     state.sephirothShards -= cost;
+    const prevMaxHp = state.maxHp;
     state.prestigeUpgrades[id] = lv + 1;
-    state.maxHp = calcMaxHp();
-    state.hp = state.maxHp;
+    const newMaxHp = calcMaxHp();
+    if (newMaxHp !== prevMaxHp) {
+        state.maxHp = newMaxHp;
+        state.hp = Math.min(newMaxHp, state.hp + (newMaxHp - prevMaxHp));
+    }
     SoundEngine.playUI('upgrade');
     updateHeaderUI();
     renderPrestigeTab();
@@ -6988,6 +7037,48 @@ function buyPrestigeUpgrade(id) {
 
 function openPrestigeConfirmModal() {
     const gain = calcPrestigeGainShards();
+    if (gain <= 0) {
+        showToast('新たに獲得できるセフィロトの木の欠片がありません。進行度を伸ばしてください。');
+        return;
+    }
+    const modal = document.getElementById('prestige-confirm-modal');
+    const body = document.getElementById('prestige-confirm-body');
+    const execBtn = document.getElementById('prestige-confirm-execute');
+    if (!modal || !body || !execBtn) return;
+
+    const curFaction = getCurrentFaction();
+    body.innerHTML = `
+        <p>現在の戦線進行をリセットし、新たな輪廻へと旅立ちます。</p>
+        <div class="bg-emerald-950/70 border border-emerald-500 p-3 rounded text-center">
+            <div class="text-xs text-emerald-200">今回獲得できる強化素材</div>
+            <div class="text-xl font-black text-emerald-300 mt-0.5">🌳 セフィロトの木の欠片 +${gain.toLocaleString()} 個</div>
+        </div>
+        <div class="bg-slate-800 p-3 rounded border border-slate-700 text-xs space-y-1">
+            <div class="text-red-300 font-bold">【リセットされる項目】</div>
+            <div>・所持資金、ステージ・勢力進行（${curFaction.name} STAGE 1へ）</div>
+            <div>・兵装の開発状態・レベル、セフィラの雇用状態・レベル、車体装甲レベル</div>
+            <div class="text-emerald-300 font-bold pt-1">【永続引き継ぎされる項目】</div>
+            <div>・セフィロトの木の欠片、欠片による永続強化レベル（出撃枠含む）、ボス図鑑・鹵獲記録</div>
+            <div>・解放済み戦線・ビーコンキー・収集品・暗黒世界</div>
+        </div>
+        <div class="text-[11px] text-amber-300/90">※欠片は「まだ欠片化していない進行度」の分だけ付与されます。同じ進行度から重複して獲得することはできません。</div>
+    `;
+    execBtn.textContent = `🌳 転生を実行する (+${gain.toLocaleString()} 個)`;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closePrestigeConfirmModal() {
+    const modal = document.getElementById('prestige-confirm-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+function executePrestige() {
+    const gain = calcPrestigeGainShards();
+    closePrestigeConfirmModal();
     if (gain <= 0) return;
 
     const resumeFactionId = state.currentFactionId || 'pol';
@@ -7424,6 +7515,15 @@ function loadGame() {
             SEPHIROTH_TREE_NODES.forEach(n => {
                 if (typeof state.prestigeUpgrades[n.id] !== 'number') state.prestigeUpgrades[n.id] = 0;
             });
+        }
+
+        if (typeof state.prestigeCount !== 'number' || !isFinite(state.prestigeCount) || state.prestigeCount < 0) {
+            state.prestigeCount = 0;
+        }
+        const allowedSpeeds = getAvailableSpeeds();
+        if (!allowedSpeeds.includes(state.gameSpeed)) {
+            const clamped = allowedSpeeds.filter(s => s <= (Number(state.gameSpeed) || 1)).pop();
+            state.gameSpeed = clamped || allowedSpeeds[0];
         }
 
         ['corp', 'gew', 'ant', 'gew_beacon', 'dark_abyss', 'dark_endless'].forEach(fid => {
