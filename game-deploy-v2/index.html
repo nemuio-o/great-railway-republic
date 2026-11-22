@@ -201,6 +201,37 @@
             transform: translate(-50%, -50%) scale(1.08);
             z-index: 20;
         }
+        /* アップグレード差分表示：現状 → 次Lv（テーマ色）＋増分チップ */
+        .delta-stat {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 0.28em;
+            white-space: nowrap;
+        }
+        .delta-stat .delta-from {
+            color: #94a3b8;
+            font-weight: 600;
+        }
+        .delta-stat .delta-arrow {
+            color: #475569;
+            font-size: 0.85em;
+            line-height: 1;
+        }
+        .delta-stat .delta-to {
+            font-weight: 800;
+        }
+        .delta-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 0 0.42em;
+            border-radius: 4px;
+            border: 1px solid transparent;
+            font-weight: 700;
+            font-size: 0.92em;
+            line-height: 1.55;
+            letter-spacing: 0.01em;
+            white-space: nowrap;
+        }
         canvas {
             display: block;
             width: 100%;
@@ -816,8 +847,8 @@
                         </div>
                         <p class="text-xs text-slate-400 mt-1">車体フレームと複合装甲を強化し、最大HPを上昇させます（強化時に上昇分も回復）。</p>
                         <div class="text-xs tech-font text-slate-300 mt-1">
-                            現在レベル: <span id="rd-armor-lv" class="text-amber-400 font-bold">Lv.1</span> 
-                            (最大耐久: <span id="rd-armor-val">1000</span> → <span id="rd-armor-next" class="text-emerald-400">1350</span>)
+                            現在レベル: <span id="rd-armor-lv" class="text-amber-400 font-bold">Lv.1</span>
+                            <span class="ml-2">最大耐久: <span id="rd-armor-delta"></span></span>
                         </div>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
@@ -1658,6 +1689,11 @@ const SEPHIROTH = [
         getAutoSkillDesc: (lv) => {
             const mult = (3.2 + (lv - 1) * 0.85).toFixed(2);
             return `4.0秒毎に最高HPの敵へレールガン威力 ×${mult} 倍の裁定荷電砲を自動照射`;
+        },
+        getAutoSkillDelta: (lv) => {
+            const cur = 3.2 + (lv - 1) * 0.85;
+            const next = 3.2 + lv * 0.85;
+            return { label: '裁定荷電砲 倍率', from: `×${cur.toFixed(2)}`, to: `×${next.toFixed(2)}`, delta: `+${(next - cur).toFixed(2)}` };
         }
     },
     {
@@ -1677,6 +1713,11 @@ const SEPHIROTH = [
         getAutoSkillDesc: (lv) => {
             const mult = (1.6 + (lv - 1) * 0.45).toFixed(2);
             return `3.5秒毎に前線の敵最大4体へ搭乗車両威力 ×${mult} 倍の制圧弾幕を自動発射`;
+        },
+        getAutoSkillDelta: (lv) => {
+            const cur = 1.6 + (lv - 1) * 0.45;
+            const next = 1.6 + lv * 0.45;
+            return { label: '制圧弾幕 倍率', from: `×${cur.toFixed(2)}`, to: `×${next.toFixed(2)}`, delta: `+${(next - cur).toFixed(2)}` };
         }
     },
     {
@@ -1697,6 +1738,12 @@ const SEPHIROTH = [
             const mult = (2.2 + (lv - 1) * 0.55).toFixed(2);
             const atkPct = 10 + (lv - 1) * 4;
             return `全車両の攻撃力 +${atkPct}%（常時）＋ 4.5秒毎に最前線の敵へ ×${mult} 倍の集中連撃`;
+        },
+        getAutoSkillDelta: (lv) => {
+            const curAtk = 10 + (lv - 1) * 4;
+            const curMult = 2.2 + (lv - 1) * 0.55;
+            const nextMult = 2.2 + lv * 0.55;
+            return { label: '攻撃力 / 連撃倍率', from: `+${curAtk}% / ×${curMult.toFixed(2)}`, to: `+${curAtk + 4}% / ×${nextMult.toFixed(2)}`, delta: `+4% / +${(nextMult - curMult).toFixed(2)}` };
         }
     },
     {
@@ -1717,6 +1764,13 @@ const SEPHIROTH = [
             const critRate = Math.min(65, 14 + (lv - 1) * 3);
             const critMult = (1.8 + (lv - 1) * 0.15).toFixed(2);
             return `全車両に会心率 ${critRate}%（会心ダメージ ×${critMult}倍）を常時付与＋対空自動迎撃`;
+        },
+        getAutoSkillDelta: (lv) => {
+            const curRate = Math.min(65, 14 + (lv - 1) * 3);
+            const nextRate = Math.min(65, 14 + lv * 3);
+            const curMult = 1.8 + (lv - 1) * 0.15;
+            const nextMult = 1.8 + lv * 0.15;
+            return { label: '会心率 / 会心倍率', from: `${curRate}% / ×${curMult.toFixed(2)}`, to: `${nextRate}% / ×${nextMult.toFixed(2)}`, delta: `+${nextRate - curRate}% / +${(nextMult - curMult).toFixed(2)}` };
         }
     },
     {
@@ -1736,6 +1790,11 @@ const SEPHIROTH = [
         getAutoSkillDesc: (lv) => {
             const mult = (2.4 + (lv - 1) * 0.6).toFixed(2);
             return `3.25秒毎に航空・高速目標を優先して搭乗車両威力 ×${mult} 倍の誘導光弾を自動発射`;
+        },
+        getAutoSkillDelta: (lv) => {
+            const cur = 2.4 + (lv - 1) * 0.6;
+            const next = 2.4 + lv * 0.6;
+            return { label: '誘導光弾 倍率', from: `×${cur.toFixed(2)}`, to: `×${next.toFixed(2)}`, delta: `+${(next - cur).toFixed(2)}` };
         }
     },
     {
@@ -1755,6 +1814,11 @@ const SEPHIROTH = [
         getAutoSkillDesc: (lv) => {
             const mult = (2.8 + (lv - 1) * 0.7).toFixed(2);
             return `4.2秒毎に敵艦・重装甲目標へ搭乗車両威力 ×${mult} 倍の重魚雷追撃を自動発射`;
+        },
+        getAutoSkillDelta: (lv) => {
+            const cur = 2.8 + (lv - 1) * 0.7;
+            const next = 2.8 + lv * 0.7;
+            return { label: '重魚雷 倍率', from: `×${cur.toFixed(2)}`, to: `×${next.toFixed(2)}`, delta: `+${(next - cur).toFixed(2)}` };
         }
     },
     {
@@ -1774,6 +1838,11 @@ const SEPHIROTH = [
         getAutoSkillDesc: (lv) => {
             const healPct = Math.min(25, 4 + (lv - 1) * 1.2).toFixed(1);
             return `戦闘中 4.0秒毎に装甲列車の最大HPの ${healPct}% を自動修復`;
+        },
+        getAutoSkillDelta: (lv) => {
+            const cur = Math.min(25, 4 + (lv - 1) * 1.2);
+            const next = Math.min(25, 4 + lv * 1.2);
+            return { label: '自動修復 最大HP比', from: `${cur.toFixed(1)}%`, to: `${next.toFixed(1)}%`, delta: cur >= 25 ? '' : `+${(next - cur).toFixed(1)}%` };
         }
     },
     {
@@ -1794,6 +1863,12 @@ const SEPHIROTH = [
             const goldPct = 18 + (lv - 1) * 7;
             const mult = (2.1 + (lv - 1) * 0.5).toFixed(2);
             return `獲得資金 +${goldPct}%（常時）＋ 4.3秒毎に搭乗車両威力 ×${mult} 倍の援護砲撃`;
+        },
+        getAutoSkillDelta: (lv) => {
+            const curGold = 18 + (lv - 1) * 7;
+            const curMult = 2.1 + (lv - 1) * 0.5;
+            const nextMult = 2.1 + lv * 0.5;
+            return { label: '獲得資金 / 援護砲撃', from: `+${curGold}% / ×${curMult.toFixed(2)}`, to: `+${curGold + 7}% / ×${nextMult.toFixed(2)}`, delta: `+7% / +${(nextMult - curMult).toFixed(2)}` };
         }
     },
     {
@@ -1814,6 +1889,13 @@ const SEPHIROTH = [
             const slowPct = Math.min(45, 12 + (lv - 1) * 3);
             const mult = (1.7 + (lv - 1) * 0.45).toFixed(2);
             return `全敵の移動速度 -${slowPct}%（常時）＋ 4.0秒毎に全敵へ ×${mult} 倍の重力衝撃波`;
+        },
+        getAutoSkillDelta: (lv) => {
+            const curSlow = Math.min(45, 12 + (lv - 1) * 3);
+            const nextSlow = Math.min(45, 12 + lv * 3);
+            const curMult = 1.7 + (lv - 1) * 0.45;
+            const nextMult = 1.7 + lv * 0.45;
+            return { label: '減速 / 重力波倍率', from: `${curSlow}% / ×${curMult.toFixed(2)}`, to: `${nextSlow}% / ×${nextMult.toFixed(2)}`, delta: `${curSlow >= 45 ? '' : `+${nextSlow - curSlow}% `}/ +${(nextMult - curMult).toFixed(2)}` };
         }
     },
     {
@@ -1834,6 +1916,12 @@ const SEPHIROTH = [
             const atkPct = 15 + (lv - 1) * 5;
             const mult = (2.5 + (lv - 1) * 0.65).toFixed(2);
             return `全車両の攻撃力 +${atkPct}%（常時）＋ 4.5秒毎に戦場の全敵へ ×${mult} 倍の天罰光線`;
+        },
+        getAutoSkillDelta: (lv) => {
+            const curAtk = 15 + (lv - 1) * 5;
+            const curMult = 2.5 + (lv - 1) * 0.65;
+            const nextMult = 2.5 + lv * 0.65;
+            return { label: '攻撃力 / 天罰光線', from: `+${curAtk}% / ×${curMult.toFixed(2)}`, to: `+${curAtk + 5}% / ×${nextMult.toFixed(2)}`, delta: `+5% / +${(nextMult - curMult).toFixed(2)}` };
         }
     }
 ];
@@ -2690,7 +2778,11 @@ const SEPHIROTH_TREE_NODES = [
         borderHex: '#eab308',
         baseCost: 8, costMult: 1.85,
         desc: 'セフィロトの頂点に位置する王冠の加護。全兵装基礎攻撃力と獲得資金を同時に永続増幅します。',
-        bonusText: (lv) => `全兵装攻撃力 +${lv * 45}% ＆ 獲得資金 +${lv * 30}%`
+        bonusText: (lv) => `全兵装攻撃力 +${lv * 45}% ＆ 獲得資金 +${lv * 30}%`,
+        bonusParts: [
+            { label: '攻撃力', get: (lv) => `+${lv * 45}%` },
+            { label: '獲得資金', get: (lv) => `+${lv * 30}%` }
+        ],
     },
     {
         id: 'chokmah',
@@ -2701,7 +2793,11 @@ const SEPHIROTH_TREE_NODES = [
         borderHex: '#3b82f6',
         baseCost: 4, costMult: 1.65,
         desc: '知恵の柱を司る加護。全兵装の装填・連射速度と会心ダメージ倍率を永続的に引き上げます。',
-        bonusText: (lv) => `全兵装装填速度 +${lv * 14}% ＆ 会心倍率 +${(lv * 0.25).toFixed(2)}倍`
+        bonusText: (lv) => `全兵装装填速度 +${lv * 14}% ＆ 会心倍率 +${(lv * 0.25).toFixed(2)}倍`,
+        bonusParts: [
+            { label: '装填速度', get: (lv) => `+${lv * 14}%` },
+            { label: '会心倍率', get: (lv) => `+${(lv * 0.25).toFixed(2)}倍` }
+        ],
     },
     {
         id: 'binah',
@@ -2712,7 +2808,10 @@ const SEPHIROTH_TREE_NODES = [
         borderHex: '#14b8a6',
         baseCost: 4, costMult: 1.65,
         desc: '峻厳の柱の頂を司る加護。ボスおよび重装甲目標に対する全兵装の最終与ダメージを永続強化します。',
-        bonusText: (lv) => `対ボス与ダメージ +${lv * 40}%`
+        bonusText: (lv) => `対ボス与ダメージ +${lv * 40}%`,
+        bonusParts: [
+            { label: '対ボス与ダメージ', get: (lv) => `+${lv * 40}%` }
+        ],
     },
     {
         id: 'chesed',
@@ -2723,7 +2822,10 @@ const SEPHIROTH_TREE_NODES = [
         borderHex: '#ec4899',
         baseCost: 4, costMult: 1.7,
         desc: '慈悲の柱を司る加護。敵撃破およびステージ制圧時の獲得資金を大幅に増加させます。',
-        bonusText: (lv) => `獲得資金 +${lv * 55}%`
+        bonusText: (lv) => `獲得資金 +${lv * 55}%`,
+        bonusParts: [
+            { label: '獲得資金', get: (lv) => `+${lv * 55}%` }
+        ],
     },
     {
         id: 'geburah',
@@ -2734,7 +2836,10 @@ const SEPHIROTH_TREE_NODES = [
         borderHex: '#ef4444',
         baseCost: 3, costMult: 1.6,
         desc: '峻厳の柱を司る加護。全兵装の基礎攻撃力を永続的に大きく強化します。',
-        bonusText: (lv) => `全兵装攻撃力 +${lv * 55}%`
+        bonusText: (lv) => `全兵装攻撃力 +${lv * 55}%`,
+        bonusParts: [
+            { label: '攻撃力', get: (lv) => `+${lv * 55}%` }
+        ],
     },
     {
         id: 'tiphareth',
@@ -2745,7 +2850,10 @@ const SEPHIROTH_TREE_NODES = [
         borderHex: '#f59e0b',
         baseCost: 5, costMult: 1.8,
         desc: '樹の中心・均衡の柱の要。セフィラ（駅員）のシナジー攻撃・装填速度ボーナスを増幅します。',
-        bonusText: (lv) => `セフィロト・シナジー効果 +${lv * 35}%`
+        bonusText: (lv) => `セフィロト・シナジー効果 +${lv * 35}%`,
+        bonusParts: [
+            { label: 'シナジー効果', get: (lv) => `+${lv * 35}%` }
+        ],
     },
     {
         id: 'netzach',
@@ -2756,7 +2864,10 @@ const SEPHIROTH_TREE_NODES = [
         borderHex: '#10b981',
         baseCost: 5, costMult: 1.75,
         desc: '勝利を約束する加護。出撃した鹵獲超兵器（縮小ボス護衛機）の攻撃力と耐久力を永続強化します。',
-        bonusText: (lv) => `鹵獲超兵器 攻撃＆HP +${lv * 50}%`
+        bonusText: (lv) => `鹵獲超兵器 攻撃＆HP +${lv * 50}%`,
+        bonusParts: [
+            { label: '鹵獲機 攻撃/HP', get: (lv) => `+${lv * 50}%` }
+        ],
     },
     {
         id: 'hod',
@@ -2767,7 +2878,10 @@ const SEPHIROTH_TREE_NODES = [
         borderHex: '#ca8a04',
         baseCost: 5, costMult: 1.75,
         desc: '戦術指令の栄光を司る加護。装甲強化（体力強化）1レベルあたりの最大耐久力の上昇幅を永続的に拡張します。',
-        bonusText: (lv) => `体力強化の上昇幅 +${lv * 20}%`
+        bonusText: (lv) => `体力強化の上昇幅 +${lv * 20}%`,
+        bonusParts: [
+            { label: '体力強化の上昇幅', get: (lv) => `+${lv * 20}%` }
+        ],
     },
     {
         id: 'yesod',
@@ -2778,7 +2892,10 @@ const SEPHIROTH_TREE_NODES = [
         borderHex: '#ea580c',
         baseCost: 3, costMult: 1.6,
         desc: 'すべてを支える基礎の加護。装甲列車の最大耐久力を永続的に引き上げます。',
-        bonusText: (lv) => `最大耐久力 +${lv * 65}%`
+        bonusText: (lv) => `最大耐久力 +${lv * 65}%`,
+        bonusParts: [
+            { label: '最大耐久力', get: (lv) => `+${lv * 65}%` }
+        ],
     },
     {
         id: 'malkuth',
@@ -2790,7 +2907,10 @@ const SEPHIROTH_TREE_NODES = [
         baseCost: 10, costMult: 2.2,
         maxLevel: 3,
         desc: '物質界の王国を統べる加護。鹵獲超兵器の同時出撃可能枠を +1 拡張します（初期1枠→最大4枠）。',
-        bonusText: (lv) => `鹵獲兵器 同時出撃枠: ${1 + lv} 体`
+        bonusText: (lv) => `鹵獲兵器 同時出撃枠: ${1 + lv} 体`,
+        bonusParts: [
+            { label: '出撃枠', get: (lv) => `${1 + lv} 体` }
+        ],
     }
 ];
 
@@ -2888,7 +3008,10 @@ const TACTICAL_SKILLS = [
         costMult: 1.48,
         desc: '全車両の砲塔が一斉に超出力砲撃を放ち、戦場内の全敵ユニットへ壊滅的な砲撃ダメージを与える。',
         getPowerMult: (lv) => (2.2 + (lv - 1) * 0.55),
-        getEffectSummary: (lv) => `全敵へ搭載総火力 ×${((2.2 + (lv - 1) * 0.55)).toFixed(2)} 倍の集中砲撃`
+        getEffectSummary: (lv) => `全敵へ搭載総火力 ×${((2.2 + (lv - 1) * 0.55)).toFixed(2)} 倍の集中砲撃`,
+        getEffectParts: (lv) => [
+            { label: '集中砲撃 倍率', now: `×${(2.2 + (lv - 1) * 0.55).toFixed(2)}`, next: `×${(2.2 + lv * 0.55).toFixed(2)}` }
+        ]
     },
     {
         id: 'overdrive',
@@ -2910,7 +3033,12 @@ const TACTICAL_SKILLS = [
             const atk = Math.round((0.80 + (lv - 1) * 0.25) * 100);
             const spd = Math.round((0.45 + (lv - 1) * 0.10) * 100);
             return `${sec}秒間：攻撃力 +${atk}% ／ 装填速度 +${spd}%`;
-        }
+        },
+        getEffectParts: (lv) => [
+            { label: '攻撃力', now: `+${Math.round((0.80 + (lv - 1) * 0.25) * 100)}%`, next: `+${Math.round((0.80 + lv * 0.25) * 100)}%` },
+            { label: '装填速度', now: `+${Math.round((0.45 + (lv - 1) * 0.10) * 100)}%`, next: `+${Math.round((0.45 + lv * 0.10) * 100)}%` },
+            { label: '効果時間', now: `${(Math.min(1800, 600 + (lv - 1) * 45) / 60).toFixed(1)}秒`, next: `${(Math.min(1800, 600 + lv * 45) / 60).toFixed(1)}秒` }
+        ]
     },
     {
         id: 'goldrush',
@@ -2930,7 +3058,11 @@ const TACTICAL_SKILLS = [
             const sec = (Math.min(2100, 720 + (lv - 1) * 45) / 60).toFixed(1);
             const gld = Math.round((1.00 + (lv - 1) * 0.35) * 100);
             return `${sec}秒間：敵撃破時の獲得資金 +${gld}%`;
-        }
+        },
+        getEffectParts: (lv) => [
+            { label: '獲得資金', now: `+${Math.round((1.00 + (lv - 1) * 0.35) * 100)}%`, next: `+${Math.round((1.00 + lv * 0.35) * 100)}%` },
+            { label: '効果時間', now: `${(Math.min(2100, 720 + (lv - 1) * 45) / 60).toFixed(1)}秒`, next: `${(Math.min(2100, 720 + lv * 45) / 60).toFixed(1)}秒` }
+        ]
     },
     {
         id: 'shield',
@@ -2950,7 +3082,11 @@ const TACTICAL_SKILLS = [
             const sec = (Math.min(1500, 480 + (lv - 1) * 35) / 60).toFixed(1);
             const heal = Math.min(95, Math.round((0.20 + (lv - 1) * 0.05) * 100));
             return `HP ${heal}% 即時修復 ＋ ${sec}秒間 被ダメージ50%軽減`;
-        }
+        },
+        getEffectParts: (lv) => [
+            { label: '即時修復', now: `${Math.min(95, Math.round((0.20 + (lv - 1) * 0.05) * 100))}%`, next: `${Math.min(95, Math.round((0.20 + lv * 0.05) * 100))}%` },
+            { label: '効果時間', now: `${(Math.min(1500, 480 + (lv - 1) * 35) / 60).toFixed(1)}秒`, next: `${(Math.min(1500, 480 + lv * 35) / 60).toFixed(1)}秒` }
+        ]
     }
 ];
 
@@ -3122,10 +3258,14 @@ function getChokmahTreeCritBonus() {
 }
 
 function getEscortStats(bossId) {
+    return getEscortStatsAtLevel(bossId, state.escortLevels[bossId] || 1);
+}
+
+function getEscortStatsAtLevel(bossId, lv) {
     const base = ENEMY_TYPES[bossId];
     if (!base) return null;
-    const lv = state.escortLevels[bossId] || 1;
-    const lvMult = 1 + (lv - 1) * 0.42;
+    const level = Math.max(1, Math.floor(lv) || 1);
+    const lvMult = 1 + (level - 1) * 0.42;
     const netzachMult = getNetzachEscortMult();
     const maxHp = Math.floor((base.hp * 0.75 + 850) * lvMult * getPrestigeHpMult() * netzachMult);
     const dmg = Math.floor((base.damage * 0.48 + 36) * lvMult * getPrestigeAtkMult() * getEffectiveWeatherAllyAtkMult() * netzachMult);
@@ -3141,7 +3281,7 @@ function getEscortStats(bossId) {
         damage: dmg,
         cooldown,
         moveSpeed,
-        lv
+        lv: level
     };
 }
 
@@ -3196,6 +3336,29 @@ function getSephirahUpgradeCost(sephId) {
 }
 function getArmorUpgradeCost() {
     return Math.floor(200 * Math.pow(1.5, Math.min(80, state.armorLevel - 1)));
+}
+
+// アップグレード差分表示の共通ヘルパ。
+// accent は各強化の既存テーマ色。背景は低彩度のティントに留め、文字と枠だけ色を合わせる。
+// 暗い赤系などはそのままだと小さい文字でコントラストが足りないため、色相を保ったまま明度だけ上げる。
+function lightenHex(hex, amount) {
+    const h = hex.replace('#', '');
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    const mix = (c) => Math.round(c + (255 - c) * amount);
+    return '#' + [mix(r), mix(g), mix(b)].map(c => c.toString(16).padStart(2, '0')).join('');
+}
+
+function deltaChipHTML(text, accent) {
+    const textColor = lightenHex(accent, 0.22);
+    return `<span class="delta-chip" style="color:${textColor};background:${accent}1f;border-color:${accent}55;">${text}</span>`;
+}
+
+function deltaStatHTML(fromText, toText, deltaText, accent) {
+    const textColor = lightenHex(accent, 0.22);
+    const chip = deltaText ? deltaChipHTML(deltaText, accent) : '';
+    return `<span class="delta-stat"><span class="delta-from">${fromText}</span><span class="delta-arrow">→</span><span class="delta-to" style="color:${textColor};">${toText}</span>${chip}</span>`;
 }
 function calcMaxHpForArmor(armorLevel) {
     const armorSteps = Math.max(0, armorLevel - 1);
@@ -6250,6 +6413,14 @@ function renderStaffTab() {
                         <span class="text-[9px] text-emerald-300 bg-emerald-950 px-1.5 py-0.2 rounded">AUTO</span>
                     </div>
                     <div class="text-slate-200 mt-0.5 leading-snug">${s.getAutoSkillDesc(lv)}</div>
+                    ${hired && s.getAutoSkillDelta ? (() => {
+                        const d = s.getAutoSkillDelta(lv);
+                        if (!d) return '';
+                        return `<div class="mt-1.5 pt-1.5 border-t border-slate-700/80 flex items-baseline gap-1.5 text-[10px] tech-font">
+                            <span class="text-slate-400">${d.label}</span>
+                            ${deltaStatHTML(d.from, d.to, d.delta, '#c084fc')}
+                        </div>`;
+                    })() : ''}
                 </div>
             </div>
             <div>
@@ -6353,12 +6524,14 @@ function bulkUpgradeSephiroth() {
 // --- タブ: 研究開発 ---
 function renderRDTab() {
     const lvEl = document.getElementById('rd-armor-lv');
-    const valEl = document.getElementById('rd-armor-val');
-    const nextEl = document.getElementById('rd-armor-next');
+    const deltaEl = document.getElementById('rd-armor-delta');
     const btnEl = document.getElementById('btn-upgrade-armor');
     if (lvEl) lvEl.textContent = `Lv.${state.armorLevel}`;
-    if (valEl) valEl.textContent = state.maxHp.toLocaleString();
-    if (nextEl) nextEl.textContent = calcMaxHpForArmor(state.armorLevel + 1).toLocaleString();
+    if (deltaEl) {
+        const cur = state.maxHp;
+        const next = calcMaxHpForArmor(state.armorLevel + 1);
+        deltaEl.innerHTML = deltaStatHTML(cur.toLocaleString(), next.toLocaleString(), `+${(next - cur).toLocaleString()}`, '#34d399');
+    }
     if (btnEl) btnEl.textContent = `強化する (${getArmorUpgradeCost().toLocaleString()} G)`;
 
     const grid = document.getElementById('rd-weapons-grid');
@@ -6371,6 +6544,8 @@ function renderRDTab() {
         const lv = state.weaponLevels[w.id] || 1;
         const dmg = getWeaponDamage(w.id);
         const upgCost = getWeaponUpgradeCost(w.id);
+        // 威力はレベル1段ごとに +45% の線形成長（getWeaponDamage と同式）
+        const nextDmg = Math.round(w.damage * (1 + lv * 0.45) * getPrestigeAtkMult());
 
         const card = document.createElement('div');
         card.className = `bg-slate-800 border ${unlocked ? 'border-amber-600/60' : 'border-slate-700'} rounded-lg p-3 flex flex-col justify-between gap-2`;
@@ -6382,7 +6557,11 @@ function renderRDTab() {
                 </div>
                 <div class="text-[10px] text-slate-400 mt-0.5">[${w.typeName}] 陸×${w.multipliers.LAND} / 海×${w.multipliers.SEA} / 空×${w.multipliers.AIR}</div>
                 <p class="text-[11px] text-slate-300 mt-1">${w.desc}</p>
-                <div class="text-xs tech-font text-amber-400 mt-1">現在基礎威力: ${dmg.toLocaleString()}</div>
+                <div class="text-xs tech-font text-amber-400 mt-1">
+                    現在基礎威力: ${unlocked
+                        ? deltaStatHTML(dmg.toLocaleString(), nextDmg.toLocaleString(), `+${(nextDmg - dmg).toLocaleString()}`, '#fbbf24')
+                        : dmg.toLocaleString()}
+                </div>
             </div>
             <div>
                 ${unlocked
@@ -6523,6 +6702,16 @@ function renderSkillsTab() {
                 <div id="skill-summary-${sk.id}" class="bg-slate-900/90 border border-slate-700 rounded p-2 mt-2 text-[11px] text-amber-200 font-bold">
                     ${sk.getEffectSummary(lv)}
                 </div>
+                ${sk.getEffectParts && !maxed ? `
+                <div class="bg-slate-900/60 border border-slate-700/70 rounded p-2 mt-1 space-y-0.5">
+                    <div class="text-[10px] tech-font text-slate-400">Lv.${lv} → Lv.${lv + 1}</div>
+                    ${sk.getEffectParts(lv).map(part => `
+                        <div class="flex items-center justify-between gap-2 text-[10px] tech-font">
+                            <span class="text-slate-400">${part.label}</span>
+                            ${deltaStatHTML(part.now, part.next, '', sk.color)}
+                        </div>
+                    `).join('')}
+                </div>` : ''}
                 ${getSkillCapNote(sk.id) ? `<div class="text-[10px] text-slate-400 mt-1">${getSkillCapNote(sk.id)}</div>` : ''}
             </div>
             <div class="space-y-1.5">
@@ -6627,24 +6816,10 @@ function upgradeTacticalSkill(skillId) {
     const nextLv = lv + 1;
     state.skillLevels[skillId] = nextLv;
 
-    const lvBadge = document.getElementById(`skill-lv-badge-${skillId}`);
-    const summaryEl = document.getElementById(`skill-summary-${skillId}`);
-    const upgBtn = document.getElementById(`skill-upg-btn-${skillId}`);
-    if (lvBadge) lvBadge.textContent = `Lv.${nextLv}`;
-    if (summaryEl) summaryEl.textContent = sk.getEffectSummary(nextLv);
-    if (upgBtn) {
-        if (isSkillMaxed(skillId)) {
-            upgBtn.textContent = '⚡ MAX LEVEL（効果上限到達）';
-            upgBtn.disabled = true;
-            upgBtn.className = 'w-full bg-slate-900 text-slate-500 cursor-not-allowed font-bold py-1.5 rounded text-xs tech-font transition';
-        } else {
-            const nextCost = getSkillUpgradeCost(skillId);
-            upgBtn.textContent = `出力強化 Lv.${nextLv + 1} (${nextCost.toLocaleString()} G)`;
-        }
-    }
-
     SoundEngine.playUI('upgrade');
     updateHeaderUI();
+    // レベル・効果サマリ・差分パネル・上限表示をまとめて更新する
+    renderSkillsTab();
     saveGame(true);
 }
 
@@ -6683,6 +6858,8 @@ function renderEscortTab() {
         if (!stats) return;
         const upgCost = Math.floor(320 * Math.pow(1.5, Math.min(80, stats.lv - 1)));
         const sellPrice = getEscortSellPrice(bid);
+        // 次Lvのステータス（getEscortStats の定格 lvMult = 1 + (lv-1)*0.42 を1段進める）
+        const nextStats = getEscortStatsAtLevel(bid, stats.lv + 1);
 
         const card = document.createElement('div');
         if (isSold) {
@@ -6714,8 +6891,9 @@ function renderEscortTab() {
                         </span>
                     </div>
                     <div class="text-xs sm:text-sm font-bold text-white mt-1.5 truncate">${stats.name}</div>
-                    <div class="text-[11px] tech-font text-slate-300 mt-0.5">
-                        耐久(HP): <span class="text-emerald-300 font-bold">${stats.maxHp.toLocaleString()}</span> / 火力: <span class="text-amber-300 font-bold">${stats.damage.toLocaleString()}</span>
+                    <div class="text-[11px] tech-font text-slate-300 mt-0.5 space-y-0.5">
+                        <div>耐久(HP): ${deltaStatHTML(stats.maxHp.toLocaleString(), nextStats.maxHp.toLocaleString(), `+${(nextStats.maxHp - stats.maxHp).toLocaleString()}`, '#34d399')}</div>
+                        <div>火力: ${deltaStatHTML(stats.damage.toLocaleString(), nextStats.damage.toLocaleString(), `+${(nextStats.damage - stats.damage).toLocaleString()}`, '#fbbf24')}</div>
                     </div>
                 </div>
                 <div class="grid grid-cols-3 gap-1.5 pt-1">
@@ -7069,10 +7247,17 @@ function renderPrestigeTab() {
                 </div>
             </div>
             <p class="text-xs text-slate-300 leading-relaxed">${sel.desc}</p>
-            <div class="bg-slate-950/90 border border-emerald-600/50 rounded-lg p-2.5 space-y-1">
-                <div class="text-[10px] tech-font text-slate-400">現在の永続加護効果</div>
-                <div class="text-xs sm:text-sm font-black text-emerald-300">${sel.bonusText(selLv)}</div>
-                ${!selMax ? `<div class="text-[11px] tech-font text-amber-300 pt-1 border-t border-slate-800">次Lv強化後: ${sel.bonusText(selLv + 1)}</div>` : ''}
+            <div class="bg-slate-950/90 border border-emerald-600/50 rounded-lg p-2.5 space-y-1.5">
+                <div class="text-[10px] tech-font text-slate-400">現在の永続加護効果${selMax ? '' : ' → 次Lv'}</div>
+                ${sel.bonusParts.map(part => `
+                    <div class="text-[11px] tech-font flex items-center justify-between gap-2">
+                        <span class="text-slate-400">${part.label}</span>
+                        ${selMax
+                            ? `<span class="font-black" style="color:${sel.color};">${part.get(selLv)}</span>`
+                            : deltaStatHTML(part.get(selLv), part.get(selLv + 1), '', sel.color)}
+                    </div>
+                `).join('')}
+                ${selMax ? `<div class="text-[10px] tech-font text-slate-500 pt-1 border-t border-slate-800">MAX LEVEL 到達済み</div>` : ''}
             </div>
         </div>
         <div class="space-y-1.5">
