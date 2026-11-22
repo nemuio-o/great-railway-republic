@@ -2815,7 +2815,7 @@ const SEPHIROTH_TREE_NODES = [
         x: 50, y: 10,
         color: '#fef08a',
         borderHex: '#eab308',
-        baseCost: 8, costMult: 1.85,
+        baseCost: 20,
         desc: 'セフィロトの頂点に位置する王冠の加護。全兵装基礎攻撃力と獲得資金を同時に永続増幅します。',
         bonusText: (lv) => `全兵装攻撃力 +${lv * 45}% ＆ 獲得資金 +${lv * 30}%`,
         bonusParts: [
@@ -2830,7 +2830,7 @@ const SEPHIROTH_TREE_NODES = [
         x: 78, y: 24,
         color: '#60a5fa',
         borderHex: '#3b82f6',
-        baseCost: 4, costMult: 1.65,
+        baseCost: 10,
         desc: '知恵の柱を司る加護。全兵装の装填・連射速度と会心ダメージ倍率を永続的に引き上げます。',
         bonusText: (lv) => `全兵装装填速度 +${lv * 14}% ＆ 会心倍率 +${(lv * 0.25).toFixed(2)}倍`,
         bonusParts: [
@@ -2845,7 +2845,7 @@ const SEPHIROTH_TREE_NODES = [
         x: 22, y: 24,
         color: '#2dd4bf',
         borderHex: '#14b8a6',
-        baseCost: 4, costMult: 1.65,
+        baseCost: 10,
         desc: '峻厳の柱の頂を司る加護。ボスおよび重装甲目標に対する全兵装の最終与ダメージを永続強化します。',
         bonusText: (lv) => `対ボス与ダメージ +${lv * 40}%`,
         bonusParts: [
@@ -2859,7 +2859,7 @@ const SEPHIROTH_TREE_NODES = [
         x: 78, y: 44,
         color: '#f472b6',
         borderHex: '#ec4899',
-        baseCost: 4, costMult: 1.7,
+        baseCost: 10,
         desc: '慈悲の柱を司る加護。敵撃破およびステージ制圧時の獲得資金を大幅に増加させます。',
         bonusText: (lv) => `獲得資金 +${lv * 55}%`,
         bonusParts: [
@@ -2873,7 +2873,7 @@ const SEPHIROTH_TREE_NODES = [
         x: 22, y: 44,
         color: '#f87171',
         borderHex: '#ef4444',
-        baseCost: 3, costMult: 1.6,
+        baseCost: 8,
         desc: '峻厳の柱を司る加護。全兵装の基礎攻撃力を永続的に大きく強化します。',
         bonusText: (lv) => `全兵装攻撃力 +${lv * 55}%`,
         bonusParts: [
@@ -2887,7 +2887,7 @@ const SEPHIROTH_TREE_NODES = [
         x: 50, y: 48,
         color: '#fbbf24',
         borderHex: '#f59e0b',
-        baseCost: 5, costMult: 1.8,
+        baseCost: 13,
         desc: '樹の中心・均衡の柱の要。セフィラ（駅員）のシナジー攻撃・装填速度ボーナスを増幅します。',
         bonusText: (lv) => `セフィロト・シナジー効果 +${lv * 35}%`,
         bonusParts: [
@@ -2901,7 +2901,7 @@ const SEPHIROTH_TREE_NODES = [
         x: 78, y: 66,
         color: '#34d399',
         borderHex: '#10b981',
-        baseCost: 5, costMult: 1.75,
+        baseCost: 13,
         desc: '勝利を約束する加護。出撃した鹵獲超兵器（縮小ボス護衛機）の攻撃力と耐久力を永続強化します。',
         bonusText: (lv) => `鹵獲超兵器 攻撃＆HP +${lv * 50}%`,
         bonusParts: [
@@ -2915,7 +2915,7 @@ const SEPHIROTH_TREE_NODES = [
         x: 22, y: 66,
         color: '#fde047',
         borderHex: '#ca8a04',
-        baseCost: 5, costMult: 1.75,
+        baseCost: 13,
         desc: '戦術指令の栄光を司る加護。装甲強化（体力強化）1レベルあたりの最大耐久力の上昇幅を永続的に拡張します。',
         bonusText: (lv) => `体力強化の上昇幅 +${lv * 20}%`,
         bonusParts: [
@@ -2929,7 +2929,7 @@ const SEPHIROTH_TREE_NODES = [
         x: 50, y: 74,
         color: '#fb923c',
         borderHex: '#ea580c',
-        baseCost: 3, costMult: 1.6,
+        baseCost: 8,
         desc: 'すべてを支える基礎の加護。装甲列車の最大耐久力を永続的に引き上げます。',
         bonusText: (lv) => `最大耐久力 +${lv * 65}%`,
         bonusParts: [
@@ -2943,7 +2943,7 @@ const SEPHIROTH_TREE_NODES = [
         x: 50, y: 91,
         color: '#c084fc',
         borderHex: '#9333ea',
-        baseCost: 10, costMult: 2.2,
+        baseCost: 25,
         maxLevel: 3,
         desc: '物質界の王国を統べる加護。鹵獲超兵器の同時出撃可能枠を +1 拡張します（初期1枠→最大4枠）。',
         bonusText: (lv) => `鹵獲兵器 同時出撃枠: ${1 + lv} 体`,
@@ -3044,7 +3044,6 @@ const TACTICAL_SKILLS = [
         cooldownFrames: 900,
         durationFrames: 0,
         baseUpgradeCost: 350,
-        costMult: 1.48,
         desc: '全車両の砲塔が一斉に超出力砲撃を放ち、戦場内の全敵ユニットへ壊滅的な砲撃ダメージを与える。',
         getPowerMult: (lv) => (2.2 + (lv - 1) * 0.55),
         getEffectSummary: (lv) => `全敵へ搭載総火力 ×${((2.2 + (lv - 1) * 0.55)).toFixed(2)} 倍の集中砲撃`,
@@ -3063,7 +3062,6 @@ const TACTICAL_SKILLS = [
         cooldownFrames: 1350,
         getDurationFrames: (lv) => Math.min(1800, 600 + (lv - 1) * 45),
         baseUpgradeCost: 380,
-        costMult: 1.48,
         desc: '一定時間、全車両の兵器炉心を限界稼働させ、攻撃力と装填速度を劇的に引き上げる。',
         getAtkBonus: (lv) => (0.80 + (lv - 1) * 0.25),
         getSpeedBonus: (lv) => (0.45 + (lv - 1) * 0.10),
@@ -3090,7 +3088,6 @@ const TACTICAL_SKILLS = [
         cooldownFrames: 1500,
         getDurationFrames: (lv) => Math.min(2100, 720 + (lv - 1) * 45),
         baseUpgradeCost: 420,
-        costMult: 1.5,
         desc: '一定時間、撃破した敵部隊から戦時物資・資金を強制徴発し、獲得資金倍率を大幅に上昇させる。',
         getGoldBonus: (lv) => (1.00 + (lv - 1) * 0.35),
         getEffectSummary: (lv) => {
@@ -3114,7 +3111,6 @@ const TACTICAL_SKILLS = [
         cooldownFrames: 1200,
         getDurationFrames: (lv) => Math.min(1500, 480 + (lv - 1) * 35),
         baseUpgradeCost: 340,
-        costMult: 1.45,
         desc: '装甲列車の耐久値を即時修復すると同時に、一定時間、受けるダメージを半減する電磁障壁を展開する。',
         getHealRatio: (lv) => Math.min(0.95, (0.20 + (lv - 1) * 0.05)),
         getEffectSummary: (lv) => {
@@ -3360,19 +3356,23 @@ function getRelicRegenRatio() {
 }
 
 // ============================================================
-// 成長曲線とコスト（全体バランスの基準値）
+// コストと火力の伸び（周回前提のテンポを作る）
 // ------------------------------------------------------------
-// すべて乗算で伸ばし、コストの指数と収入の伸びを釣り合わせている。
-//   兵器/装甲: 1Lvあたり +10% の乗算（+120%までの加算上限は撤廃）
-//   コスト    : 1Lvあたり ×1.08（旧 1.45/1.5 は指数が強すぎてLv20以降買えなかった）
-//   敵        : 勢力ごとに HP・攻撃 ×2.6（プレイヤーの約2.6倍の成長率に対応）
-//   報酬      : 勢力ごとに ×2.16（=1.08^10 とほぼ一致し、毎勢力で10Lv前後買える）
-// 検証済みの到達点: 各勢力の大ボスTTK 約20〜40秒、ボス攻撃に約9〜15発耐える。
+// コストの伸び(r) > 火力の伸び にすると、買うほど次の1Lvが遠くなる。
+//   Cost_n = BaseCost * r^n
+//
+// ここでは コスト ×1.145 / 火力 ×1.08 と差をつけている。
+// この差が「進むほど1ステージが重くなる」壁になる。
+//
+// 検証済みの到達点（転生0回・スキルや鹵獲機なし）:
+//   アメリカ入口 n41   … 約0.15h
+//   イスラム大ボス n130 … 約2.1h（ここまでが1周目）
+//   ロシア入口 n131    … ここで完全に止まる（転生が必要）
+// 転生してセフィロトを伸ばすと、この壁を越えて次の勢力へ進める。
 // ============================================================
-const COST_GROWTH = 1.08;
-const WEAPON_GROWTH = 0.10;
-const ARMOR_GROWTH = 0.10;
-
+const COST_GROWTH = 1.145;
+const WEAPON_GROWTH = 0.08;
+const ARMOR_GROWTH = 0.08;
 // 転生ごとの成長上乗せ。ハードキャップ（+40%で打ち止め）だと上限に達した瞬間に
 // 成長が止まり体感が悪いため、漸近するソフトギャップにする。
 //   bonus = MAX * (1 - EXP(-prestige / SCALE))
@@ -3383,6 +3383,14 @@ const WEAPON_PRESTIGE_BONUS_SCALE = 15;
 function getPrestigeGrowthBonus() {
     const prestige = Math.max(0, Number(state.prestigeCount) || 0);
     return WEAPON_PRESTIGE_BONUS_MAX * (1 - Math.exp(-prestige / WEAPON_PRESTIGE_BONUS_SCALE));
+}
+
+// セフィロトノードのコストも、他と同じ COST_GROWTH で伸ばす。
+// 以前はノードごとに 1.6〜2.2 の倍率を持っていたため、20Lv累計が
+// 950万〜3200万まで暴走し、他の強化と桁が揃わなかった。
+function getPrestigeNodeCost(node, level) {
+    const lv = Math.max(0, Math.floor(level) || 0);
+    return Math.max(1, Math.floor(node.baseCost * Math.pow(COST_GROWTH, Math.min(200, lv))));
 }
 
 function getWeaponDamageAtLevel(weaponId, level) {
@@ -4115,12 +4123,9 @@ function getMaxAliveEnemies() {
 // ============================================================
 // 敵の勢力倍率
 // 旧 powerMult（0.65〜180,000 の巨大な指数）は廃止。
-// 勢力の強さは getFactionPowerMult()、ステージ内の伸びは
-// getCommonStageMult() が受け持つ。ここには共通の係数だけ置く。
-// 報酬は ×2.16（コスト1.08^10 とほぼ一致）で、毎勢力およそ10Lv分の強化が買える。
+// 敵の強さは getGlobalStageMult()、報酬は getGlobalRewardMult() が
+// 通しステージ番号から算出する。
 // ============================================================
-const ENEMY_TIER_REWARD = 2.16;
-const ENEMY_STAGE_REWARD = 0.09;
 // ボス種別の重さ（中ボス・ネームド・大ボス共通の係数）。
 // テンプレHPがネームドで突出しているため、係数で平準化する。
 const ENEMY_BOSS_HP_SCALE = 0.28;
@@ -4129,71 +4134,97 @@ function getFactionTier(faction) {
     return Math.max(0, FACTIONS.findIndex(f => f.id === faction.id));
 }
 
-// チュートリアル（国連警察）の序盤カーブ。
-// 初期装備（レールガン1両＋ティファレト）では STAGE 2 まで突破でき、
-// STAGE 3 から強化しないと通せない、という段差を作る。
-// 全10ステージに急峻な指数を掛けると ST10 で天文学的数値になるため、
-// STAGE 3 以降は +56%/STAGE の線形に切り替えて暴走を防ぐ。
-const TUTORIAL_HARD_START = 3;
-const TUTORIAL_EARLY_GROWTH = 0.35;
-const TUTORIAL_LATE_GROWTH = 1.6;
+// チュートリアル（国連警察）も通し番号カーブに従う。
+// ただし初期装備（レールガン1両＋ティファレト）で挑むため、
+// ST1-2 は軽く、ST3 で段差を作り、ST10 で通し番号カーブに合流させる。
+// 全区間で厳密に単調増加するように、各ステージの下限を前ステージ+εで担保する。
+const TUTORIAL_START_SCALE = 0.35;   // 初期装備で ST1-2 を突破できる強さ
 
 function getTutorialStageMult(stage) {
-    if (stage < TUTORIAL_HARD_START) return TUTORIAL_EARLY_GROWTH;
-    // ST3 で一気に 10倍 へ跳ね上げ、以降は加算で伸ばす。
-    // ST4 以降は初期装備では到底削り切れない HP になる。
-    const steps = stage - TUTORIAL_HARD_START;
-    return TUTORIAL_EARLY_GROWTH * (10 * (1 + steps * TUTORIAL_LATE_GROWTH));
+    const endMult = getGlobalStageMult({ id: 'pol' }, 10);  // ST10 で合流する倍率
+    if (stage <= 1) return TUTORIAL_START_SCALE;
+    if (stage === 2) return TUTORIAL_START_SCALE * 1.15;
+    // ST3 以降: 初期係数 → ST10倍率 へ指数的に収束（ST3で段差、以降なだらか）
+    const t = (stage - 2) / 8;                               // ST3=0.125 … ST10=1.0
+    const base2 = TUTORIAL_START_SCALE * 1.15;
+    return base2 * Math.pow(endMult / base2, Math.pow(t, 0.45));
+}
+// ============================================================
+// 敵の強さは「通しステージ番号」で決める
+// ------------------------------------------------------------
+// 重要: 勢力N の ST1 は、勢力N-1 の ST30 より必ず強い。
+// 各勢力ごとにカーブを作ると入口で難度が逆戻りするため、
+// 全370ステージを1本の単調増加関数に通す。
+//
+//   倍率 = 1.12^(通し番号 - 1)
+//
+// 1ステージあたり ×1.12。コインも同じ ×1.12 で伸ばすので、
+// 「1ステージ稼いで得られる強化量」がどこまで進んでも一定になる。
+// コスト(1.10/Lv)が火力(1.08/Lv)より重いぶん、進むほど1ステージが
+// 相対的に重くなり、周回して稼ぐ必要が出てくる。
+// 370ステージ通しても最終倍率は ×4.0e18 程度に収まる。
+// ============================================================
+const GLOBAL_STAGE_STEP = 1.12;
+
+// 通しステージ番号を返す（チュートリアルの10ステージを含む）
+function getGlobalStageNumber(faction, stage) {
+    let n = 0;
+    for (const f of FACTIONS) {
+        if (f.id === faction.id || f.isEndless) {
+            if (f.id === faction.id) {
+                return n + Math.max(1, stage);
+            }
+            continue;
+        }
+        n += f.stageCount || 30;
+    }
+    return Math.max(1, stage);
 }
 
-// 全勢力共通の序盤カーブ。
-// チュートリアルと同じ「ST1-2は緩い → ST3で段差 → 以降は緩やかに」を適用する。
-// ただし30ステージある勢力で ST3 に大きな段差を置くと ST20 以降が破綻するため、
-// ST3 は base の4倍に抑え、以降は毎ステージ ×1.14（上限12倍）で伸ばす。
-// これで「ST1-3は軽い / ST5で強化が必要 / ST30は周回前提」が全勢力で揃う。
-const COMMON_HARD_START = 3;
-const COMMON_EARLY_GROWTH = 0.40;
-const COMMON_STAGE_STEP = 1.14;
-const COMMON_STAGE_CAP = 12;
-
-function getCommonStageMult(stage) {
-    if (stage < COMMON_HARD_START) return COMMON_EARLY_GROWTH;
-    const steps = stage - COMMON_HARD_START;
-    return Math.min(COMMON_STAGE_CAP, COMMON_EARLY_GROWTH * 4 * Math.pow(COMMON_STAGE_STEP, steps));
+function getGlobalStageMult(faction, stage) {
+    const n = getGlobalStageNumber(faction, stage);
+    return Math.pow(GLOBAL_STAGE_STEP, n - 1);
 }
 
-// 勢力ごとの強さ。装備が育つ前提で、1勢力ごとに ×2.15。
-// tier1→2 は装備の伸びが大きい時期なので追加で ×1.6 補正する。
-const FACTION_TIER_MULT = 2.15;
-const TIER2_EXTRA = 1.6;
+// 報酬（コイン）の伸び。敵HPと同じ ×1.12 に揃える。
+//
+// これが揃っていることが「詰まったら周回して稼ぐ」を成立させる鍵。
+//   コイン/秒 ∝ DPS / 敵HP
+// なので、コインと敵HPが同じ率で伸びれば、どのステージを周回しても
+// 「1秒あたりに買える強化量」が変わらない。深いステージを周回するほど
+// 得をする、という破綻も起きない。
+//
+// もしコインが敵HPより速く伸びると（例: コイン1.15 / 敵1.12）、進むほど
+// 楽になって壁が消え、周回が一度も発生しなくなる。
+const REWARD_STAGE_STEP = 1.12;
 
-function getFactionPowerMult(faction) {
-    const tier = getFactionTier(faction);
-    if (tier <= 0) return 1;
-    let m = Math.pow(FACTION_TIER_MULT, Math.max(0, tier - 1));
-    if (tier >= 2) m *= TIER2_EXTRA;
-    return m;
+function getGlobalRewardMult(faction, stage) {
+    const n = getGlobalStageNumber(faction, stage);
+    return Math.pow(REWARD_STAGE_STEP, n - 1);
 }
 
+// ============================================================
+// 敵の勢力倍率
+// 旧 powerMult（0.65〜180,000 の巨大な指数）は廃止。
+// 敵の強さは getGlobalStageMult()、報酬は getGlobalRewardMult() が
+// 通しステージ番号から算出する。
+//
+// ボス面が重く入口ST1が軽いのは意図した設計。ウェーブ構成の山を
+// そのまま残す（正規化して潰さない）。
+// ============================================================
 function getEnemyFactionMult(faction, tmpl) {
     const bossScale = (tmpl && tmpl.isBoss) ? ENEMY_BOSS_HP_SCALE : 1;
-
-    let hpMult, dmgMult;
-    if (faction.isTutorial) {
-        const tut = getTutorialStageMult(state.stage);
-        hpMult = tut * bossScale;
-        dmgMult = Math.sqrt(tut);
-    } else {
-        const power = getFactionPowerMult(faction);
-        const stageMult = getCommonStageMult(state.stage);
-        hpMult = power * stageMult * bossScale;
-        dmgMult = Math.pow(power, 0.55) * Math.sqrt(stageMult) * 0.85;
-    }
+    const stageMult = faction.isTutorial
+        ? getTutorialStageMult(state.stage)
+        : getGlobalStageMult(faction, state.stage);
+    const hpMult = stageMult * bossScale;
+    // 攻撃力はHPほど急がせない（HPの平方根相当）。急に即死させないため。
+    const dmgMult = Math.sqrt(stageMult) * 1.15;
 
     return {
         hpMult,
         dmgMult,
-        rewardMult: Math.pow(ENEMY_TIER_REWARD, getFactionTier(faction)) * (1 + (state.stage - 1) * ENEMY_STAGE_REWARD)
+        rewardMult: getGlobalRewardMult(faction, state.stage)
     };
 }
 
@@ -7379,7 +7410,7 @@ function renderWorldTab() {
                 ${bKey ? `<div class="text-[10px] mt-1 ${state.beaconKeys[bKey.id] ? 'text-cyan-300 font-bold' : 'text-slate-400'}">🔑 制圧報酬レリック: ${bKey.name} ${state.beaconKeys[bKey.id] ? '（入手済）' : ''}</div>` : ''}
                 <div class="flex justify-between items-center text-[11px] tech-font mt-1.5">
                     <span class="text-amber-300">到達: STAGE ${maxSt}${f.isEndless ? '' : `/${f.stageCount}`}</span>
-                    <span class="text-red-300">敵: HP×${Math.round(getFactionPowerMult(f)).toLocaleString()} / 報酬×${Math.round(Math.pow(ENEMY_TIER_REWARD, getFactionTier(f))).toLocaleString()}</span>
+                    <span class="text-red-300">敵: HP×${Math.round(getGlobalStageMult(f, 1)).toLocaleString()} / 報酬×${Math.round(getGlobalRewardMult(f, 1)).toLocaleString()}</span>
                 </div>
             </div>
             <div>
@@ -7440,32 +7471,50 @@ function switchFaction(factionId, isAutoAdvance = false) {
 }
 
 // --- タブ: プレステージ（セフィロトの樹 デザイン＆10ノード配置） ---
-// 獲得欠片は「今回の周回で到達した進行度」のみから算出する。
-// 解放済み勢力・制圧済み勢力（clearedFactions）は永続データでプレステージ後も残るため、
-// これらを加算に含めると周回せずにプレステージを連打するだけで欠片が無限に増えてしまう。
-// 周回を重ねるほど僅かに効率が上がる（転生回数1回につき+2%、最大30回で+60%）ことで、
-// 何度も走り直す動機を残しつつ、連打による無限増殖は起こらないようにしている。
-function getPrestigeRerunMultiplier() {
-    const count = Math.max(0, Math.min(30, Number(state.prestigeCount) || 0));
-    return 1 + count * 0.02;
-}
+// 欠片の供給は「今回の到達度」を平方根カーブで変換する。
+//
+// インクリメンタルゲームの定石:
+//   MetaCurrency = k × (生涯進行度)^p    (p < 1、多くは 0.5)
+// 線形だと進行度に比例して供給が膨らみ、周回を重ねるほど強化が簡単になり
+// 難度が消えてしまう。平方根にすると、
+//   - 浅い周回でも一定量はもらえる（取りこぼしがない）
+//   - 深く潜るほど1点あたりの効率は下がる（インフレを抑える）
+// という、長期運用に耐える曲線になる。
+//
+// 注意: clearedFactions は永続なので加算に含めない（連打で増殖するため）。
+const PRESTIGE_SHARD_COEF = 1.6;      // k: 進行度1あたりの基礎効率
+const PRESTIGE_SHARD_EXP = 0.5;       // p: 平方根
 
-function calcPrestigeGainShards() {
+function calcPrestigeRawScore() {
     let score = 0;
     FACTIONS.forEach((f, idx) => {
         if (f.isTutorial) return;
         const reached = state.maxReachedStages[f.id] || 1;
         if (reached > 1) score += (reached - 1) * (1 + idx * 0.65);
     });
-    return Math.floor(score * 0.45 * getPrestigeRerunMultiplier());
+    return score;
+}
+
+// 転生回数による僅かな効率上昇（+1.5%/回、最大+45%）。
+// 周回そのものへの報酬は残しつつ、主効果は平方根側で抑える。
+function getPrestigeRerunMultiplier() {
+    const count = Math.max(0, Math.min(30, Number(state.prestigeCount) || 0));
+    return 1 + count * 0.015;
+}
+
+function calcPrestigeGainShards() {
+    const score = calcPrestigeRawScore();
+    if (score <= 0) return 0;
+    const shards = PRESTIGE_SHARD_COEF * Math.pow(score, PRESTIGE_SHARD_EXP) * getPrestigeRerunMultiplier();
+    return Math.floor(shards);
 }
 
 function selectSephirothTreeNode(nodeId) {
     state.selectedSephirothTreeNode = nodeId;
     renderPrestigeTab();
 }
-// 転生（プレステージ）の実行条件。転生回数を重ねるほど要求戦線が1つ先へ進む。
-// 例: 0〜1回目=アメリカ大ボス / 2回目=中華 / 3回目=イスラム / …
+// 転生（プレステージ）の実行条件。転生2回ごとに要求戦線が1つ先へ進む。
+// 例: 0〜1回目=アメリカ大ボス / 2〜3回目=中華 / 4〜5回目=イスラム …
 const PRESTIGE_REQUIRE_FACTIONS = ['usa', 'chn', 'isl', 'rus', 'eu', 'ter', 'corp', 'gew', 'ant'];
 
 function getPrestigeRequirement() {
@@ -7565,7 +7614,7 @@ function renderPrestigeTab() {
         const lv = getTreeLv(n.id);
         const isSelected = n.id === selectedId;
         const isMax = n.maxLevel && lv >= n.maxLevel;
-        const cost = Math.floor(n.baseCost * Math.pow(n.costMult, Math.min(80, lv)));
+        const cost = getPrestigeNodeCost(n, lv);
         const canAfford = !isMax && state.sephirothShards >= cost;
 
         nodesHtml += `
@@ -7589,7 +7638,7 @@ function renderPrestigeTab() {
     const sel = nodeMap[selectedId];
     const selLv = getTreeLv(sel.id);
     const selMax = sel.maxLevel && selLv >= sel.maxLevel;
-    const selCost = Math.floor(sel.baseCost * Math.pow(sel.costMult, Math.min(80, selLv)));
+    const selCost = getPrestigeNodeCost(sel, selLv);
 
     inspector.innerHTML = `
         <div class="space-y-2.5">
@@ -7633,7 +7682,7 @@ function buyPrestigeUpgrade(id) {
     if (!u) return;
     const lv = getTreeLv(id);
     if (u.maxLevel && lv >= u.maxLevel) return;
-    const cost = Math.floor(u.baseCost * Math.pow(u.costMult, Math.min(80, lv)));
+    const cost = getPrestigeNodeCost(u, lv);
     if (state.sephirothShards < cost) {
         showToast('セフィロトの木の欠片が不足しています！');
         return;
