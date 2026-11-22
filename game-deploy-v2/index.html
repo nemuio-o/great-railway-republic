@@ -2045,7 +2045,15 @@ function updateSephirahAutoSkills() {
             return;
         }
 
-        const aliveEnemies = enemies.filter(e => e.hp > 0);
+        const aliveEnemiesAll = enemies.filter(e => e.hp > 0);
+        if (aliveEnemiesAll.length === 0) return;
+
+        // 自動スキルも射程の制約を受ける。射程外の敵をここで処理してしまうと、
+        // 画面外に滞留した敵が自動スキルだけでゆっくり溶け、
+        // 「攻撃が届いていないのに勝手にステージが進む」状態になるため。
+        const autoRange = (getCarEffectiveStats(car) || { weapon: { range: 480 } }).weapon.range;
+        const carXForRange = getCarX(car.index);
+        const aliveEnemies = aliveEnemiesAll.filter(e => (e.x - carXForRange) <= autoRange);
         if (aliveEnemies.length === 0) return;
 
         switch (s.id) {
@@ -4138,11 +4146,12 @@ function getFactionTier(faction) {
 // STAGE 3 以降は +45%/STAGE の線形に切り替えて暴走を防ぐ。
 const TUTORIAL_HARD_START = 3;
 const TUTORIAL_EARLY_GROWTH = 0.35;
-const TUTORIAL_LATE_GROWTH = 0.75;
+const TUTORIAL_LATE_GROWTH = 1.6;
 
 function getTutorialStageMult(stage) {
     if (stage < TUTORIAL_HARD_START) return TUTORIAL_EARLY_GROWTH;
-    // ST3 で一気に 3.5倍 へ跳ね上げ、以降は加算で伸ばす
+    // ST3 で一気に 3.5倍 へ跳ね上げ、以降は +56%/STAGE で伸ばす。
+    // ST4 以降は初期装備では到底削り切れない HP になる。
     const steps = stage - TUTORIAL_HARD_START;
     return TUTORIAL_EARLY_GROWTH * (10 * (1 + steps * TUTORIAL_LATE_GROWTH));
 }
