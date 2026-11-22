@@ -3180,9 +3180,7 @@ function getSkillUpgradeCost(skillId) {
     const sk = TACTICAL_SKILLS.find(s => s.id === skillId);
     if (!sk) return 999999;
     const lv = getSkillLevel(skillId);
-    const exp = Math.min(60, lv - 1);
-    const linearTail = lv > 61 ? (lv - 61) * 0.18 : 0;
-    const rawCost = sk.baseUpgradeCost * Math.pow(sk.costMult, exp) * (1 + linearTail);
+    const rawCost = sk.baseUpgradeCost * Math.pow(COST_GROWTH, Math.min(200, lv - 1));
     if (!Number.isFinite(rawCost)) return Number.MAX_SAFE_INTEGER;
     return Math.max(100, Math.floor(rawCost));
 }
@@ -3250,6 +3248,7 @@ function getNetzachEscortMult() {
     return 1 + getTreeLv('netzach') * 0.50;
 }
 function getHodArmorHpMult() {
+    // 体力強化の1Lvあたり成長率に掛かる倍率（Lv20で+400%）
     return 1 + getTreeLv('hod') * 0.20;
 }
 function getBinahBossDmgMult() {
@@ -3268,7 +3267,8 @@ function getEscortStatsAtLevel(bossId, lv) {
     const base = ENEMY_TYPES[bossId];
     if (!base) return null;
     const level = Math.max(1, Math.floor(lv) || 1);
-    const lvMult = 1 + (level - 1) * 0.42;
+    // 1Lvあたり乗算 +18%（旧 線形+42% は低Lvで強すぎ、高Lvで弱すぎた）
+    const lvMult = Math.pow(1.18, level - 1);
     const netzachMult = getNetzachEscortMult();
     const maxHp = Math.floor((base.hp * 0.75 + 850) * lvMult * getPrestigeHpMult() * netzachMult);
     // 天候の攻撃倍率は発射時（updateAllyEscorts 内部）に一度だけ掛ける。
@@ -3323,23 +3323,36 @@ function getRelicRegenRatio() {
     return Math.min(1.0, getCollectibleBonus('regen'));
 }
 
-// 兵器強化成長率（1Lvあたりの上昇幅）。
-// 転生ごとに +3% ずつ加算し、+45%〜+120% の範囲に収める（最大 転生25回）。
-// 以前の指数逓増（1.5^転生回数）は数回の転生で数十倍に膨らみ、数値が破綻していた。
-const WEAPON_GROWTH_BASE = 0.45;
-const WEAPON_GROWTH_PER_PRESTIGE = 0.03;
-const WEAPON_GROWTH_CAP = 1.20;
+// ============================================================
+// 成長曲線とコスト（全体バランスの基準値）
+// ------------------------------------------------------------
+// すべて乗算で伸ばし、コストの指数と収入の伸びを釣り合わせている。
+//   兵器/装甲: 1Lvあたり +10% の乗算（+120%までの加算上限は撤廃）
+//   コスト    : 1Lvあたり ×1.08（旧 1.45/1.5 は指数が強すぎてLv20以降買えなかった）
+//   敵        : 勢力ごとに HP・攻撃 ×2.6（プレイヤーの約2.6倍の成長率に対応）
+//   報酬      : 勢力ごとに ×2.16（=1.08^10 とほぼ一致し、毎勢力で10Lv前後買える）
+// 検証済みの到達点: 各勢力の大ボスTTK 約20〜40秒、ボス攻撃に約9〜15発耐える。
+// ============================================================
+const COST_GROWTH = 1.08;
+const WEAPON_GROWTH = 0.10;
+const ARMOR_GROWTH = 0.10;
 
-function getWeaponGrowthPerLevel() {
+// 転生ごとの成長上乗せ（+2%/転生、+40%で頭打ち）。
+// 兵器の成長率にだけ掛かるので、転生するほど火力の伸びが良くなる。
+const WEAPON_GROWTH_PER_PRESTIGE = 0.02;
+const WEAPON_PRESTIGE_CAP = 0.40;
+
+function getPrestigeGrowthBonus() {
     const prestige = Math.max(0, Number(state.prestigeCount) || 0);
-    return Math.min(WEAPON_GROWTH_CAP, WEAPON_GROWTH_BASE + prestige * WEAPON_GROWTH_PER_PRESTIGE);
+    return Math.min(WEAPON_PRESTIGE_CAP, prestige * WEAPON_GROWTH_PER_PRESTIGE);
 }
 
 function getWeaponDamageAtLevel(weaponId, level) {
     const w = WEAPONS[weaponId];
     if (!w) return 0;
     const lv = Math.max(1, Math.floor(level) || 1);
-    return Math.round(w.damage * (1 + (lv - 1) * getWeaponGrowthPerLevel()) * getPrestigeAtkMult());
+    const growth = 1 + WEAPON_GROWTH * (1 + getPrestigeGrowthBonus());
+    return Math.round(w.damage * Math.pow(growth, lv - 1) * getPrestigeAtkMult());
 }
 
 function getWeaponDamage(weaponId) {
@@ -3348,15 +3361,15 @@ function getWeaponDamage(weaponId) {
 function getWeaponUpgradeCost(weaponId) {
     const w = WEAPONS[weaponId];
     const lv = state.weaponLevels[weaponId] || 1;
-    return Math.floor(w.upgradeBaseCost * Math.pow(1.45, Math.min(80, lv - 1)));
+    return Math.max(50, Math.floor(w.upgradeBaseCost * Math.pow(COST_GROWTH, Math.min(200, lv - 1))));
 }
 function getSephirahUpgradeCost(sephId) {
     const s = SEPHIROTH.find(item => item.id === sephId);
     const lv = state.sephirahLevels[sephId] || 1;
-    return Math.floor(s.upgradeBaseCost * Math.pow(1.5, Math.min(80, lv - 1)));
+    return Math.max(50, Math.floor(s.upgradeBaseCost * Math.pow(COST_GROWTH, Math.min(200, lv - 1))));
 }
 function getArmorUpgradeCost() {
-    return Math.floor(200 * Math.pow(1.5, Math.min(80, state.armorLevel - 1)));
+    return Math.max(50, Math.floor(200 * Math.pow(COST_GROWTH, Math.min(200, state.armorLevel - 1))));
 }
 
 // アップグレード差分表示の共通ヘルパ。
@@ -3382,8 +3395,10 @@ function deltaStatHTML(fromText, toText, deltaText, accent) {
     return `<span class="delta-stat"><span class="delta-from">${fromText}</span><span class="delta-arrow">→</span><span class="delta-to" style="color:${textColor};">${toText}</span>${chip}</span>`;
 }
 function calcMaxHpForArmor(armorLevel) {
-    const armorSteps = Math.max(0, armorLevel - 1);
-    return Math.round((1000 + armorSteps * 1000 * getHodArmorHpMult()) * getPrestigeHpMult());
+    const lv = Math.max(1, Math.floor(armorLevel) || 1);
+    // 1Lvあたり乗算 +10%。ホドの加護はこの成長率そのものを底上げする。
+    const growth = 1 + ARMOR_GROWTH * getHodArmorHpMult();
+    return Math.round(1000 * Math.pow(growth, lv - 1) * getPrestigeHpMult());
 }
 function calcMaxHp() {
     return calcMaxHpForArmor(state.armorLevel);
@@ -3999,6 +4014,39 @@ function getMaxAliveEnemies() {
     return MAX_ALIVE_ENEMIES_BASE + (faction.isEndless ? 6 : 0);
 }
 
+// ============================================================
+// 敵の勢力倍率（新しいバランス基準）
+// 旧 powerMult（0.65〜180,000 の巨大な指数）を廃止し、
+// 勢力順に HP・攻撃 ×2.6 で伸ばす方式に統一した。
+// 報酬は ×2.16（コスト1.08^10 とほぼ一致）で、毎勢力およそ10Lv分の強化が買える。
+// 最初の2勢力（チュートリアル＋国連防衛軍）だけは強化前のため個別に緩和する。
+// ============================================================
+const ENEMY_TIER_HP = 2.6;
+const ENEMY_TIER_DMG = 2.6;
+const ENEMY_TIER_REWARD = 2.16;
+const ENEMY_STAGE_HP = 0.09;
+const ENEMY_STAGE_DMG = 0.05;
+const ENEMY_STAGE_REWARD = 0.09;
+const EARLY_TIER_COUNT = 2;
+const EARLY_HP_SCALE = 0.35;
+const EARLY_DMG_SCALE = 0.55;
+
+function getFactionTier(faction) {
+    return Math.max(0, FACTIONS.findIndex(f => f.id === faction.id));
+}
+
+function getEnemyFactionMult(faction) {
+    const tier = getFactionTier(faction);
+    const early = tier < EARLY_TIER_COUNT;
+    const stageHp = faction.isEndless ? ENEMY_STAGE_HP * 1.4 : ENEMY_STAGE_HP;
+    const stageDmg = faction.isEndless ? ENEMY_STAGE_DMG * 1.4 : ENEMY_STAGE_DMG;
+    return {
+        hpMult: Math.pow(ENEMY_TIER_HP, tier) * (1 + (state.stage - 1) * stageHp) * (early ? EARLY_HP_SCALE : 1),
+        dmgMult: Math.pow(ENEMY_TIER_DMG, tier) * (1 + (state.stage - 1) * stageDmg) * (early ? EARLY_DMG_SCALE : 1),
+        rewardMult: Math.pow(ENEMY_TIER_REWARD, tier) * (1 + (state.stage - 1) * ENEMY_STAGE_REWARD)
+    };
+}
+
 function spawnEnemyUnit(typeId) {
     const tmpl = ENEMY_TYPES[typeId];
     if (!tmpl) return;
@@ -4008,14 +4056,11 @@ function spawnEnemyUnit(typeId) {
     const h = canvas.height || 260;
     const sephPassive = getSephirahPassiveEffects();
     const pr = getPrestigeEnemyScaling();
+    const fm = getEnemyFactionMult(faction);
 
-    // ステージ内のHP伸びを緩め、終盤で1体あたりの処理時間が膨らみすぎないようにする
-    const stageScale = 1 + (state.stage - 1) * (faction.isEndless ? 0.30 : 0.20);
-    const endlessLoopBonus = faction.isEndless ? Math.pow(1.15, Math.floor((state.stage - 1) / 5)) : 1.0;
-
-    const finalHp = Math.max(40, Math.round(tmpl.hp * faction.powerMult * stageScale * endlessLoopBonus * weather.enemyHpMult * pr.hpMult));
-    const finalDmg = Math.max(5, Math.round(tmpl.damage * Math.pow(faction.powerMult, 0.78) * (1 + (state.stage - 1) * 0.12) * pr.dmgMult));
-    const finalReward = Math.max(5, Math.round(tmpl.reward * faction.rewardMult * (1 + (state.stage - 1) * 0.18) * getPrestigeGoldMult() * sephPassive.goldMult * pr.rewardMult));
+    const finalHp = Math.max(40, Math.round(tmpl.hp * fm.hpMult * weather.enemyHpMult * pr.hpMult));
+    const finalDmg = Math.max(5, Math.round(tmpl.damage * fm.dmgMult * pr.dmgMult));
+    const finalReward = Math.max(5, Math.round(tmpl.reward * fm.rewardMult * getPrestigeGoldMult() * sephPassive.goldMult * pr.rewardMult));
 
     let yPos = h * 0.70;
     if (tmpl.attr === 'AIR') {
@@ -4234,8 +4279,8 @@ function handleStageVictory() {
     SoundEngine.playStageClear();
 
     const faction = getCurrentFaction();
-    // ステージクリア報酬も、転生に伴う敵戦力の上昇分を吸収できるよう同じ倍率を掛ける
-    const clearBonus = Math.round((40 + state.stage * 22) * faction.rewardMult * getPrestigeGoldMult() * getActiveSkillGoldMult() * getPrestigeEnemyScaling().rewardMult);
+    // ステージクリア報酬も、敵の勢力倍率と同じ報酬補正で伸ばす
+    const clearBonus = Math.round((40 + state.stage * 22) * getEnemyFactionMult(faction).rewardMult * getPrestigeGoldMult() * getActiveSkillGoldMult() * getPrestigeEnemyScaling().rewardMult);
     state.gold += clearBonus;
 
     state.hp = state.maxHp;
@@ -6931,6 +6976,9 @@ function upgradeTacticalSkill(skillId) {
 }
 
 // --- タブ: 鹵獲超兵器 ---
+function getEscortUpgradeCost(lv) {
+    return Math.max(60, Math.floor(320 * Math.pow(COST_GROWTH, Math.min(200, (lv || 1) - 1))));
+}
 function getEscortSellPrice(bossId) {
     const base = ENEMY_TYPES[bossId];
     const lv = state.escortLevels[bossId] || 1;
@@ -6963,7 +7011,7 @@ function renderEscortTab() {
         const isEquipped = state.equippedEscorts.includes(bid);
         const stats = getEscortStats(bid);
         if (!stats) return;
-        const upgCost = Math.floor(320 * Math.pow(1.5, Math.min(80, stats.lv - 1)));
+        const upgCost = getEscortUpgradeCost(stats.lv);
         const sellPrice = getEscortSellPrice(bid);
         // 次Lvのステータス（getEscortStats の定格 lvMult = 1 + (lv-1)*0.42 を1段進める）
         const nextStats = getEscortStatsAtLevel(bid, stats.lv + 1);
@@ -7059,7 +7107,7 @@ function toggleEquipEscort(bossId) {
 
 function upgradeEscort(bossId) {
     const lv = state.escortLevels[bossId] || 1;
-    const cost = Math.floor(320 * Math.pow(1.5, Math.min(80, lv - 1)));
+    const cost = getEscortUpgradeCost(lv);
     if (state.gold < cost) {
         showToast('資金が不足しています！');
         return;
@@ -7172,7 +7220,7 @@ function renderWorldTab() {
                 ${bKey ? `<div class="text-[10px] mt-1 ${state.beaconKeys[bKey.id] ? 'text-cyan-300 font-bold' : 'text-slate-400'}">🔑 制圧報酬レリック: ${bKey.name} ${state.beaconKeys[bKey.id] ? '（入手済）' : ''}</div>` : ''}
                 <div class="flex justify-between items-center text-[11px] tech-font mt-1.5">
                     <span class="text-amber-300">到達: STAGE ${maxSt}${f.isEndless ? '' : `/${f.stageCount}`}</span>
-                    <span class="text-red-300">敵戦力: ×${f.powerMult.toLocaleString()} / 報酬: ×${f.rewardMult.toLocaleString()}</span>
+                    <span class="text-red-300">敵: HP×${Math.round(Math.pow(ENEMY_TIER_HP, getFactionTier(f)) * (getFactionTier(f) < EARLY_TIER_COUNT ? EARLY_HP_SCALE : 1)).toLocaleString()} / 報酬×${Math.round(Math.pow(ENEMY_TIER_REWARD, getFactionTier(f))).toLocaleString()}</span>
                 </div>
             </div>
             <div>
