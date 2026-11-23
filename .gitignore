@@ -11,3 +11,19 @@ node_modules/
 # Temp / scratch
 _tmp_*
 *.log
+
+# このリポジトリ（ゲーム）とは無関係のローカル作業ディレクトリ
+Wagent/
+bridge/
+docs/
+game-deploy/
+memory/
+remote/
+tutor/
+suika-slash/
+check_card.py
+delete
+skills-lock.json
+stop
+teapot.config.json
+tool-detail.png

@@ -373,12 +373,29 @@
             #faction-list-grid .mobile-faction-status { font-size: 9px; }
             #faction-list-grid .mobile-faction-progress { font-size: 10px; flex-wrap: wrap; }
             #faction-list-grid .mobile-faction-action { min-height: 44px; font-size: 12px; }
-            /* Match the lower terrain band while scaling with the available viewport. */
-            #mobile-armor-hud { width: clamp(174px,46vw,245px); height: clamp(56px,8dvh,84px); min-width: 0; padding: 7px 9px; border-width: 1px; display:flex; flex-direction:column; justify-content:space-between; }
-            #mobile-armor-hud > div:first-child { font-size: 8px; letter-spacing: .04em; margin: 0; }
-            #mobile-armor-hud > div:nth-child(2) { height: 7px; flex: 0 0 auto; margin: 0; }
-            #mobile-armor-hud > div:last-child { font-size: 14px; }
-            #mobile-armor-hud > div:last-child span:nth-child(2) { font-size: 10px; }
+            /* キャンバス内の左上にコンパクト表示。車両（下部）と重ならない */
+            #mobile-armor-hud {
+                position: absolute !important;
+                top: 44px !important;
+                left: 8px !important;
+                right: auto !important;
+                bottom: auto !important;
+                width: 150px !important;
+                min-width: 0 !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 3px 6px !important;
+                border-radius: 4px !important;
+                border-width: 1px !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
+                gap: 2px !important;
+            }
+            #mobile-armor-hud > div:first-child { font-size: 7px; letter-spacing: .03em; margin: 0 !important; }
+            #mobile-armor-hud > div:nth-child(2) { height: 6px; flex: 0 0 auto; margin: 0 !important; }
+            #mobile-armor-hud > div:last-child { font-size: 10px; line-height: 1; }
+            #mobile-armor-hud > div:last-child span:nth-child(2) { font-size: 8px; }
             #world-overview-card { grid-template-columns: minmax(120px,.72fr) minmax(0,1.28fr); align-items: stretch; }
             #world-overview-card #world-subtab-container { min-width: 0; grid-template-columns: minmax(0,1fr); }
             #world-overview-card #world-subtab-container button { width: 100%; min-height: 80px; }
@@ -468,7 +485,7 @@
         </header>
 
         <!-- 司令部戦術モニター外枠（上半部の残り全体を占有） -->
-        <div id="mobile-battle-shell" class="flex-1 min-h-0 flex flex-col bg-slate-950 px-1.5 sm:px-2.5 pt-1 pb-1 border-b-2 border-amber-700/80 shadow-2xl">
+        <div id="mobile-battle-shell" class="relative flex-1 min-h-0 flex flex-col bg-slate-950 px-1.5 sm:px-2.5 pt-1 pb-1 border-b-2 border-amber-700/80 shadow-2xl">
             <div class="flex-shrink-0 bg-slate-900 border-t-2 border-x-2 border-slate-600 rounded-t-md px-3 py-0.5 flex justify-between items-center text-[10px] tech-font text-slate-400">
                 <div class="flex items-center gap-2">
                     <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
@@ -604,7 +621,7 @@
                     <span>[UNIT: AIN-SOPH-AUR // 10-CAR]</span>
                 </div>
 
-                <!-- 戦闘画面左下：装甲列車耐久値 -->
+                <!-- 戦闘画面内：装甲列車耐久値 -->
                 <div id="mobile-armor-hud" class="absolute bottom-2 left-3 bg-slate-950/90 backdrop-blur border-2 border-emerald-600/80 rounded px-2.5 py-1 shadow-xl pointer-events-none z-20 min-w-[155px] sm:min-w-[180px]">
                     <div class="flex justify-between items-center text-[9px] sm:text-[10px] tech-font tracking-wider text-emerald-400 font-bold mb-0.5">
                         <span>◈ ARMOR INTEGRITY</span>
@@ -1356,6 +1373,25 @@
                 </button>
                 <button id="prestige-confirm-execute" onclick="executePrestige()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-black px-5 py-2 rounded shadow-lg text-xs sm:text-sm transition">
                     🌳 転生を実行する
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 鹵獲兵器 売却確認モーダル -->
+    <div id="escort-sell-confirm-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 border-2 border-red-600 rounded-lg max-w-md w-full p-5 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b border-red-700/60 pb-2">
+                <h3 class="text-lg font-bold text-red-300">🤖 鹵獲兵器 売却確認</h3>
+                <button onclick="closeEscortSellConfirmModal()" class="text-slate-400 hover:text-white text-xl font-bold px-2">×</button>
+            </div>
+            <div id="escort-sell-confirm-body" class="text-sm text-slate-300 leading-relaxed space-y-3"></div>
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-700">
+                <button onclick="closeEscortSellConfirmModal()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold px-4 py-2 rounded text-xs sm:text-sm transition">
+                    キャンセル
+                </button>
+                <button id="escort-sell-confirm-execute" onclick="executeSellEscort()" class="bg-red-600 hover:bg-red-500 text-white font-black px-5 py-2 rounded shadow-lg text-xs sm:text-sm transition">
+                    売却する
                 </button>
             </div>
         </div>
@@ -3264,6 +3300,19 @@ function checkAndUnlockAntarcticBase(notify = true) {
 
 // 戦術マスターデータ
 const TACTICAL_MAX_LEVEL = 30;
+// 戦術の最終効果。
+const TACTICAL_CAPS = {
+    salvo: 1.50,      // 全兵装攻撃力 +150%
+    overdrive: 3.00,  // 対ボス与ダメージ +300%
+    goldrush: 2.00,   // 獲得資金 +200%
+    shield: 0.70      // 被ダメージ -70%
+};
+
+function getTacticalEffectRatio(level, cap) {
+    const lv = Math.max(1, Math.min(TACTICAL_MAX_LEVEL, Math.floor(level) || 1));
+    return Math.min(cap, cap * (lv / TACTICAL_MAX_LEVEL));
+}
+
 const TACTICAL_SKILLS = [
     {
         id: 'salvo',
@@ -3275,10 +3324,10 @@ const TACTICAL_SKILLS = [
         btnBg: 'bg-red-900/90 hover:bg-red-800 text-red-100',
         baseUpgradeCost: 350,
         desc: '全兵装の攻撃力を常時強化する戦術。選択すると常時稼働する。',
-        getAtkBonus: (lv) => Math.min(1.50, lv * 0.05),
-        getEffectSummary: (lv) => `全兵装攻撃力 +${Math.round(Math.min(1.50, lv * 0.05) * 100)}%`,
+        getAtkBonus: (lv) => getTacticalEffectRatio(lv, TACTICAL_CAPS.salvo),
+        getEffectSummary: (lv) => `全兵装攻撃力 +${Math.round(getTacticalEffectRatio(lv, TACTICAL_CAPS.salvo) * 100)}%`,
         getEffectParts: (lv) => [
-            { label: '攻撃力', now: `+${Math.round(Math.min(1.50, lv * 0.05) * 100)}%`, next: `+${Math.round(Math.min(1.50, (lv + 1) * 0.05) * 100)}%` }
+            { label: '攻撃力', now: `+${Math.round(getTacticalEffectRatio(lv, TACTICAL_CAPS.salvo) * 100)}%`, next: `+${Math.round(getTacticalEffectRatio(lv + 1, TACTICAL_CAPS.salvo) * 100)}%` }
         ]
     },
     {
@@ -3291,10 +3340,10 @@ const TACTICAL_SKILLS = [
         btnBg: 'bg-amber-900/90 hover:bg-amber-800 text-amber-100',
         baseUpgradeCost: 380,
         desc: 'ボスへ与えるダメージを常時強化する戦術。選択すると常時稼働する。',
-        getBossBonus: (lv) => Math.min(3.00, lv * 0.10),
-        getEffectSummary: (lv) => `対ボス与ダメージ +${Math.round(Math.min(3.00, lv * 0.10) * 100)}%`,
+        getBossBonus: (lv) => getTacticalEffectRatio(lv, TACTICAL_CAPS.overdrive),
+        getEffectSummary: (lv) => `対ボス与ダメージ +${Math.round(getTacticalEffectRatio(lv, TACTICAL_CAPS.overdrive) * 100)}%`,
         getEffectParts: (lv) => [
-            { label: '対ボス与ダメージ', now: `+${Math.round(Math.min(3.00, lv * 0.10) * 100)}%`, next: `+${Math.round(Math.min(3.00, (lv + 1) * 0.10) * 100)}%` }
+            { label: '対ボス与ダメージ', now: `+${Math.round(getTacticalEffectRatio(lv, TACTICAL_CAPS.overdrive) * 100)}%`, next: `+${Math.round(getTacticalEffectRatio(lv + 1, TACTICAL_CAPS.overdrive) * 100)}%` }
         ]
     },
     {
@@ -3307,10 +3356,10 @@ const TACTICAL_SKILLS = [
         btnBg: 'bg-yellow-900/90 hover:bg-yellow-800 text-yellow-100',
         baseUpgradeCost: 420,
         desc: '敵撃破およびステージクリアで得られる資金を常時増やす戦術。',
-        getGoldBonus: (lv) => Math.min(2.00, lv * (2.00 / TACTICAL_MAX_LEVEL)),
-        getEffectSummary: (lv) => `獲得資金 +${Math.round(Math.min(2.00, lv * (2.00 / TACTICAL_MAX_LEVEL)) * 100)}%`,
+        getGoldBonus: (lv) => getTacticalEffectRatio(lv, TACTICAL_CAPS.goldrush),
+        getEffectSummary: (lv) => `獲得資金 +${Math.round(getTacticalEffectRatio(lv, TACTICAL_CAPS.goldrush) * 100)}%`,
         getEffectParts: (lv) => [
-            { label: '獲得資金', now: `+${Math.round(Math.min(2.00, lv * (2.00 / TACTICAL_MAX_LEVEL)) * 100)}%`, next: `+${Math.round(Math.min(2.00, (lv + 1) * (2.00 / TACTICAL_MAX_LEVEL)) * 100)}%` }
+            { label: '獲得資金', now: `+${Math.round(getTacticalEffectRatio(lv, TACTICAL_CAPS.goldrush) * 100)}%`, next: `+${Math.round(getTacticalEffectRatio(lv + 1, TACTICAL_CAPS.goldrush) * 100)}%` }
         ]
     },
     {
@@ -3323,10 +3372,10 @@ const TACTICAL_SKILLS = [
         btnBg: 'bg-sky-900/90 hover:bg-sky-800 text-sky-100',
         baseUpgradeCost: 340,
         desc: '受けるダメージを常時軽減する戦術。選択すると常時稼働する。',
-        getDamageReduction: (lv) => Math.min(0.70, lv * (0.70 / TACTICAL_MAX_LEVEL)),
-        getEffectSummary: (lv) => `被ダメージ -${Math.round(Math.min(0.70, lv * (0.70 / TACTICAL_MAX_LEVEL)) * 100)}%`,
+        getDamageReduction: (lv) => getTacticalEffectRatio(lv, TACTICAL_CAPS.shield),
+        getEffectSummary: (lv) => `被ダメージ -${Math.round(getTacticalEffectRatio(lv, TACTICAL_CAPS.shield) * 100)}%`,
         getEffectParts: (lv) => [
-            { label: '被ダメージ', now: `-${Math.round(Math.min(0.70, lv * (0.70 / TACTICAL_MAX_LEVEL)) * 100)}%`, next: `-${Math.round(Math.min(0.70, (lv + 1) * (0.70 / TACTICAL_MAX_LEVEL)) * 100)}%` }
+            { label: '被ダメージ', now: `-${Math.round(getTacticalEffectRatio(lv, TACTICAL_CAPS.shield) * 100)}%`, next: `-${Math.round(getTacticalEffectRatio(lv + 1, TACTICAL_CAPS.shield) * 100)}%` }
         ]
     }
 ];
@@ -3376,8 +3425,10 @@ function getSkillUpgradeCost(skillId) {
     const sk = TACTICAL_SKILLS.find(s => s.id === skillId);
     if (!sk) return 999999;
     const lv = getSkillLevel(skillId);
-    const rawCost = sk.baseUpgradeCost * Math.pow(COST_GROWTH, Math.min(200, lv - 1));
-    if (!Number.isFinite(rawCost)) return Number.MAX_SAFE_INTEGER;
+    // 武器と同じ伸び率: 武器DPS成長 × レベルコスト倍率 × 転生倍率
+    const costMult = Math.pow(getWeaponDamageGrowth(), lv - 1) * getUpgradeLevelCostMult(lv) * getPrestigeCostMult();
+    const rawCost = sk.baseUpgradeCost * costMult;
+    if (!Number.isFinite(rawCost)) return Infinity;
     return Math.max(100, Math.floor(rawCost));
 }
 
@@ -3468,12 +3519,29 @@ function getEscortStats(bossId) {
     return getEscortStatsAtLevel(bossId, state.escortLevels[bossId] || 1);
 }
 
+// 鹵獲機のレベル上限とソフトキャップ。
+// 1.18^Lv のまま上限なしだと Lv4000 付近で HP/攻撃力が Infinity になり、
+// さらにコスト計算が破綻して MAX_SAFE_INTEGER で買えてしまうため、
+// Lv100 以降は成長を 1.03/Lv に落とし、Lv200 で打ち止める。
+const ESCORT_MAX_LEVEL = 200;
+const ESCORT_SOFT_CAP_LEVEL = 100;
+const ESCORT_SOFT_GROWTH = 1.03;
+// 強化コストにHP増加を換算する重み（1HP = 0.01 DPS相当）。
+// 高HPの鹵獲機ほど強化費が高くなり、火力だけでなく耐久も価格に反映される。
+const ESCORT_HP_COST_WEIGHT = 0.01;
+
+function getEscortLevelMult(level) {
+    const lv = Math.max(1, Math.min(ESCORT_MAX_LEVEL, Math.floor(level) || 1));
+    if (lv <= ESCORT_SOFT_CAP_LEVEL) return Math.pow(1.18, lv - 1);
+    const soft = Math.pow(1.18, ESCORT_SOFT_CAP_LEVEL - 1);
+    return soft * Math.pow(ESCORT_SOFT_GROWTH, lv - ESCORT_SOFT_CAP_LEVEL);
+}
+
 function getEscortStatsAtLevel(bossId, lv) {
     const base = ENEMY_TYPES[bossId];
     if (!base) return null;
-    const level = Math.max(1, Math.floor(lv) || 1);
-    // 1Lvあたり乗算 +18%（旧 線形+42% は低Lvで強すぎ、高Lvで弱すぎた）
-    const lvMult = Math.pow(1.18, level - 1);
+    const level = Math.max(1, Math.min(ESCORT_MAX_LEVEL, Math.floor(lv) || 1));
+    const lvMult = getEscortLevelMult(level);
     const netzachMult = getNetzachEscortMult();
     const malkuthMult = 1 + getMalkuthEscortBonus();
     const maxHp = Math.floor((base.hp * 0.75 + 850) * lvMult * getPrestigeHpMult() * netzachMult * malkuthMult);
@@ -3547,6 +3615,16 @@ function getRelicRegenRatio() {
 const COST_GROWTH = 1.145;
 const WEAPON_GROWTH = 0.08;
 const ARMOR_GROWTH = 0.08;
+// 武器・セフィラの強化コストは「実戦DPSの伸び」に比例させる。
+// 基準値に加えて、レベルごと・転生回数ごとの割増を掛ける。
+const UPGRADE_BASE_COST_PER_DPS = 60;
+const UPGRADE_LEVEL_COST_RATE = 1.4;
+const UPGRADE_PRESTIGE_COST_RATE = 0.10;
+// 武器・セフィラ・装甲の上限。コスト/ステータスのInfinity化を防ぐ安全弁。
+// 現状の最高難度（暗黒無限ST30）でも必要Tierは約290 / 装甲約221なので十分な余裕がある。
+const WEAPON_MAX_LEVEL = 1500;
+const SEPHIRAH_MAX_LEVEL = 1500;
+const ARMOR_MAX_LEVEL = 4000;
 // 転生ごとの成長上乗せ。ハードキャップ（+40%で打ち止め）だと上限に達した瞬間に
 // 成長が止まり体感が悪いため、漸近するソフトギャップにする。
 //   bonus = MAX * (1 - EXP(-prestige / SCALE))
@@ -3559,37 +3637,134 @@ function getPrestigeGrowthBonus() {
     return WEAPON_PRESTIGE_BONUS_MAX * (1 - Math.exp(-prestige / WEAPON_PRESTIGE_BONUS_SCALE));
 }
 
-// セフィロトノードのコストも、他と同じ COST_GROWTH で伸ばす。
-// 以前はノードごとに 1.6〜2.2 の倍率を持っていたため、20Lv累計が
-// 950万〜3200万まで暴走し、他の強化と桁が揃わなかった。
-function getPrestigeNodeCost(node, level) {
-    const lv = Math.max(0, Math.floor(level) || 0);
-    return Math.max(1, Math.floor(node.baseCost * Math.pow(COST_GROWTH, Math.min(200, lv))));
+// レベルごとのコスト割増。DPSの伸びとは別に、同じ強化を重ねるほど高くする。
+function getUpgradeLevelCostMult(level) {
+    const lv = Math.max(1, Math.floor(level) || 1);
+    const mult = Math.pow(UPGRADE_LEVEL_COST_RATE, lv - 1);
+    return Number.isFinite(mult) ? mult : Infinity;
+}
+
+// 転生回数ごとのコスト割増。報酬の伸び(+10%/転生)と同率にして、
+// 周回が進んでも強化のテンポが極端に変わらないようにする。
+function getPrestigeCostMult() {
+    const prestige = Math.max(0, Number(state.prestigeCount) || 0);
+    const mult = 1 + prestige * UPGRADE_PRESTIGE_COST_RATE;
+    return Number.isFinite(mult) ? mult : Infinity;
+}
+
+function getWeaponDamageGrowth() {
+    return 1 + WEAPON_GROWTH * (1 + getPrestigeGrowthBonus());
+}
+
+function getWeaponDpsAtLevel(weaponId, level) {
+    const w = WEAPONS[weaponId];
+    if (!w) return 0;
+    // 実際に表示・戦闘で使われる丸め後のダメージでDPSを出す。
+    return getWeaponDamageAtLevel(weaponId, level) * 60 / w.cooldown;
 }
 
 function getWeaponDamageAtLevel(weaponId, level) {
     const w = WEAPONS[weaponId];
     if (!w) return 0;
-    const lv = Math.max(1, Math.floor(level) || 1);
-    const growth = 1 + WEAPON_GROWTH * (1 + getPrestigeGrowthBonus());
-    return Math.round(w.damage * Math.pow(growth, lv - 1) * getPrestigeAtkMult());
+    const lv = Math.max(1, Math.min(WEAPON_MAX_LEVEL, Math.floor(level) || 1));
+    return Math.round(w.damage * Math.pow(getWeaponDamageGrowth(), lv - 1) * getPrestigeAtkMult());
 }
 
 function getWeaponDamage(weaponId) {
     return getWeaponDamageAtLevel(weaponId, state.weaponLevels[weaponId] || 1);
 }
+
 function getWeaponUpgradeCost(weaponId) {
-    const w = WEAPONS[weaponId];
-    const lv = state.weaponLevels[weaponId] || 1;
-    return Math.max(50, Math.floor(w.upgradeBaseCost * Math.pow(COST_GROWTH, Math.min(200, lv - 1))));
+    const lv = Math.max(1, state.weaponLevels[weaponId] || 1);
+    if (lv >= WEAPON_MAX_LEVEL) return Infinity;
+    const gain = getWeaponDpsAtLevel(weaponId, lv + 1) - getWeaponDpsAtLevel(weaponId, lv);
+    const cost = gain * UPGRADE_BASE_COST_PER_DPS * getUpgradeLevelCostMult(lv) * getPrestigeCostMult();
+    if (!Number.isFinite(cost)) return Infinity;
+    return Math.max(50, Math.ceil(cost));
 }
+
+// セフィラの強化コストも、実際に噛み合っている兵装のDPS上昇から算出する。
+// 装備中の兵装と解放済みの同系統兵装のうち、最もDPSが高いものを基準にする。
+function getSephirahMatchingWeaponId(sephId) {
+    const s = SEPHIROTH.find(item => item.id === sephId);
+    if (!s) return null;
+    const all = Object.values(WEAPONS).filter(w => w.type === s.specialty);
+    if (!all.length) return null;
+
+    // 装備中の兵装と解放済みの同系統兵装のうち、最大DPSのものを基準にする。
+    // 弱い兵装に付け替えてから強化する、といった抜け道を防ぐため。
+    const ids = all
+        .filter(w => state.unlockedWeapons.includes(w.id))
+        .map(w => w.id);
+    const equipped = state.cars.find(car =>
+        car.sephirahId === sephId && WEAPONS[car.weaponId] && WEAPONS[car.weaponId].type === s.specialty
+    );
+    if (equipped && !ids.includes(equipped.weaponId)) ids.push(equipped.weaponId);
+    const pool = ids.length ? ids : all.map(w => w.id);
+
+    let bestId = pool[0];
+    let bestDps = -1;
+    pool.forEach(id => {
+        const dps = getWeaponDpsAtLevel(id, state.weaponLevels[id] || 1);
+        if (dps > bestDps) { bestDps = dps; bestId = id; }
+    });
+    return bestId;
+}
+
+// セフィラ固有の追加効果（常時攻撃力・会心）もDPS換算に含める。
+function getSephirahPassiveDpsMult(sephId, level) {
+    const lv = Math.max(1, Math.floor(level) || 1);
+    if (sephId === 'netzach') return 1 + 0.10 + (lv - 1) * 0.04;
+    if (sephId === 'kether') return 1 + 0.15 + (lv - 1) * 0.05;
+    if (sephId === 'chokmah') {
+        const rate = Math.min(0.65, 0.14 + (lv - 1) * 0.03);
+        const mult = 1.8 + (lv - 1) * 0.15;
+        return 1 + rate * (mult - 1);
+    }
+    return 1;
+}
+
+function getSephirahDpsAtLevel(sephId, level, weaponId) {
+    const w = WEAPONS[weaponId];
+    if (!w) return 0;
+    const lv = Math.max(1, Math.floor(level) || 1);
+    const weaponLv = state.weaponLevels[weaponId] || 1;
+    const synergy = (0.45 + (lv - 1) * 0.18) * getPrestigeSynergyMult();
+    const reload = (0.25 + (lv - 1) * 0.08) * getPrestigeSynergyMult();
+    // getCarEffectiveStats と同じ丸め方で、実際のDPS上昇を求める。
+    let damage = Math.round(getWeaponDamageAtLevel(weaponId, weaponLv) * (1 + synergy));
+    damage = Math.round(damage * getSephirahPassiveDpsMult(sephId, lv));
+    const cooldown = Math.max(5, Math.round(w.cooldown / (1 + reload)));
+    return damage * 60 / cooldown;
+}
+
 function getSephirahUpgradeCost(sephId) {
     const s = SEPHIROTH.find(item => item.id === sephId);
-    const lv = state.sephirahLevels[sephId] || 1;
-    return Math.max(50, Math.floor(s.upgradeBaseCost * Math.pow(COST_GROWTH, Math.min(200, lv - 1))));
+    if (!s) return 999999;
+    const lv = Math.max(1, Math.min(SEPHIRAH_MAX_LEVEL, state.sephirahLevels[sephId] || 1));
+    if (lv >= SEPHIRAH_MAX_LEVEL) return Infinity;
+    const weaponId = getSephirahMatchingWeaponId(sephId);
+    if (!weaponId) {
+        const fallback = s.upgradeBaseCost * Math.pow(COST_GROWTH, lv - 1) * getPrestigeCostMult();
+        return Number.isFinite(fallback) ? Math.max(50, Math.floor(fallback)) : Infinity;
+    }
+    const gain = getSephirahDpsAtLevel(sephId, lv + 1, weaponId) - getSephirahDpsAtLevel(sephId, lv, weaponId);
+    const cost = gain * UPGRADE_BASE_COST_PER_DPS * getUpgradeLevelCostMult(lv) * getPrestigeCostMult();
+    if (!Number.isFinite(cost)) return Infinity;
+    return Math.max(50, Math.ceil(cost));
 }
+
 function getArmorUpgradeCost() {
-    return Math.max(50, Math.floor(200 * Math.pow(COST_GROWTH, Math.min(200, state.armorLevel - 1))));
+    if (state.armorLevel >= ARMOR_MAX_LEVEL) return Infinity;
+    const cost = 200 * Math.pow(COST_GROWTH, state.armorLevel - 1) * getPrestigeCostMult();
+    return Number.isFinite(cost) ? Math.max(50, Math.floor(cost)) : Infinity;
+}
+
+// セフィロトノードのコスト。上限レベルを設けず、Lvに応じて伸び続ける。
+function getPrestigeNodeCost(node, level) {
+    const lv = Math.max(0, Math.floor(level) || 0);
+    const cost = node.baseCost * Math.pow(COST_GROWTH, lv);
+    return Number.isFinite(cost) ? Math.max(1, Math.floor(cost)) : Infinity;
 }
 
 // アップグレード差分表示の共通ヘルパ。
@@ -3615,7 +3790,7 @@ function deltaStatHTML(fromText, toText, deltaText, accent) {
     return `<span class="delta-stat"><span class="delta-from">${fromText}</span><span class="delta-arrow">→</span><span class="delta-to" style="color:${textColor};">${toText}</span>${chip}</span>`;
 }
 function calcMaxHpForArmor(armorLevel) {
-    const lv = Math.max(1, Math.floor(armorLevel) || 1);
+    const lv = Math.max(1, Math.min(ARMOR_MAX_LEVEL, Math.floor(armorLevel) || 1));
     // 1Lvあたり乗算 +10%。ホドの加護はこの成長率そのものを底上げする。
     const growth = 1 + ARMOR_GROWTH * getHodArmorHpMult();
     return Math.round(1000 * Math.pow(growth, lv - 1) * getPrestigeHpMult());
@@ -4285,6 +4460,8 @@ function getDistrictName(faction, stage, meters) {
 // 表示は累計側を使い、「この勢力でどこまで進んだか」が分かるようにする。
 const STAGE_LENGTH_M = 1000;
 const BOSS_SPAWN_M = 950;
+// 雑魚を片付けたあと、残りがボスだけなら早期出現させる。ただし最低限の助走距離は残す。
+const BOSS_EARLY_SPAWN_MIN_M = 200;
 
 function getTotalMeters(faction, stage, metersInStage) {
     const completed = Math.max(0, (stage || 1) - 1) * STAGE_LENGTH_M;
@@ -4950,10 +5127,16 @@ function updateSimulation() {
     updateSephirahAutoSkills();
 
     if (waveSpawnQueue.length > 0) {
-        // 一定距離ごとに敵を出す。ボスは終端付近（BOSS_SPAWN_M）まで待つ。
+        // 一定距離ごとに敵を出す。ボスは基本 BOSS_SPAWN_M まで待つが、
+        // 雑魚をすべて片付けて残りがボスだけになったら早期に出現させる。
+        // 敵数が少ないステージで終盤に何百mも空白が続くのを防ぐ。
         const nextType = waveSpawnQueue[0];
         const isBossNext = !!(ENEMY_TYPES[nextType] && ENEMY_TYPES[nextType].isBoss);
-        const gate = isBossNext ? BOSS_SPAWN_M : nextSpawnMeters;
+        const onlyBossesLeft = waveSpawnQueue.every(id => ENEMY_TYPES[id] && ENEMY_TYPES[id].isBoss);
+        const bossGate = (onlyBossesLeft && enemies.length === 0)
+            ? Math.max(BOSS_EARLY_SPAWN_MIN_M, Math.min(BOSS_SPAWN_M, marchMeters))
+            : BOSS_SPAWN_M;
+        const gate = isBossNext ? bossGate : nextSpawnMeters;
         if (marchMeters >= gate) {
             // 画面に同時滞在できる敵数に上限を設ける（処理落ち防止）
             if (enemies.length < getMaxAliveEnemies()) {
@@ -6996,7 +7179,8 @@ function renderStaffTab() {
     SEPHIROTH.forEach(s => {
         const hired = state.hiredSephiroth.includes(s.id);
         const lv = state.sephirahLevels[s.id] || 1;
-        const upgCost = getSephirahUpgradeCost(s.id);
+        const isMax = lv >= SEPHIRAH_MAX_LEVEL;
+        const upgCost = isMax ? Infinity : getSephirahUpgradeCost(s.id);
         const assignedCar = state.cars.find(c => c.sephirahId === s.id);
 
         const card = document.createElement('div');
@@ -7008,7 +7192,7 @@ function renderStaffTab() {
                     <div class="min-w-0 flex-1">
                         <div class="flex justify-between items-center">
                             <span class="text-xs sm:text-sm font-bold text-purple-300 truncate">${s.name}</span>
-                            <span class="text-xs tech-font text-amber-300 font-bold">${hired ? `Lv.${lv}` : '未雇用'}</span>
+                            <span class="text-xs tech-font text-amber-300 font-bold">${hired ? `Lv.${lv}/${SEPHIRAH_MAX_LEVEL}${isMax ? ' MAX' : ''}` : '未雇用'}</span>
                         </div>
                         <div class="text-[11px] text-amber-400 font-bold mt-0.5">得意兵装: ${s.specialtyName}</div>
                         <p class="text-[11px] text-slate-400 mt-0.5 line-clamp-2">${s.desc}</p>
@@ -7021,7 +7205,7 @@ function renderStaffTab() {
                         <span class="text-[9px] text-emerald-300 bg-emerald-950 px-1.5 py-0.2 rounded">AUTO</span>
                     </div>
                     <div class="text-slate-200 mt-0.5 leading-snug">${s.getAutoSkillDesc(lv)}</div>
-                    ${hired && s.getAutoSkillDelta ? (() => {
+                    ${hired && !isMax && s.getAutoSkillDelta ? (() => {
                         const d = s.getAutoSkillDelta(lv);
                         if (!d) return '';
                         return `<div class="mt-1.5 pt-1.5 border-t border-slate-700/80 flex items-baseline gap-1.5 text-[10px] tech-font">
@@ -7034,7 +7218,11 @@ function renderStaffTab() {
             <div>
                 ${!hired
                     ? `<button onclick="hireSephirah('${s.id}')" class="w-full bg-amber-600 hover:bg-amber-500 text-slate-950 font-black py-1.5 rounded text-xs tech-font transition">雇用する (${s.cost} G)</button>`
-                    : `<button onclick="upgradeSephirah('${s.id}')" class="w-full bg-purple-700 hover:bg-purple-600 text-white font-bold py-1.5 rounded text-xs tech-font transition">Lv.${lv + 1} へ強化 (${upgCost.toLocaleString()} G)</button>`
+                    : isMax
+                        ? `<button disabled class="w-full bg-slate-900 text-slate-500 font-bold py-1.5 rounded text-xs tech-font cursor-not-allowed">MAX Lv.${SEPHIRAH_MAX_LEVEL}</button>`
+                        : Number.isFinite(upgCost)
+                            ? `<button onclick="upgradeSephirah('${s.id}')" class="w-full bg-purple-700 hover:bg-purple-600 text-white font-bold py-1.5 rounded text-xs tech-font transition">Lv.${lv + 1} へ強化 (${upgCost.toLocaleString()} G)</button>`
+                            : `<button disabled class="w-full bg-slate-900 text-slate-500 font-bold py-1.5 rounded text-xs tech-font cursor-not-allowed">強化不可</button>`
                 }
             </div>
         `;
@@ -7063,6 +7251,10 @@ function hireSephirah(id) {
 function upgradeSephirah(id) {
     if (!state.hiredSephiroth.includes(id)) return;
     const cost = getSephirahUpgradeCost(id);
+    if (!Number.isFinite(cost)) {
+        showToast('これ以上強化できません');
+        return;
+    }
     if (state.gold < cost) {
         showToast('資金が不足しています！');
         return;
@@ -7134,13 +7326,26 @@ function renderRDTab() {
     const lvEl = document.getElementById('rd-armor-lv');
     const deltaEl = document.getElementById('rd-armor-delta');
     const btnEl = document.getElementById('btn-upgrade-armor');
-    if (lvEl) lvEl.textContent = `Lv.${state.armorLevel}`;
+    const armorCost = getArmorUpgradeCost();
+    const armorMax = state.armorLevel >= ARMOR_MAX_LEVEL;
+    if (lvEl) lvEl.textContent = `Lv.${state.armorLevel}/${ARMOR_MAX_LEVEL}${armorMax ? ' MAX' : ''}`;
     if (deltaEl) {
-        const cur = state.maxHp;
-        const next = calcMaxHpForArmor(state.armorLevel + 1);
-        deltaEl.innerHTML = deltaStatHTML(cur.toLocaleString(), next.toLocaleString(), `+${(next - cur).toLocaleString()}`, '#34d399');
+        if (armorMax || !Number.isFinite(armorCost)) {
+            deltaEl.textContent = `最大耐久: ${state.maxHp.toLocaleString()}（MAX）`;
+        } else {
+            const cur = state.maxHp;
+            const next = calcMaxHpForArmor(state.armorLevel + 1);
+            deltaEl.innerHTML = deltaStatHTML(cur.toLocaleString(), next.toLocaleString(), `+${(next - cur).toLocaleString()}`, '#34d399');
+        }
     }
-    if (btnEl) btnEl.textContent = `強化する (${getArmorUpgradeCost().toLocaleString()} G)`;
+    if (btnEl) {
+        btnEl.disabled = armorMax || !Number.isFinite(armorCost);
+        btnEl.textContent = armorMax
+            ? `MAX Lv.${ARMOR_MAX_LEVEL}`
+            : Number.isFinite(armorCost)
+                ? `強化する (${armorCost.toLocaleString()} G)`
+                : '強化不可';
+    }
 
     const grid = document.getElementById('rd-weapons-grid');
     if (!grid) return;
@@ -7150,10 +7355,11 @@ function renderRDTab() {
         const unlocked = state.unlockedWeapons.includes(w.id);
         const reqMet = !w.reqWeapon || state.unlockedWeapons.includes(w.reqWeapon);
         const lv = state.weaponLevels[w.id] || 1;
+        const isMax = lv >= WEAPON_MAX_LEVEL;
         const dmg = getWeaponDamage(w.id);
-        const upgCost = getWeaponUpgradeCost(w.id);
+        const upgCost = isMax ? Infinity : getWeaponUpgradeCost(w.id);
         // 次のレベルの威力（getWeaponDamageAtLevel と同式）
-        const nextDmg = getWeaponDamageAtLevel(w.id, lv + 1);
+        const nextDmg = isMax ? dmg : getWeaponDamageAtLevel(w.id, lv + 1);
 
         const card = document.createElement('div');
         card.className = `bg-slate-800 border ${unlocked ? 'border-amber-600/60' : 'border-slate-700'} rounded-lg p-3 flex flex-col justify-between gap-2`;
@@ -7161,19 +7367,23 @@ function renderRDTab() {
             <div>
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-amber-300">${w.name}</span>
-                    <span class="text-xs tech-font text-slate-300">${unlocked ? `Lv.${lv}` : `Tier ${w.tier}`}</span>
+                    <span class="text-xs tech-font text-slate-300">${unlocked ? `Lv.${lv}/${WEAPON_MAX_LEVEL}${isMax ? ' MAX' : ''}` : `Tier ${w.tier}`}</span>
                 </div>
                 <div class="text-[10px] text-slate-400 mt-0.5">[${w.typeName}] 陸×${w.multipliers.LAND} / 海×${w.multipliers.SEA} / 空×${w.multipliers.AIR}</div>
                 <p class="text-[11px] text-slate-300 mt-1">${w.desc}</p>
                 <div class="text-xs tech-font text-amber-400 mt-1">
                     現在基礎威力: ${unlocked
-                        ? deltaStatHTML(dmg.toLocaleString(), nextDmg.toLocaleString(), `+${(nextDmg - dmg).toLocaleString()}`, '#fbbf24')
+                        ? (isMax ? dmg.toLocaleString() : deltaStatHTML(dmg.toLocaleString(), nextDmg.toLocaleString(), `+${(nextDmg - dmg).toLocaleString()}`, '#fbbf24'))
                         : dmg.toLocaleString()}
                 </div>
             </div>
             <div>
                 ${unlocked
-                    ? `<button onclick="upgradeWeapon('${w.id}')" class="w-full bg-amber-600 hover:bg-amber-500 text-slate-950 font-black py-1.5 rounded text-xs tech-font transition">Lv.${lv + 1} へ強化 (${upgCost.toLocaleString()} G)</button>`
+                    ? (isMax
+                        ? `<button disabled class="w-full bg-slate-900 text-slate-500 font-black py-1.5 rounded text-xs tech-font cursor-not-allowed">MAX Lv.${WEAPON_MAX_LEVEL}</button>`
+                        : Number.isFinite(upgCost)
+                            ? `<button onclick="upgradeWeapon('${w.id}')" class="w-full bg-amber-600 hover:bg-amber-500 text-slate-950 font-black py-1.5 rounded text-xs tech-font transition">Lv.${lv + 1} へ強化 (${upgCost.toLocaleString()} G)</button>`
+                            : `<button disabled class="w-full bg-slate-900 text-slate-500 font-black py-1.5 rounded text-xs tech-font cursor-not-allowed">強化不可</button>`)
                     : reqMet
                         ? `<button onclick="unlockWeapon('${w.id}')" class="w-full bg-sky-700 hover:bg-sky-600 text-white font-bold py-1.5 rounded text-xs tech-font transition">研究開発する (${w.unlockCost.toLocaleString()} G)</button>`
                         : `<div class="text-center text-[11px] text-slate-500 bg-slate-900 py-1.5 rounded">前提兵装「${WEAPONS[w.reqWeapon].name}」が必要</div>`
@@ -7186,6 +7396,10 @@ function renderRDTab() {
 
 function upgradeTrainArmor() {
     const cost = getArmorUpgradeCost();
+    if (!Number.isFinite(cost)) {
+        showToast('これ以上強化できません');
+        return;
+    }
     if (state.gold < cost) {
         showToast('資金が不足しています！');
         return;
@@ -7221,6 +7435,10 @@ function unlockWeapon(id) {
 function upgradeWeapon(id) {
     if (!state.unlockedWeapons.includes(id)) return;
     const cost = getWeaponUpgradeCost(id);
+    if (!Number.isFinite(cost)) {
+        showToast('これ以上強化できません');
+        return;
+    }
     if (state.gold < cost) {
         showToast('資金が不足しています！');
         return;
@@ -7396,6 +7614,10 @@ function upgradeTacticalSkill(skillId) {
     }
     const lv = getSkillLevel(skillId);
     const cost = getSkillUpgradeCost(skillId);
+    if (!Number.isFinite(cost)) {
+        showToast('これ以上強化できません');
+        return;
+    }
     if (state.gold < cost) {
         showToast(`資金が不足しています！（必要: ${cost.toLocaleString()} G）`);
         return;
@@ -7412,8 +7634,46 @@ function upgradeTacticalSkill(skillId) {
 }
 
 // --- タブ: 鹵獲超兵器 ---
-function getEscortUpgradeCost(lv) {
-    return Math.max(60, Math.floor(320 * Math.pow(COST_GROWTH, Math.min(200, (lv || 1) - 1))));
+function getEscortDpsAtLevel(bossId, level) {
+    const stats = getEscortStatsAtLevel(bossId, level);
+    if (!stats) return 0;
+    return stats.damage * 60 / stats.cooldown;
+}
+
+// コスト計算用のDPS。実ステータスはLv100以降ソフトキャップするが、
+// 価格は「普段通り」1.18/Lvの成長を維持して上がり続ける。
+function getEscortCostDpsAtLevel(bossId, level) {
+    const base = ENEMY_TYPES[bossId];
+    if (!base) return 0;
+    const lv = Math.max(1, Math.floor(level) || 1);
+    const lvMult = Math.pow(1.18, lv - 1);
+    const netzachMult = getNetzachEscortMult();
+    const malkuthMult = 1 + getMalkuthEscortBonus();
+    const dmg = Math.floor((base.damage * 0.48 + 36) * lvMult * getPrestigeAtkMult() * netzachMult * malkuthMult);
+    const cooldown = base.attr === 'AIR' ? 38 : base.attr === 'SEA' ? 55 : 46;
+    return dmg * 60 / cooldown;
+}
+
+function getEscortCostHpAtLevel(bossId, level) {
+    const base = ENEMY_TYPES[bossId];
+    if (!base) return 0;
+    const lv = Math.max(1, Math.floor(level) || 1);
+    const lvMult = Math.pow(1.18, lv - 1);
+    const netzachMult = getNetzachEscortMult();
+    const malkuthMult = 1 + getMalkuthEscortBonus();
+    return Math.floor((base.hp * 0.75 + 850) * lvMult * getPrestigeHpMult() * netzachMult * malkuthMult);
+}
+
+function getEscortUpgradeCost(bossId, lv) {
+    if (!ENEMY_TYPES[bossId]) return Infinity;
+    const level = Math.max(1, Math.min(ESCORT_MAX_LEVEL, Math.floor(lv) || 1));
+    if (level >= ESCORT_MAX_LEVEL) return Infinity;
+    const dpsGain = getEscortCostDpsAtLevel(bossId, level + 1) - getEscortCostDpsAtLevel(bossId, level);
+    const hpGain = getEscortCostHpAtLevel(bossId, level + 1) - getEscortCostHpAtLevel(bossId, level);
+    const gain = dpsGain + hpGain * ESCORT_HP_COST_WEIGHT;
+    const cost = gain * UPGRADE_BASE_COST_PER_DPS * getUpgradeLevelCostMult(level) * getPrestigeCostMult();
+    if (!Number.isFinite(cost)) return Infinity;
+    return Math.max(60, Math.ceil(cost));
 }
 function getEscortSellPrice(bossId) {
     const base = ENEMY_TYPES[bossId];
@@ -7447,10 +7707,10 @@ function renderEscortTab() {
         const isEquipped = state.equippedEscorts.includes(bid);
         const stats = getEscortStats(bid);
         if (!stats) return;
-        const upgCost = getEscortUpgradeCost(stats.lv);
+        const isMax = stats.lv >= ESCORT_MAX_LEVEL;
+        const upgCost = isMax ? Infinity : getEscortUpgradeCost(bid, stats.lv);
         const sellPrice = getEscortSellPrice(bid);
-        // 次Lvのステータス（getEscortStats の定格 lvMult = 1 + (lv-1)*0.42 を1段進める）
-        const nextStats = getEscortStatsAtLevel(bid, stats.lv + 1);
+        const nextStats = isMax ? stats : getEscortStatsAtLevel(bid, stats.lv + 1);
 
         const card = document.createElement('div');
         if (isSold) {
@@ -7472,7 +7732,7 @@ function renderEscortTab() {
                         <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${isEquipped ? 'bg-cyan-900 text-cyan-200' : 'bg-emerald-950 text-emerald-300'}">
                             ${isEquipped ? `★ 出撃編成中（${stats.attr === 'AIR' ? '空域' : stats.attr === 'SEA' ? '海域' : '地上'}）` : '● 保有・待機中'}
                         </span>
-                        <span class="text-xs tech-font text-amber-300 font-bold">Lv.${stats.lv}</span>
+                        <span class="text-xs tech-font text-amber-300 font-bold">Lv.${stats.lv}/${ESCORT_MAX_LEVEL}${isMax ? ' MAX' : ''}</span>
                     </div>
                     <div class="relative mt-1.5 h-20 w-full bg-slate-950 rounded border ${isEquipped ? 'border-cyan-500/70' : 'border-slate-700'} overflow-hidden flex items-center justify-center">
                         <div class="hq-scanlines absolute inset-0 pointer-events-none opacity-40"></div>
@@ -7483,17 +7743,21 @@ function renderEscortTab() {
                     </div>
                     <div class="text-xs sm:text-sm font-bold text-white mt-1.5 truncate">${stats.name}</div>
                     <div class="text-[11px] tech-font text-slate-300 mt-0.5 space-y-0.5">
-                        <div>耐久(HP): ${deltaStatHTML(stats.maxHp.toLocaleString(), nextStats.maxHp.toLocaleString(), `+${(nextStats.maxHp - stats.maxHp).toLocaleString()}`, '#34d399')}</div>
-                        <div>火力: ${deltaStatHTML(stats.damage.toLocaleString(), nextStats.damage.toLocaleString(), `+${(nextStats.damage - stats.damage).toLocaleString()}`, '#fbbf24')}</div>
+                        <div>耐久(HP): ${isMax ? stats.maxHp.toLocaleString() : deltaStatHTML(stats.maxHp.toLocaleString(), nextStats.maxHp.toLocaleString(), `+${(nextStats.maxHp - stats.maxHp).toLocaleString()}`, '#34d399')}</div>
+                        <div>火力: ${isMax ? stats.damage.toLocaleString() : deltaStatHTML(stats.damage.toLocaleString(), nextStats.damage.toLocaleString(), `+${(nextStats.damage - stats.damage).toLocaleString()}`, '#fbbf24')}</div>
                     </div>
                 </div>
                 <div class="grid grid-cols-3 gap-1.5 pt-1">
                     <button onclick="toggleEquipEscort('${bid}')" class="${isEquipped ? 'bg-slate-700 hover:bg-slate-600 text-slate-200' : 'bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-black'} py-1.5 rounded text-[11px] transition">
                         ${isEquipped ? '編成解除' : '出撃編成'}
                     </button>
+                    ${isMax ? `
+                    <button disabled class="bg-slate-900 text-slate-500 font-bold py-1.5 rounded text-[11px] tech-font cursor-not-allowed">
+                        MAX Lv.${ESCORT_MAX_LEVEL}
+                    </button>` : `
                     <button onclick="upgradeEscort('${bid}')" class="bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold py-1.5 rounded text-[11px] tech-font transition">
-                        強化 ${upgCost}G
-                    </button>
+                        強化 ${Number.isFinite(upgCost) ? upgCost.toLocaleString() : '不可'}G
+                    </button>`}
                     <button onclick="sellEscort('${bid}')" class="bg-red-900/80 hover:bg-red-800 text-red-200 border border-red-600/70 py-1.5 rounded text-[11px] tech-font transition">
                         売却 +${sellPrice}G
                     </button>
@@ -7543,7 +7807,15 @@ function toggleEquipEscort(bossId) {
 
 function upgradeEscort(bossId) {
     const lv = state.escortLevels[bossId] || 1;
-    const cost = getEscortUpgradeCost(lv);
+    if (lv >= ESCORT_MAX_LEVEL) {
+        showToast(`鹵獲機は最大Lv.${ESCORT_MAX_LEVEL}です`);
+        return;
+    }
+    const cost = getEscortUpgradeCost(bossId, lv);
+    if (!Number.isFinite(cost)) {
+        showToast('これ以上強化できません');
+        return;
+    }
     if (state.gold < cost) {
         showToast('資金が不足しています！');
         return;
@@ -7556,7 +7828,53 @@ function upgradeEscort(bossId) {
     saveGame(true);
 }
 
+let pendingEscortSellId = null;
+
 function sellEscort(bossId) {
+    if (!state.escortLevels[bossId]) return;
+    const stats = getEscortStats(bossId);
+    if (!stats) return;
+    const modal = document.getElementById('escort-sell-confirm-modal');
+    const body = document.getElementById('escort-sell-confirm-body');
+    const execBtn = document.getElementById('escort-sell-confirm-execute');
+    if (!modal || !body || !execBtn) return;
+
+    pendingEscortSellId = bossId;
+    const price = getEscortSellPrice(bossId);
+    const equipped = state.equippedEscorts.includes(bossId);
+    body.innerHTML = `
+        <p>この鹵獲兵器を売却しますか？</p>
+        <div class="bg-slate-800 border border-slate-700 rounded p-3 space-y-1 text-xs">
+            <div class="text-white font-bold">🤖 ${stats.name}</div>
+            <div class="text-slate-300">機体Lv: ${stats.lv}</div>
+            <div class="text-amber-300 font-bold">売却額: +${price.toLocaleString()} G</div>
+            ${equipped ? '<div class="text-cyan-300">編成からも外れます</div>' : ''}
+        </div>
+        <div class="bg-red-950/60 border border-red-700 rounded p-3 text-xs text-red-200 leading-relaxed">
+            売却すると格納庫から失われ、再び鹵獲するまで使用できません。<br>
+            売却後はロック解除するまで、討伐時に自動売却されます。
+        </div>
+    `;
+    execBtn.textContent = `売却する (+${price.toLocaleString()} G)`;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    SoundEngine.playUI('click');
+}
+
+function closeEscortSellConfirmModal() {
+    pendingEscortSellId = null;
+    const modal = document.getElementById('escort-sell-confirm-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+function executeSellEscort() {
+    const bossId = pendingEscortSellId;
+    if (!bossId) return;
+    closeEscortSellConfirmModal();
+
     const price = getEscortSellPrice(bossId);
     state.gold += price;
     state.equippedEscorts = state.equippedEscorts.filter(id => id !== bossId);
@@ -8453,17 +8771,30 @@ function loadGame() {
         if (!state.factionStages || typeof state.factionStages !== 'object') state.factionStages = {};
         if (!state.maxReachedStages || typeof state.maxReachedStages !== 'object') state.maxReachedStages = {};
         if (!state.weaponLevels || typeof state.weaponLevels !== 'object') state.weaponLevels = {};
+        Object.keys(state.weaponLevels).forEach(id => {
+            const v = Number(state.weaponLevels[id]);
+            state.weaponLevels[id] = Number.isFinite(v) && v >= 1 ? Math.min(WEAPON_MAX_LEVEL, Math.floor(v)) : 1;
+        });
         if (!state.sephirahLevels || typeof state.sephirahLevels !== 'object') state.sephirahLevels = {};
+        Object.keys(state.sephirahLevels).forEach(id => {
+            const v = Number(state.sephirahLevels[id]);
+            state.sephirahLevels[id] = Number.isFinite(v) && v >= 1 ? Math.min(SEPHIRAH_MAX_LEVEL, Math.floor(v)) : 1;
+        });
         if (!state.bossRecords || typeof state.bossRecords !== 'object') state.bossRecords = {};
         if (typeof state.muteBossCutscene !== 'boolean') state.muteBossCutscene = false;
         if (typeof state.skipSeenBossCutscene !== 'boolean') state.skipSeenBossCutscene = false;
         if (!state.escortLevels || typeof state.escortLevels !== 'object') state.escortLevels = {};
+        Object.keys(state.escortLevels).forEach(id => {
+            const v = Number(state.escortLevels[id]);
+            state.escortLevels[id] = Number.isFinite(v) && v >= 1 ? Math.min(ESCORT_MAX_LEVEL, Math.floor(v)) : 1;
+        });
         if (!state.relics || typeof state.relics !== 'object') state.relics = {};
         if (!Array.isArray(state.unlockedWeapons)) state.unlockedWeapons = ['railgun_tiphareth', 'mg_vulcan', 'aa_flak'];
         if (!Array.isArray(state.hiredSephiroth)) state.hiredSephiroth = ['tiphareth'];
         if (typeof state.gold !== 'number' || !isFinite(state.gold)) state.gold = 300;
         if (typeof state.stage !== 'number' || state.stage < 1) state.stage = 1;
         if (typeof state.armorLevel !== 'number' || state.armorLevel < 1) state.armorLevel = 1;
+        state.armorLevel = Math.min(ARMOR_MAX_LEVEL, Math.floor(state.armorLevel));
         if (typeof state.currentFactionId !== 'string') state.currentFactionId = 'pol';
         if (!['train', 'skills', 'escort', 'rd', 'staff', 'world', 'prestige', 'dex'].includes(state.activeTab)) state.activeTab = 'train';
 
