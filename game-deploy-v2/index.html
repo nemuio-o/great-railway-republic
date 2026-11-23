@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja"><head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>大鉄道共和国 - 装甲列車タワーディフェンス</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@700;900&amp;family=Share+Tech+Mono&amp;display=swap" rel="stylesheet">
@@ -257,6 +257,154 @@
                 min-height: 180px;
             }
         }
+        /* Mobile edge-to-edge bridge dock */
+        .mobile-command-dock, .mobile-command-panel, .mobile-skills-ui, .mobile-world-lore { display: none; }
+        @media (max-width: 639px) {
+            html, body { width: 100%; max-width: 100%; overflow-x: clip; }
+            body.h-screen { height: 100vh; height: 100dvh; padding: env(safe-area-inset-top) 0 0; }
+            body > .battle-upper > header { display: none; }
+            .battle-upper { height: 34dvh; min-height: 190px; max-height: 38dvh; }
+            .battle-upper { width: 100%; margin: 0; }
+            #mobile-battle-shell { width: 100%; max-width: 100%; padding: 0 !important; border-left: 0; border-right: 0; }
+            #mobile-battle-shell .hq-chassis { border-left: 0; border-right: 0; }
+            #ui-weather-header { display: none; }
+            #mobile-management { width: 100%; max-width: 100%; margin: 0 !important; border-left: 0; border-right: 0; border-bottom: 0; border-radius: 0; box-shadow: none; }
+            #mobile-bridge-content { display: flex; flex-direction: column; padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+            #mobile-header-controls { display: none; }
+            .mobile-command-dock {
+                position: fixed; z-index: 45; inset: auto 0 0; width: 100%;
+                display: grid; grid-template-columns: 1.8fr 1fr .42fr; gap: 4px;
+                padding: 9px max(8px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));
+                background: linear-gradient(180deg, rgba(23,29,38,.98), rgba(7,10,15,.99));
+                border-top: 2px solid #9a661e;
+                box-shadow: 0 -8px 24px rgba(0,0,0,.72), inset 0 1px rgba(251,191,36,.18);
+            }
+            .mobile-command-dock::before {
+                content: ''; position: absolute; inset: 0 0 auto; height: 3px;
+                background: repeating-linear-gradient(-45deg,#b45309,#b45309 6px,#1e293b 6px,#1e293b 12px);
+                pointer-events: none;
+            }
+            .mobile-dock-button {
+                min-width: 0; min-height: 50px; display: flex; flex-direction: column;
+                justify-content: center; align-items: center; gap: 3px;
+                border: 1px solid #39485e; border-radius: 4px;
+                background: linear-gradient(180deg,#1a2432,#0c121b); color: #aab7c9;
+                font-size: 10px; font-weight: 800; line-height: 1.1;
+            }
+            .mobile-dock-button[aria-expanded="true"], .mobile-dock-button[aria-current="page"] {
+                border-color: #d99a28; color: #ffd05b;
+                background: linear-gradient(180deg,#342815,#17140f);
+                box-shadow: inset 0 2px #fbbf24, 0 0 12px rgba(245,158,11,.16);
+            }
+            .mobile-dock-icon { font-size: 18px; line-height: 1; }
+            .mobile-dock-operations { align-items: stretch; justify-content: center; gap: 3px; padding: 4px 7px; }
+            .mobile-dock-operations-main { display:flex; align-items:center; gap:6px; font-size:11px; }
+            .mobile-dock-operations-main .mobile-dock-icon { font-size:16px; }
+            .mobile-dock-status { min-width:0; display:flex; align-items:center; justify-content:space-between; gap:5px; color:#b7c5d8; font:10px/1.1 'Share Tech Mono',monospace; }
+            .mobile-dock-status-stage { flex-shrink:0; color:#fbbf24; font-weight:900; }
+            .mobile-dock-status-route { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:right; }
+            .mobile-save-label { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+            .mobile-command-panel {
+                position: fixed; z-index: 44; left: max(8px,env(safe-area-inset-left)); right: max(8px,env(safe-area-inset-right));
+                bottom: calc(74px + env(safe-area-inset-bottom)); max-height: min(68dvh, 520px);
+                overflow-y: auto; overscroll-behavior: contain;
+                padding: 10px; background: linear-gradient(180deg,rgba(16,24,37,.99),rgba(6,9,15,.99));
+                border: 2px solid #79571f; border-top: 4px solid #b45309; border-radius: 5px;
+                box-shadow: 0 14px 35px rgba(0,0,0,.82), inset 0 0 20px rgba(0,0,0,.45);
+            }
+            .mobile-command-panel.is-open { display: block; }
+            #mobile-header-slot #mobile-header-controls {
+                display: grid; grid-template-columns: 66px minmax(0,1fr) repeat(4,minmax(30px,34px));
+                grid-template-areas: 'stage route route route route route' 'modes modes sound save manage help';
+                align-items: stretch; gap: 5px; width: 100%; padding-bottom: 8px; border-bottom: 1px solid #334155;
+            }
+            #mobile-header-controls > * { min-height: 36px; min-width: 0; }
+            #mobile-header-controls > :nth-child(1) { grid-area: stage; justify-content: center; padding-inline: 4px; }
+            #mobile-header-controls > :nth-child(2) { grid-area: route; width: 100%; padding-inline: 6px; }
+            #mobile-header-controls > :nth-child(3) { grid-area: modes; width: 100%; justify-content: space-evenly; }
+            #mobile-header-controls > :nth-child(4) { grid-area: sound; }
+            #mobile-header-controls > :nth-child(5) { grid-area: save; }
+            #mobile-header-controls > :nth-child(6) { grid-area: manage; }
+            #mobile-header-controls > :nth-child(7) { grid-area: help; }
+            #mobile-header-controls > :nth-child(n+4) { width: 100%; min-width: 0; padding-inline: 0; display: flex; justify-content: center; align-items: center; }
+            #btn-auto, #btn-loop { padding-inline: 5px; }
+            #btn-speed { min-width: 34px; }
+            #mobile-battle-controls { position: static !important; inset: auto !important; width: 100%; display: flex !important; gap: 7px; margin-top: 8px; }
+            #mobile-battle-controls > :first-child { flex: 1 1 auto; min-height: 42px; }
+            #mobile-battle-controls #ui-weather-badge { flex: 1 1 100%; min-height: 38px; }
+            #mobile-bridge-slot > #mobile-bridge-nav { display: block; }
+            #mobile-bridge-nav { margin: 0; padding: 0; }
+            #mobile-bridge-nav > div:first-child { margin-bottom: 8px; }
+            #mobile-bridge-nav .grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
+            #mobile-bridge-nav .grid button { min-height: 44px; font-size: 12px; }
+            #train-intro-desktop, #skills-description-desktop { display: none; }
+            #train-intro-mobile, #skills-description-mobile { display: block; }
+            #train-action-row { display: grid; grid-template-columns: 78px minmax(0,1fr) 100px; align-items: stretch; gap: 6px; }
+            #train-action-row > div { min-width: 0; padding: 4px 5px; font-size: 9px; gap: 3px; }
+            #train-action-row > div span:first-child { display: none; }
+            #train-action-row > div .ui-gold-display { font-size: 13px; }
+            #train-action-row button { min-width: 0; min-height: 42px; padding: 5px 6px; font-size: 10px; line-height: 1.2; }
+            #train-slots-container { display: grid !important; grid-template-columns: minmax(0,1fr); overflow: visible; gap: 8px; padding: 0 0 8px; }
+            #train-slots-container .train-car-card { width: 100% !important; min-width: 0; min-height: 102px; display: grid !important; grid-template-columns: minmax(0,1fr) minmax(112px,.78fr); align-items: center; gap: 8px; padding: 9px !important; }
+            #train-slots-container .train-car-card > div:first-child { min-width: 0; }
+            #train-slots-container .train-car-card > div:first-child > div:last-child { margin-top: 5px; }
+            #train-slots-container .train-car-card > div:last-child { min-width: 0; margin: 0; }
+            #skills-description-mobile { color: #cbd5e1; font-size: 11px; line-height: 1.4; }
+            #skills-list-grid { display: none !important; }
+            #mobile-skills-tabs { display: grid !important; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
+            .mobile-skill-tab { min-width: 0; min-height: 72px; display: flex; flex-direction: column; justify-content: space-between; text-align: left; padding: 8px; border: 1px solid #475569; border-radius: 5px; background: linear-gradient(145deg,#1e293b,#0f172a); color: #cbd5e1; }
+            .mobile-skill-tab[aria-selected="true"] { border: 2px solid #fbbf24; color: #fde68a; box-shadow: inset 0 0 14px rgba(245,158,11,.12); }
+            .mobile-skill-tab-title { font-size: 12px; font-weight: 900; line-height: 1.25; }
+            .mobile-skill-tab-meta { display: flex; justify-content: space-between; gap: 4px; color: #94a3b8; font: 10px 'Share Tech Mono',monospace; }
+            #mobile-skill-detail { display: block; }
+            .mobile-skill-action { min-height: 44px; font-size: 12px; font-weight: 800; }
+            #world-overview-card { display: grid; grid-template-columns: 1fr; gap: 7px; padding: 8px; }
+            #world-subtab-container { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; width: 100%; }
+            #world-subtab-container button { min-height: 42px; padding: 6px 8px; font-size: 12px; }
+            #world-subtab-desc { font-size: 10px; line-height: 1.4; }
+            #faction-list-grid { grid-template-columns: minmax(0,1fr); gap: 8px; }
+            #faction-list-grid .mobile-faction-card { padding: 10px; gap: 8px; }
+            #faction-list-grid .mobile-faction-title { font-size: 14px; }
+            #faction-list-grid .mobile-faction-subtitle { font-size: 9px; }
+            #faction-list-grid .world-faction-description { display: none; }
+            #faction-list-grid .mobile-world-lore { display: block; color: #aebbd0; font-size: 11px; line-height: 1.45; }
+            #faction-list-grid .mobile-world-lore summary { color: #7dd3fc; cursor: pointer; padding: 3px 0; }
+            #faction-list-grid .mobile-world-lore p { margin-top: 4px; }
+            #faction-list-grid .mobile-faction-status { font-size: 9px; }
+            #faction-list-grid .mobile-faction-progress { font-size: 10px; flex-wrap: wrap; }
+            #faction-list-grid .mobile-faction-action { min-height: 44px; font-size: 12px; }
+            /* Match the lower terrain band while scaling with the available viewport. */
+            #mobile-armor-hud { width: clamp(174px,46vw,245px); height: clamp(56px,8dvh,84px); min-width: 0; padding: 7px 9px; border-width: 1px; display:flex; flex-direction:column; justify-content:space-between; }
+            #mobile-armor-hud > div:first-child { font-size: 8px; letter-spacing: .04em; margin: 0; }
+            #mobile-armor-hud > div:nth-child(2) { height: 7px; flex: 0 0 auto; margin: 0; }
+            #mobile-armor-hud > div:last-child { font-size: 14px; }
+            #mobile-armor-hud > div:last-child span:nth-child(2) { font-size: 10px; }
+            #world-overview-card { grid-template-columns: minmax(120px,.72fr) minmax(0,1.28fr); align-items: stretch; }
+            #world-overview-card #world-subtab-container { min-width: 0; grid-template-columns: minmax(0,1fr); }
+            #world-overview-card #world-subtab-container button { width: 100%; min-height: 80px; }
+            #world-overview-card #world-subtab-desc { display: flex; align-items: center; min-height: 80px; }
+            #mobile-skills-tabs { align-items: stretch; }
+            #tab-content-skills { flex: 1 0 100%; min-height: 100%; }
+            #mobile-skills-tabs { flex: 1; min-height: 0; grid-template-rows: repeat(2,minmax(0,1fr)); }
+            .mobile-skill-card { min-width: 0; min-height: clamp(156px,calc((100dvh - 550px) / 2),260px); height: 100%; display:flex; flex-direction:column; justify-content:space-between; gap:7px; padding:9px; border:1px solid #475569; border-radius:6px; background:linear-gradient(145deg,#1e293b,#0f172a); }
+            .mobile-skill-card.is-active { border:2px solid #fbbf24; box-shadow:inset 0 0 14px rgba(245,158,11,.12); }
+            .mobile-skill-card-title { font-size:12px; font-weight:900; line-height:1.25; }
+            .mobile-skill-card-desc { color:#cbd5e1; font-size:10px; line-height:1.35; }
+            .mobile-skill-card-effect { padding:5px; border:1px solid #334155; border-radius:4px; background:#0b1220; color:#fde68a; font-size:10px; font-weight:800; line-height:1.25; }
+            .mobile-skill-card-actions { display:grid; grid-template-columns:1fr; gap:4px; }
+            .mobile-skill-card-actions button { min-height:34px; padding:4px; font-size:10px; line-height:1.1; }
+            #mobile-skill-detail { display:none !important; }
+            #config-modal > div { max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px); }
+            #config-modal { padding: max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left)); }
+            #config-modal .config-mobile-switch { display:grid !important; }
+            #config-modal .config-modal-scroll { min-height:0; overflow:auto; }
+            #config-modal .config-mobile-switch { position:sticky; top:0; z-index:2; }
+            #config-modal .config-mobile-section { display:none; }
+            #config-modal .config-mobile-section.is-active { display:block; }
+        }
+        @media (max-width: 639px) and (max-height: 760px) {
+            .battle-upper { height: 31dvh; min-height: 165px; max-height: 34dvh; }
+        }
     </style>
 <style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.pointer-events-none{pointer-events:none}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.inset-0{inset:0px}.inset-x-0{left:0px;right:0px}.inset-x-10{left:2.5rem;right:2.5rem}.bottom-0{bottom:0px}.bottom-16{bottom:4rem}.bottom-2{bottom:0.5rem}.bottom-4{bottom:1rem}.left-1\/2{left:50%}.left-3{left:0.75rem}.right-3{right:0.75rem}.top-0{top:0px}.top-2\.5{top:0.625rem}.z-10{z-index:10}.z-20{z-index:20}.z-30{z-index:30}.z-50{z-index:50}.mx-1\.5{margin-left:0.375rem;margin-right:0.375rem}.mx-auto{margin-left:auto;margin-right:auto}.mb-0\.5{margin-bottom:0.125rem}.mb-1{margin-bottom:0.25rem}.mb-1\.5{margin-bottom:0.375rem}.mb-2{margin-bottom:0.5rem}.ml-0\.5{margin-left:0.125rem}.ml-1{margin-left:0.25rem}.mt-0\.5{margin-top:0.125rem}.mt-1{margin-top:0.25rem}.mt-1\.5{margin-top:0.375rem}.mt-2{margin-top:0.5rem}.line-clamp-2{overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}.block{display:block}.inline-block{display:inline-block}.flex{display:flex}.inline-flex{display:inline-flex}.grid{display:grid}.hidden{display:none}.h-1\.5{height:0.375rem}.h-1\/2{height:50%}.h-2{height:0.5rem}.h-2\.5{height:0.625rem}.h-28{height:7rem}.h-\[380px\]{height:380px}.h-\[54px\]{height:54px}.h-\[70px\]{height:70px}.h-full{height:100%}.h-screen{height:100vh}.h-11{height:2.75rem}.max-h-\[55vh\]{max-height:55vh}.max-h-\[90vh\]{max-height:90vh}.min-h-0{min-height:0px}.w-1\.5{width:0.375rem}.w-28{width:7rem}.w-\[100px\]{width:100px}.w-\[115\%\]{width:115%}.w-\[120px\]{width:120px}.w-full{width:100%}.w-px{width:1px}.w-44{width:11rem}.w-9{width:2.25rem}.min-w-0{min-width:0px}.min-w-\[155px\]{min-width:155px}.max-w-2xl{max-width:42rem}.max-w-4xl{max-width:56rem}.max-w-\[215px\]{max-width:215px}.max-w-\[330px\]{max-width:330px}.max-w-\[440px\]{max-width:440px}.max-w-lg{max-width:32rem}.max-w-md{max-width:28rem}.max-w-xl{max-width:36rem}.flex-1{flex:1 1 0%}.flex-shrink-0{flex-shrink:0}.-translate-x-1\/2{--tw-translate-x:-50%;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.skew-x-\[12deg\]{--tw-skew-x:12deg;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.transform{transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}@keyframes ping{75%, 100%{transform:scale(2);opacity:0}}.animate-ping{animation:ping 1s cubic-bezier(0, 0, 0.2, 1) infinite}@keyframes pulse{50%{opacity:.5}}.animate-pulse{animation:pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite}.cursor-pointer{cursor:pointer}.select-none{-webkit-user-select:none;user-select:none}.grid-cols-1{grid-template-columns:repeat(1, minmax(0, 1fr))}.grid-cols-4{grid-template-columns:repeat(4, minmax(0, 1fr))}.grid-cols-5{grid-template-columns:repeat(5, minmax(0, 1fr))}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-end{align-items:flex-end}.items-center{align-items:center}.items-stretch{align-items:stretch}.justify-end{justify-content:flex-end}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-1{gap:0.25rem}.gap-1\.5{gap:0.375rem}.gap-2{gap:0.5rem}.gap-2\.5{gap:0.625rem}.gap-3{gap:0.75rem}.gap-4{gap:1rem}.gap-x-3{column-gap:0.75rem}.gap-y-1{row-gap:0.25rem}.space-y-0\.5 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.125rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.125rem * var(--tw-space-y-reverse))}.space-y-1 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.25rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.25rem * var(--tw-space-y-reverse))}.space-y-1\.5 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.375rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.375rem * var(--tw-space-y-reverse))}.space-y-2 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.5rem * var(--tw-space-y-reverse))}.space-y-3 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.75rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.75rem * var(--tw-space-y-reverse))}.space-y-4 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1rem * var(--tw-space-y-reverse))}.space-y-6 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1.5rem * var(--tw-space-y-reverse))}.overflow-hidden{overflow:hidden}.overflow-x-auto{overflow-x:auto}.overflow-y-auto{overflow-y:auto}.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.whitespace-nowrap{white-space:nowrap}.rounded{border-radius:0.25rem}.rounded-full{border-radius:9999px}.rounded-lg{border-radius:0.5rem}.rounded-sm{border-radius:0.125rem}.rounded-xl{border-radius:0.75rem}.rounded-b-lg{border-bottom-right-radius:0.5rem;border-bottom-left-radius:0.5rem}.rounded-b-md{border-bottom-right-radius:0.375rem;border-bottom-left-radius:0.375rem}.rounded-r{border-top-right-radius:0.25rem;border-bottom-right-radius:0.25rem}.rounded-t-md{border-top-left-radius:0.375rem;border-top-right-radius:0.375rem}.border{border-width:1px}.border-2{border-width:2px}.border-4{border-width:4px}.border-x-2{border-left-width:2px;border-right-width:2px}.border-y-4{border-top-width:4px;border-bottom-width:4px}.border-b{border-bottom-width:1px}.border-b-2{border-bottom-width:2px}.border-l{border-left-width:1px}.border-l-2{border-left-width:2px}.border-l-4{border-left-width:4px}.border-r{border-right-width:1px}.border-t{border-top-width:1px}.border-t-2{border-top-width:2px}.border-amber-300{--tw-border-opacity:1;border-color:rgb(252 211 77 / var(--tw-border-opacity, 1))}.border-amber-400{--tw-border-opacity:1;border-color:rgb(251 191 36 / var(--tw-border-opacity, 1))}.border-amber-400\/80{border-color:rgb(251 191 36 / 0.8)}.border-amber-500{--tw-border-opacity:1;border-color:rgb(245 158 11 / var(--tw-border-opacity, 1))}.border-amber-500\/25{border-color:rgb(245 158 11 / 0.25)}.border-amber-500\/60{border-color:rgb(245 158 11 / 0.6)}.border-amber-500\/70{border-color:rgb(245 158 11 / 0.7)}.border-amber-600{--tw-border-opacity:1;border-color:rgb(217 119 6 / var(--tw-border-opacity, 1))}.border-amber-600\/50{border-color:rgb(217 119 6 / 0.5)}.border-amber-600\/70{border-color:rgb(217 119 6 / 0.7)}.border-amber-700{--tw-border-opacity:1;border-color:rgb(180 83 9 / var(--tw-border-opacity, 1))}.border-amber-700\/50{border-color:rgb(180 83 9 / 0.5)}.border-amber-700\/60{border-color:rgb(180 83 9 / 0.6)}.border-amber-700\/70{border-color:rgb(180 83 9 / 0.7)}.border-amber-700\/80{border-color:rgb(180 83 9 / 0.8)}.border-amber-800\/70{border-color:rgb(146 64 14 / 0.7)}.border-cyan-500\/60{border-color:rgb(6 182 212 / 0.6)}.border-cyan-700\/60{border-color:rgb(14 116 144 / 0.6)}.border-cyan-700\/70{border-color:rgb(14 116 144 / 0.7)}.border-emerald-300{--tw-border-opacity:1;border-color:rgb(110 231 183 / var(--tw-border-opacity, 1))}.border-emerald-400{--tw-border-opacity:1;border-color:rgb(52 211 153 / var(--tw-border-opacity, 1))}.border-emerald-500{--tw-border-opacity:1;border-color:rgb(16 185 129 / var(--tw-border-opacity, 1))}.border-emerald-600\/70{border-color:rgb(5 150 105 / 0.7)}.border-emerald-600\/80{border-color:rgb(5 150 105 / 0.8)}.border-emerald-700\/70{border-color:rgb(4 120 87 / 0.7)}.border-purple-400{--tw-border-opacity:1;border-color:rgb(192 132 252 / var(--tw-border-opacity, 1))}.border-purple-500{--tw-border-opacity:1;border-color:rgb(168 85 247 / var(--tw-border-opacity, 1))}.border-red-400{--tw-border-opacity:1;border-color:rgb(248 113 113 / var(--tw-border-opacity, 1))}.border-red-500{--tw-border-opacity:1;border-color:rgb(239 68 68 / var(--tw-border-opacity, 1))}.border-red-600{--tw-border-opacity:1;border-color:rgb(220 38 38 / var(--tw-border-opacity, 1))}.border-red-600\/70{border-color:rgb(220 38 38 / 0.7)}.border-sky-400{--tw-border-opacity:1;border-color:rgb(56 189 248 / var(--tw-border-opacity, 1))}.border-slate-500{--tw-border-opacity:1;border-color:rgb(100 116 139 / var(--tw-border-opacity, 1))}.border-slate-500\/70{border-color:rgb(100 116 139 / 0.7)}.border-slate-600{--tw-border-opacity:1;border-color:rgb(71 85 105 / var(--tw-border-opacity, 1))}.border-slate-700{--tw-border-opacity:1;border-color:rgb(51 65 85 / var(--tw-border-opacity, 1))}.border-slate-800{--tw-border-opacity:1;border-color:rgb(30 41 59 / var(--tw-border-opacity, 1))}.border-slate-900{--tw-border-opacity:1;border-color:rgb(15 23 42 / var(--tw-border-opacity, 1))}.border-yellow-600\/70{border-color:rgb(202 138 4 / 0.7)}.border-slate-700\/80{border-color:rgb(51 65 85 / 0.8)}.bg-amber-400{--tw-bg-opacity:1;background-color:rgb(251 191 36 / var(--tw-bg-opacity, 1))}.bg-amber-500{--tw-bg-opacity:1;background-color:rgb(245 158 11 / var(--tw-bg-opacity, 1))}.bg-amber-500\/30{background-color:rgb(245 158 11 / 0.3)}.bg-amber-500\/40{background-color:rgb(245 158 11 / 0.4)}.bg-amber-600{--tw-bg-opacity:1;background-color:rgb(217 119 6 / var(--tw-bg-opacity, 1))}.bg-amber-700{--tw-bg-opacity:1;background-color:rgb(180 83 9 / var(--tw-bg-opacity, 1))}.bg-amber-800{--tw-bg-opacity:1;background-color:rgb(146 64 14 / var(--tw-bg-opacity, 1))}.bg-amber-900{--tw-bg-opacity:1;background-color:rgb(120 53 15 / var(--tw-bg-opacity, 1))}.bg-amber-950\/35{background-color:rgb(69 26 3 / 0.35)}.bg-black\/60{background-color:rgb(0 0 0 / 0.6)}.bg-black\/80{background-color:rgb(0 0 0 / 0.8)}.bg-black\/85{background-color:rgb(0 0 0 / 0.85)}.bg-cyan-900{--tw-bg-opacity:1;background-color:rgb(22 78 99 / var(--tw-bg-opacity, 1))}.bg-cyan-950\/35{background-color:rgb(8 51 68 / 0.35)}.bg-emerald-500{--tw-bg-opacity:1;background-color:rgb(16 185 129 / var(--tw-bg-opacity, 1))}.bg-emerald-600{--tw-bg-opacity:1;background-color:rgb(5 150 105 / var(--tw-bg-opacity, 1))}.bg-emerald-700{--tw-bg-opacity:1;background-color:rgb(4 120 87 / var(--tw-bg-opacity, 1))}.bg-emerald-800{--tw-bg-opacity:1;background-color:rgb(6 95 70 / var(--tw-bg-opacity, 1))}.bg-emerald-900{--tw-bg-opacity:1;background-color:rgb(6 78 59 / var(--tw-bg-opacity, 1))}.bg-purple-700{--tw-bg-opacity:1;background-color:rgb(126 34 206 / var(--tw-bg-opacity, 1))}.bg-purple-900{--tw-bg-opacity:1;background-color:rgb(88 28 135 / var(--tw-bg-opacity, 1))}.bg-red-600{--tw-bg-opacity:1;background-color:rgb(220 38 38 / var(--tw-bg-opacity, 1))}.bg-red-700{--tw-bg-opacity:1;background-color:rgb(185 28 28 / var(--tw-bg-opacity, 1))}.bg-red-900{--tw-bg-opacity:1;background-color:rgb(127 29 29 / var(--tw-bg-opacity, 1))}.bg-red-900\/80{background-color:rgb(127 29 29 / 0.8)}.bg-red-950\/60{background-color:rgb(69 10 10 / 0.6)}.bg-red-950\/80{background-color:rgb(69 10 10 / 0.8)}.bg-red-950\/90{background-color:rgb(69 10 10 / 0.9)}.bg-sky-700{--tw-bg-opacity:1;background-color:rgb(3 105 161 / var(--tw-bg-opacity, 1))}.bg-slate-500{--tw-bg-opacity:1;background-color:rgb(100 116 139 / var(--tw-bg-opacity, 1))}.bg-slate-700{--tw-bg-opacity:1;background-color:rgb(51 65 85 / var(--tw-bg-opacity, 1))}.bg-slate-800{--tw-bg-opacity:1;background-color:rgb(30 41 59 / var(--tw-bg-opacity, 1))}.bg-slate-800\/50{background-color:rgb(30 41 59 / 0.5)}.bg-slate-800\/80{background-color:rgb(30 41 59 / 0.8)}.bg-slate-800\/90{background-color:rgb(30 41 59 / 0.9)}.bg-slate-900{--tw-bg-opacity:1;background-color:rgb(15 23 42 / var(--tw-bg-opacity, 1))}.bg-slate-900\/80{background-color:rgb(15 23 42 / 0.8)}.bg-slate-900\/90{background-color:rgb(15 23 42 / 0.9)}.bg-slate-900\/95{background-color:rgb(15 23 42 / 0.95)}.bg-slate-950{--tw-bg-opacity:1;background-color:rgb(2 6 23 / var(--tw-bg-opacity, 1))}.bg-slate-950\/90{background-color:rgb(2 6 23 / 0.9)}.bg-slate-950\/95{background-color:rgb(2 6 23 / 0.95)}.bg-gradient-to-r{background-image:linear-gradient(to right, var(--tw-gradient-stops))}.from-emerald-950\/90{--tw-gradient-from:rgb(2 44 34 / 0.9) var(--tw-gradient-from-position);--tw-gradient-to:rgb(2 44 34 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.from-red-950\/95{--tw-gradient-from:rgb(69 10 10 / 0.95) var(--tw-gradient-from-position);--tw-gradient-to:rgb(69 10 10 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.via-slate-900{--tw-gradient-to:rgb(15 23 42 / 0)  var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), #0f172a var(--tw-gradient-via-position), var(--tw-gradient-to)}.via-slate-950\/95{--tw-gradient-to:rgb(2 6 23 / 0)  var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), rgb(2 6 23 / 0.95) var(--tw-gradient-via-position), var(--tw-gradient-to)}.to-amber-950\/60{--tw-gradient-to:rgb(69 26 3 / 0.6) var(--tw-gradient-to-position)}.to-amber-950\/95{--tw-gradient-to:rgb(69 26 3 / 0.95) var(--tw-gradient-to-position)}.p-1{padding:0.25rem}.p-2{padding:0.5rem}.p-2\.5{padding:0.625rem}.p-3{padding:0.75rem}.p-4{padding:1rem}.p-5{padding:1.25rem}.p-6{padding:1.5rem}.p-1\.5{padding:0.375rem}.px-0\.5{padding-left:0.125rem;padding-right:0.125rem}.px-1{padding-left:0.25rem;padding-right:0.25rem}.px-1\.5{padding-left:0.375rem;padding-right:0.375rem}.px-2{padding-left:0.5rem;padding-right:0.5rem}.px-2\.5{padding-left:0.625rem;padding-right:0.625rem}.px-3{padding-left:0.75rem;padding-right:0.75rem}.px-4{padding-left:1rem;padding-right:1rem}.px-5{padding-left:1.25rem;padding-right:1.25rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}.py-0\.5{padding-top:0.125rem;padding-bottom:0.125rem}.py-1{padding-top:0.25rem;padding-bottom:0.25rem}.py-1\.5{padding-top:0.375rem;padding-bottom:0.375rem}.py-2{padding-top:0.5rem;padding-bottom:0.5rem}.pb-0\.5{padding-bottom:0.125rem}.pb-1{padding-bottom:0.25rem}.pb-2{padding-bottom:0.5rem}.pb-3{padding-bottom:0.75rem}.pl-2{padding-left:0.5rem}.pt-1{padding-top:0.25rem}.pt-2{padding-top:0.5rem}.pt-3{padding-top:0.75rem}.text-center{text-align:center}.text-right{text-align:right}.text-\[10px\]{font-size:10px}.text-\[11px\]{font-size:11px}.text-\[9px\]{font-size:9px}.text-base{font-size:1rem;line-height:1.5rem}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-sm{font-size:0.875rem;line-height:1.25rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.text-xs{font-size:0.75rem;line-height:1rem}.font-black{font-weight:900}.font-bold{font-weight:700}.uppercase{text-transform:uppercase}.leading-none{line-height:1}.leading-relaxed{line-height:1.625}.leading-snug{line-height:1.375}.leading-tight{line-height:1.25}.tracking-\[0\.22em\]{letter-spacing:0.22em}.tracking-wide{letter-spacing:0.025em}.tracking-wider{letter-spacing:0.05em}.tracking-widest{letter-spacing:0.1em}.text-amber-100{--tw-text-opacity:1;color:rgb(254 243 199 / var(--tw-text-opacity, 1))}.text-amber-200{--tw-text-opacity:1;color:rgb(253 230 138 / var(--tw-text-opacity, 1))}.text-amber-300{--tw-text-opacity:1;color:rgb(252 211 77 / var(--tw-text-opacity, 1))}.text-amber-400{--tw-text-opacity:1;color:rgb(251 191 36 / var(--tw-text-opacity, 1))}.text-amber-400\/90{color:rgb(251 191 36 / 0.9)}.text-amber-500{--tw-text-opacity:1;color:rgb(245 158 11 / var(--tw-text-opacity, 1))}.text-amber-500\/70{color:rgb(245 158 11 / 0.7)}.text-cyan-200{--tw-text-opacity:1;color:rgb(165 243 252 / var(--tw-text-opacity, 1))}.text-cyan-300{--tw-text-opacity:1;color:rgb(103 232 249 / var(--tw-text-opacity, 1))}.text-cyan-400{--tw-text-opacity:1;color:rgb(34 211 238 / var(--tw-text-opacity, 1))}.text-emerald-100{--tw-text-opacity:1;color:rgb(209 250 229 / var(--tw-text-opacity, 1))}.text-emerald-200{--tw-text-opacity:1;color:rgb(167 243 208 / var(--tw-text-opacity, 1))}.text-emerald-300{--tw-text-opacity:1;color:rgb(110 231 183 / var(--tw-text-opacity, 1))}.text-emerald-400{--tw-text-opacity:1;color:rgb(52 211 153 / var(--tw-text-opacity, 1))}.text-emerald-400\/90{color:rgb(52 211 153 / 0.9)}.text-purple-200{--tw-text-opacity:1;color:rgb(233 213 255 / var(--tw-text-opacity, 1))}.text-purple-300{--tw-text-opacity:1;color:rgb(216 180 254 / var(--tw-text-opacity, 1))}.text-purple-400{--tw-text-opacity:1;color:rgb(192 132 252 / var(--tw-text-opacity, 1))}.text-red-100{--tw-text-opacity:1;color:rgb(254 226 226 / var(--tw-text-opacity, 1))}.text-red-100\/90{color:rgb(254 226 226 / 0.9)}.text-red-200{--tw-text-opacity:1;color:rgb(254 202 202 / var(--tw-text-opacity, 1))}.text-red-300{--tw-text-opacity:1;color:rgb(252 165 165 / var(--tw-text-opacity, 1))}.text-red-400{--tw-text-opacity:1;color:rgb(248 113 113 / var(--tw-text-opacity, 1))}.text-sky-300{--tw-text-opacity:1;color:rgb(125 211 252 / var(--tw-text-opacity, 1))}.text-slate-200{--tw-text-opacity:1;color:rgb(226 232 240 / var(--tw-text-opacity, 1))}.text-slate-300{--tw-text-opacity:1;color:rgb(203 213 225 / var(--tw-text-opacity, 1))}.text-slate-400{--tw-text-opacity:1;color:rgb(148 163 184 / var(--tw-text-opacity, 1))}.text-slate-500{--tw-text-opacity:1;color:rgb(100 116 139 / var(--tw-text-opacity, 1))}.text-slate-950{--tw-text-opacity:1;color:rgb(2 6 23 / var(--tw-text-opacity, 1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.text-yellow-400{--tw-text-opacity:1;color:rgb(250 204 21 / var(--tw-text-opacity, 1))}.text-yellow-500{--tw-text-opacity:1;color:rgb(234 179 8 / var(--tw-text-opacity, 1))}.text-amber-300\/90{color:rgb(252 211 77 / 0.9)}.opacity-0{opacity:0}.opacity-45{opacity:0.45}.opacity-100{opacity:1}.shadow-2xl{--tw-shadow:0 25px 50px -12px rgb(0 0 0 / 0.25);--tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-\[0_0_20px_rgba\(168\2c 85\2c 247\2c 0\.45\)\]{--tw-shadow:0 0 20px rgba(168,85,247,0.45);--tw-shadow-colored:0 0 20px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-\[0_0_25px_rgba\(239\2c 68\2c 68\2c 0\.6\)\]{--tw-shadow:0 0 25px rgba(239,68,68,0.6);--tw-shadow-colored:0 0 25px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-\[0_0_40px_rgba\(0\2c 0\2c 0\2c 0\.95\)\]{--tw-shadow:0 0 40px rgba(0,0,0,0.95);--tw-shadow-colored:0 0 40px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-\[inset_0_0_60px_rgba\(220\2c 38\2c 38\2c 0\.65\)\]{--tw-shadow:inset 0 0 60px rgba(220,38,38,0.65);--tw-shadow-colored:inset 0 0 60px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-inner{--tw-shadow:inset 0 2px 4px 0 rgb(0 0 0 / 0.05);--tw-shadow-colored:inset 0 2px 4px 0 var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-lg{--tw-shadow:0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-xl{--tw-shadow:0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 20px 25px -5px var(--tw-shadow-color), 0 8px 10px -6px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-\[0_0_10px_rgba\(251\2c 191\2c 36\2c 0\.25\)\]{--tw-shadow:0 0 10px rgba(251,191,36,0.25);--tw-shadow-colored:0 0 10px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.drop-shadow{--tw-drop-shadow:drop-shadow(0 1px 2px rgb(0 0 0 / 0.1)) drop-shadow(0 1px 1px rgb(0 0 0 / 0.06));filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.drop-shadow-\[0_2px_10px_rgba\(239\2c 68\2c 68\2c 0\.9\)\]{--tw-drop-shadow:drop-shadow(0 2px 10px rgba(239,68,68,0.9));filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.drop-shadow-md{--tw-drop-shadow:drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06));filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.backdrop-blur{--tw-backdrop-blur:blur(8px);-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.backdrop-blur-sm{--tw-backdrop-blur:blur(4px);-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.transition{transition-property:color, background-color, border-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-text-decoration-color, -webkit-backdrop-filter;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-text-decoration-color, -webkit-backdrop-filter;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-opacity{transition-property:opacity;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.duration-150{transition-duration:150ms}.duration-300{transition-duration:300ms}.duration-500{transition-duration:500ms}.hover\:border-amber-400:hover{--tw-border-opacity:1;border-color:rgb(251 191 36 / var(--tw-border-opacity, 1))}.hover\:border-amber-500:hover{--tw-border-opacity:1;border-color:rgb(245 158 11 / var(--tw-border-opacity, 1))}.hover\:border-cyan-400:hover{--tw-border-opacity:1;border-color:rgb(34 211 238 / var(--tw-border-opacity, 1))}.hover\:border-slate-500:hover{--tw-border-opacity:1;border-color:rgb(100 116 139 / var(--tw-border-opacity, 1))}.hover\:bg-amber-500:hover{--tw-bg-opacity:1;background-color:rgb(245 158 11 / var(--tw-bg-opacity, 1))}.hover\:bg-amber-600:hover{--tw-bg-opacity:1;background-color:rgb(217 119 6 / var(--tw-bg-opacity, 1))}.hover\:bg-amber-700:hover{--tw-bg-opacity:1;background-color:rgb(180 83 9 / var(--tw-bg-opacity, 1))}.hover\:bg-emerald-500:hover{--tw-bg-opacity:1;background-color:rgb(16 185 129 / var(--tw-bg-opacity, 1))}.hover\:bg-emerald-600:hover{--tw-bg-opacity:1;background-color:rgb(5 150 105 / var(--tw-bg-opacity, 1))}.hover\:bg-emerald-700:hover{--tw-bg-opacity:1;background-color:rgb(4 120 87 / var(--tw-bg-opacity, 1))}.hover\:bg-purple-600:hover{--tw-bg-opacity:1;background-color:rgb(147 51 234 / var(--tw-bg-opacity, 1))}.hover\:bg-red-600:hover{--tw-bg-opacity:1;background-color:rgb(220 38 38 / var(--tw-bg-opacity, 1))}.hover\:bg-red-800:hover{--tw-bg-opacity:1;background-color:rgb(153 27 27 / var(--tw-bg-opacity, 1))}.hover\:bg-sky-600:hover{--tw-bg-opacity:1;background-color:rgb(2 132 199 / var(--tw-bg-opacity, 1))}.hover\:bg-slate-600:hover{--tw-bg-opacity:1;background-color:rgb(71 85 105 / var(--tw-bg-opacity, 1))}.hover\:bg-slate-700:hover{--tw-bg-opacity:1;background-color:rgb(51 65 85 / var(--tw-bg-opacity, 1))}.hover\:bg-slate-800:hover{--tw-bg-opacity:1;background-color:rgb(30 41 59 / var(--tw-bg-opacity, 1))}.hover\:text-amber-200:hover{--tw-text-opacity:1;color:rgb(253 230 138 / var(--tw-text-opacity, 1))}.hover\:text-amber-400:hover{--tw-text-opacity:1;color:rgb(251 191 36 / var(--tw-text-opacity, 1))}.hover\:text-cyan-300:hover{--tw-text-opacity:1;color:rgb(103 232 249 / var(--tw-text-opacity, 1))}.hover\:text-emerald-300:hover{--tw-text-opacity:1;color:rgb(110 231 183 / var(--tw-text-opacity, 1))}.hover\:text-white:hover{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.disabled\:pointer-events-none:disabled{pointer-events:none}.disabled\:bg-slate-800:disabled{--tw-bg-opacity:1;background-color:rgb(30 41 59 / var(--tw-bg-opacity, 1))}.disabled\:text-slate-500:disabled{--tw-text-opacity:1;color:rgb(100 116 139 / var(--tw-text-opacity, 1))}.disabled\:opacity-30:disabled{opacity:0.3}@media (min-width: 640px){.sm\:mx-2\.5{margin-left:0.625rem;margin-right:0.625rem}.sm\:inline{display:inline}.sm\:h-32{height:8rem}.sm\:h-\[420px\]{height:420px}.sm\:h-\[64px\]{height:64px}.sm\:h-\[86px\]{height:86px}.sm\:w-32{width:8rem}.sm\:w-\[120px\]{width:120px}.sm\:w-\[150px\]{width:150px}.sm\:w-48{width:12rem}.sm\:min-w-\[180px\]{min-width:180px}.sm\:max-w-\[400px\]{max-width:400px}.sm\:grid-cols-2{grid-template-columns:repeat(2, minmax(0, 1fr))}.sm\:grid-cols-6{grid-template-columns:repeat(6, minmax(0, 1fr))}.sm\:grid-cols-8{grid-template-columns:repeat(8, minmax(0, 1fr))}.sm\:gap-1\.5{gap:0.375rem}.sm\:p-4{padding:1rem}.sm\:px-10{padding-left:2.5rem;padding-right:2.5rem}.sm\:px-2{padding-left:0.5rem;padding-right:0.5rem}.sm\:px-2\.5{padding-left:0.625rem;padding-right:0.625rem}.sm\:px-3{padding-left:0.75rem;padding-right:0.75rem}.sm\:px-4{padding-left:1rem;padding-right:1rem}.sm\:py-3{padding-top:0.75rem;padding-bottom:0.75rem}.sm\:text-2xl{font-size:1.5rem;line-height:2rem}.sm\:text-\[10px\]{font-size:10px}.sm\:text-\[11px\]{font-size:11px}.sm\:text-base{font-size:1rem;line-height:1.5rem}.sm\:text-lg{font-size:1.125rem;line-height:1.75rem}.sm\:text-sm{font-size:0.875rem;line-height:1.25rem}.sm\:text-xl{font-size:1.25rem;line-height:1.75rem}.sm\:text-xs{font-size:0.75rem;line-height:1rem}}@media (min-width: 768px){.md\:inline{display:inline}.md\:grid-cols-2{grid-template-columns:repeat(2, minmax(0, 1fr))}}@media (min-width: 1024px){.lg\:col-span-5{grid-column:span 5 / span 5}.lg\:col-span-7{grid-column:span 7 / span 7}.lg\:grid-cols-12{grid-template-columns:repeat(12, minmax(0, 1fr))}.lg\:grid-cols-3{grid-template-columns:repeat(3, minmax(0, 1fr))}.lg\:grid-cols-4{grid-template-columns:repeat(4, minmax(0, 1fr))}}</style></head>
 <body class="flex flex-col h-screen overflow-hidden">
@@ -278,7 +426,7 @@
                 </div>
             </div>
             
-            <div class="flex items-center gap-1 sm:gap-1.5 text-[11px] tech-font flex-shrink-0">
+            <div id="mobile-header-controls" class="flex items-center gap-1 sm:gap-1.5 text-[11px] tech-font flex-shrink-0">
                 <button onclick="openStageSelectModal()" title="クリックでステージ選択" class="bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded border border-slate-700 hover:border-amber-500 transition flex items-center gap-1 cursor-pointer">
                     <span class="text-slate-400 hidden md:inline">区間:</span>
                     <span id="ui-stage" class="text-amber-400 font-bold">1</span><span id="ui-max-stage-label" class="text-slate-500">/10</span>
@@ -320,7 +468,7 @@
         </header>
 
         <!-- 司令部戦術モニター外枠（上半部の残り全体を占有） -->
-        <div class="flex-1 min-h-0 flex flex-col bg-slate-950 px-1.5 sm:px-2.5 pt-1 pb-1 border-b-2 border-amber-700/80 shadow-2xl">
+        <div id="mobile-battle-shell" class="flex-1 min-h-0 flex flex-col bg-slate-950 px-1.5 sm:px-2.5 pt-1 pb-1 border-b-2 border-amber-700/80 shadow-2xl">
             <div class="flex-shrink-0 bg-slate-900 border-t-2 border-x-2 border-slate-600 rounded-t-md px-3 py-0.5 flex justify-between items-center text-[10px] tech-font text-slate-400">
                 <div class="flex items-center gap-2">
                     <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
@@ -405,7 +553,7 @@
                 </div>
                 
                 <!-- バトルコントロールオーバーレイ＆天候ステータスバッジ -->
-                <div class="absolute top-2.5 left-3 flex flex-wrap items-center gap-2 z-20">
+                <div id="mobile-battle-controls" class="absolute top-2.5 left-3 flex flex-wrap items-center gap-2 z-20">
                     <div class="flex items-center bg-slate-900/95 rounded border-2 border-slate-500 overflow-hidden shadow-lg">
                         <button id="btn-prev-stage" onclick="changeStage(-1)" title="前のステージへ戻る" class="px-2.5 py-1 text-xs font-bold text-slate-300 hover:bg-slate-700 hover:text-amber-400 disabled:opacity-30 disabled:pointer-events-none transition border-r border-slate-700" disabled="">
                             ◀
@@ -457,7 +605,7 @@
                 </div>
 
                 <!-- 戦闘画面左下：装甲列車耐久値 -->
-                <div class="absolute bottom-2 left-3 bg-slate-950/90 backdrop-blur border-2 border-emerald-600/80 rounded px-2.5 py-1 shadow-xl pointer-events-none z-20 min-w-[155px] sm:min-w-[180px]">
+                <div id="mobile-armor-hud" class="absolute bottom-2 left-3 bg-slate-950/90 backdrop-blur border-2 border-emerald-600/80 rounded px-2.5 py-1 shadow-xl pointer-events-none z-20 min-w-[155px] sm:min-w-[180px]">
                     <div class="flex justify-between items-center text-[9px] sm:text-[10px] tech-font tracking-wider text-emerald-400 font-bold mb-0.5">
                         <span>◈ ARMOR INTEGRITY</span>
                         <span id="ui-hp-percent">100%</span>
@@ -482,9 +630,9 @@
     </div>
 
     <!-- 下半部：ブリッジ（下部タブ一覧＋マネジメント領域）。残り領域をすべて使う -->
-    <section class="flex-1 min-h-0 bg-slate-900 flex flex-col border-x-2 border-b-2 border-slate-700 mx-1.5 sm:mx-2.5 mb-1.5 rounded-b-lg shadow-2xl overflow-hidden">
+    <section id="mobile-management" class="flex-1 min-h-0 bg-slate-900 flex flex-col border-x-2 border-b-2 border-slate-700 mx-1.5 sm:mx-2.5 mb-1.5 rounded-b-lg shadow-2xl overflow-hidden">
         <!-- ブリッジ（COMMAND BRIDGE）：全8タブをスクロール不要で一覧表示 -->
-        <div class="flex-shrink-0 bg-slate-950/90 border-b border-slate-700 px-2 py-1.5">
+        <div id="mobile-bridge-nav" class="flex-shrink-0 bg-slate-950/90 border-b border-slate-700 px-2 py-1.5">
             <div class="flex items-center justify-between text-[10px] tech-font text-amber-400/90 mb-1 px-0.5">
                 <div class="flex items-center gap-1.5">
                     <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
@@ -525,14 +673,15 @@
         </div>
 
         <!-- タブコンテンツスクロール領域 -->
-        <div class="flex-1 min-h-0 overflow-y-auto">
+        <div id="mobile-bridge-content" class="flex-1 min-h-0 overflow-y-auto">
             <!-- タブ1: 車両編成 -->
             <div id="tab-content-train" class="p-3 sm:p-4 flex flex-col gap-3">
                 <div class="flex flex-wrap justify-between items-center gap-2">
-                    <p class="text-xs text-slate-400">
+                    <p id="train-intro-desktop" class="text-xs text-slate-400">
                         ※各車両をクリックして「兵装」と「セフィラ（駅員）」を編成。駅員の得意兵装と一致すると<span class="text-amber-400 font-bold">【セフィロト・シナジー】</span>が発動し、さらに駅員固有の<span class="text-purple-300 font-bold">自動スキル</span>が稼働します！
                     </p>
-                    <div class="flex flex-wrap items-center gap-2">
+                    <p id="train-intro-mobile" class="hidden text-[10px] text-slate-400">車両を選んで兵装と駅員を編成。得意兵装が一致するとシナジーが発動します。</p>
+                    <div id="train-action-row" class="flex flex-wrap items-center gap-2">
                         <div class="bg-slate-950 border border-yellow-600/70 px-2.5 py-1.5 rounded text-xs tech-font shadow-inner flex items-center gap-1">
                             <span class="text-slate-400">💰 FUNDS:</span>
                             <span class="ui-gold-display text-yellow-400 font-bold text-sm">300</span>
@@ -909,15 +1058,16 @@
 
             <!-- タブ: 戦術 -->
             <div id="tab-content-skills" class="p-3 sm:p-4 hidden flex-col gap-3">
-                <div class="bg-slate-800/90 border border-amber-600/70 rounded-lg p-3 flex flex-wrap justify-between items-center gap-2">
+                <div id="skills-intro-card" class="bg-slate-800/90 border border-amber-600/70 rounded-lg p-3 flex flex-wrap justify-between items-center gap-2">
                     <div>
                         <div class="flex items-center gap-2">
                             <span class="px-2 py-0.5 text-[10px] font-bold bg-amber-900 text-amber-200 rounded">司令部常時指令</span>
                             <h3 class="text-sm sm:text-base font-bold text-amber-300">戦術選択 ＆ レベル強化</h3>
                         </div>
-                        <p class="text-xs text-slate-300 mt-1">
+                        <p id="skills-description-desktop" class="text-xs text-slate-300 mt-1">
                             4種の戦術から<strong>1つを選択</strong>すると常時稼働します（発動操作・クールダウンなし）。レベルは最大Lv.30で、プレステージ時にLv1へリセットされます。
                         </p>
+                        <p id="skills-description-mobile" class="hidden">4種のうち1つが常時稼働。各戦術はLv.30まで強化できます。</p>
                     </div>
                     <div class="bg-slate-950 border border-yellow-600/70 px-3 py-1.5 rounded text-xs tech-font shadow-inner flex items-center gap-1">
                         <span class="text-slate-400">💰 FUNDS:</span>
@@ -926,6 +1076,8 @@
                     </div>
                 </div>
                 <div id="skills-list-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3"></div>
+                <div id="mobile-skills-tabs" class="mobile-skills-ui" role="group" aria-label="戦術一覧"></div>
+                <div id="mobile-skill-detail" class="mobile-skills-ui" role="tabpanel"></div>
             </div>
 
             <!-- タブ: 鹵獲超兵器 -->
@@ -959,7 +1111,7 @@
 
             <!-- タブ: 世界・勢力選択（現実世界 / 暗黒世界 動的タブ生成） -->
             <div id="tab-content-world" class="p-3 sm:p-4 hidden flex-col gap-3">
-                <div class="flex flex-wrap justify-between items-center gap-2 bg-slate-800/80 border border-slate-700 rounded-lg p-2.5">
+                <div id="world-overview-card" class="flex flex-wrap justify-between items-center gap-2 bg-slate-800/80 border border-slate-700 rounded-lg p-2.5">
                     <div id="world-subtab-container" class="flex items-center gap-2"></div>
                     <div id="world-subtab-desc" class="text-[11px] text-slate-300">
                         現実世界の各勢力を突破し、永続チェックポイントとビーコンキー（レリック）を獲得せよ！
@@ -1078,13 +1230,17 @@
                 <button onclick="closeConfigModal()" class="text-slate-400 hover:text-white text-xl font-bold px-2">×</button>
             </div>
             
-            <div class="p-4 overflow-y-auto space-y-6 flex-1">
+            <div class="config-mobile-switch hidden p-2 border-b border-slate-700 bg-slate-950 grid grid-cols-2 gap-1">
+                <button type="button" id="config-tab-weapon" class="config-mobile-tab px-3 py-2 text-xs font-black rounded border border-amber-500 bg-amber-900/50 text-amber-200" onclick="setConfigSection('weapon')">⚔️ 兵装</button>
+                <button type="button" id="config-tab-sephirah" class="config-mobile-tab px-3 py-2 text-xs font-black rounded border border-slate-700 bg-slate-800 text-slate-300" onclick="setConfigSection('sephirah')">👤 セフィラ</button>
+            </div>
+            <div class="config-modal-scroll p-4 overflow-y-auto space-y-6 flex-1">
                 <div id="modal-synergy-status" class="p-3 rounded bg-slate-800 border border-slate-700 text-sm"></div>
-                <div>
+                <div id="config-section-weapon" class="config-mobile-section is-active">
                     <h4 class="text-sm font-bold text-slate-300 mb-2 border-l-4 border-amber-500 pl-2">1. 搭載兵装の選択</h4>
                     <div id="modal-weapon-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
                 </div>
-                <div>
+                <div id="config-section-sephirah" class="config-mobile-section">
                     <h4 class="text-sm font-bold text-slate-300 mb-2 border-l-4 border-purple-500 pl-2">2. 配属セフィラ（駅員）の選択</h4>
                     <p class="text-xs text-slate-400 mb-2">※同じセフィラは列車内に1人しか配置できません（他車両から異動可能）</p>
                     <div id="modal-sephirah-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
@@ -6512,6 +6668,17 @@ function updateHeaderUI() {
     if (distEl) distEl.textContent = `${Math.floor(getTotalMeters(faction, state.stage, marchMeters)).toLocaleString()} m`;
     const districtEl = document.getElementById('ui-district');
     if (districtEl) districtEl.textContent = getDistrictName(faction, state.stage, marchMeters);
+    const dockStageEl = document.getElementById('mobile-dock-stage');
+    const dockRouteEl = document.getElementById('mobile-dock-route');
+    if (dockStageEl) {
+        const stageSuffix = maxStEl ? maxStEl.textContent : `/${faction.stageCount}`;
+        dockStageEl.textContent = `ST.${state.stage}${stageSuffix}`;
+    }
+    if (dockRouteEl) {
+        const distanceText = distEl ? distEl.textContent : '';
+        const districtText = districtEl ? districtEl.textContent : '';
+        dockRouteEl.textContent = `${distanceText} · ${districtText}`;
+    }
 
     const bossBadge = document.getElementById('ui-boss-badge');
     if (bossBadge) {
@@ -6598,6 +6765,12 @@ function switchTab(tabId) {
         }
     });
     renderCurrentTab();
+    if (window.matchMedia('(max-width: 639px)').matches) {
+        closeMobileCommandPanels();
+        document.querySelectorAll('[data-mobile-dock-destination]').forEach(button => {
+            button.setAttribute('aria-current', 'page');
+        });
+    }
 }
 
 function renderCurrentTab() {
@@ -6735,8 +6908,21 @@ function openConfigModal(carIdx) {
         statusBox.innerHTML = `<span class="text-slate-400">搭載兵装と得意分野が一致するセフィラを配属すると【セフィロト・シナジー】が発動します。</span>`;
     }
 
+    setConfigSection(configSectionFocus);
     modal.classList.remove('hidden');
     modal.classList.add('flex');
+}
+
+function setConfigSection(section) {
+    configSectionFocus = section === 'sephirah' ? 'sephirah' : 'weapon';
+    document.querySelectorAll('#config-modal .config-mobile-section').forEach(panel => {
+        panel.classList.toggle('is-active', panel.id === `config-section-${configSectionFocus}`);
+    });
+    document.querySelectorAll('#config-modal .config-mobile-tab').forEach(tab => {
+        const selected = tab.id === `config-tab-${configSectionFocus}`;
+        tab.setAttribute('aria-pressed', String(selected));
+        tab.className = `config-mobile-tab px-3 py-2 text-xs font-black rounded border ${selected ? (configSectionFocus === 'weapon' ? 'border-amber-500 bg-amber-900/50 text-amber-200' : 'border-purple-500 bg-purple-900/50 text-purple-200') : 'border-slate-700 bg-slate-800 text-slate-300'}`;
+    });
 }
 
 function closeConfigModal() {
@@ -7102,8 +7288,13 @@ function bulkUpgradeWeapons() {
 
 // --- タブ: 戦術 ---
 // 4種の戦術から1つを選択し、常時稼働させる。レベルは Lv1〜30。
+let mobileSkillFocusId = null;
+let configSectionFocus = 'weapon';
+
 function renderSkillsTab() {
     const grid = document.getElementById('skills-list-grid');
+    const mobileTabs = document.getElementById('mobile-skills-tabs');
+    const mobileDetail = document.getElementById('mobile-skill-detail');
     if (!grid) return;
     grid.innerHTML = '';
 
@@ -7149,6 +7340,37 @@ function renderSkillsTab() {
         `;
         grid.appendChild(card);
     });
+
+    if (!mobileTabs || !mobileDetail) return;
+    mobileTabs.innerHTML = '';
+    TACTICAL_SKILLS.forEach(sk => {
+        const lv = getSkillLevel(sk.id);
+        const active = isTacticSelected(sk.id);
+        const maxed = isSkillMaxed(sk.id);
+        const cost = getSkillUpgradeCost(sk.id);
+        const card = document.createElement('article');
+        card.id = `mobile-skill-card-${sk.id}`;
+        card.className = `mobile-skill-card ${active ? 'is-active' : ''}`;
+        card.innerHTML = `
+            <div>
+                <div class="flex justify-between items-start gap-1"><h4 class="mobile-skill-card-title ${active ? 'text-amber-200' : 'text-white'}">${sk.icon} ${sk.name}</h4><span class="flex-shrink-0 text-[9px] tech-font text-amber-300 font-bold">Lv.${lv}/${TACTICAL_MAX_LEVEL}</span></div>
+                <p class="mobile-skill-card-desc mt-1">${sk.desc}</p>
+            </div>
+            <div class="mobile-skill-card-effect">${sk.getEffectSummary(lv)}</div>
+            <div class="mobile-skill-card-actions">
+                <button class="rounded border ${active ? 'border-emerald-600 bg-emerald-900/70 text-emerald-200' : 'border-slate-600 bg-slate-700 text-slate-100'}" onclick="selectTacticalSkill('${sk.id}')" ${active ? 'disabled' : ''}>${active ? '● 稼働中' : 'この戦術を選択'}</button>
+                <button class="rounded border border-amber-700 ${maxed ? 'bg-slate-900 text-slate-500' : 'bg-amber-900/70 text-amber-200'}" onclick="upgradeTacticalSkill('${sk.id}')" ${maxed ? 'disabled' : ''}>${maxed ? 'MAX Lv.30' : `強化 ${cost.toLocaleString()} G`}</button>
+            </div>
+        `;
+        mobileTabs.appendChild(card);
+    });
+    mobileDetail.innerHTML = '';
+}
+
+function focusMobileTactic(skillId) {
+    if (!TACTICAL_SKILLS.some(sk => sk.id === skillId)) return;
+    mobileSkillFocusId = skillId;
+    renderSkillsTab();
 }
 
 function selectTacticalSkill(skillId) {
@@ -7420,26 +7642,27 @@ function renderWorldTab() {
         const bKey = BEACON_KEYS.find(k => k.factionId === f.id);
 
         const card = document.createElement('div');
-        card.className = `bg-slate-800 border-2 ${isCurrent ? 'border-amber-400' : unlocked ? 'border-slate-700' : 'border-slate-800 opacity-50'} rounded-lg p-3.5 flex flex-col justify-between gap-2.5`;
+        card.className = `mobile-faction-card bg-slate-800 border-2 ${isCurrent ? 'border-amber-400' : unlocked ? 'border-slate-700' : 'border-slate-800 opacity-50'} rounded-lg p-3.5 flex flex-col justify-between gap-2.5`;
         card.innerHTML = `
             <div>
                 <div class="flex justify-between items-center">
-                    <span class="text-sm font-black text-white">${f.name}</span>
-                    <span class="text-[10px] font-bold px-2 py-0.5 rounded ${cleared ? 'bg-emerald-900 text-emerald-200' : isCurrent ? 'bg-amber-900 text-amber-200' : unlocked ? 'bg-cyan-950 text-cyan-200 border border-cyan-700/60' : 'bg-slate-900 text-slate-400'}">
+                    <span class="mobile-faction-title text-sm font-black text-white">${f.name}</span>
+                    <span class="mobile-faction-status text-[10px] font-bold px-2 py-0.5 rounded ${cleared ? 'bg-emerald-900 text-emerald-200' : isCurrent ? 'bg-amber-900 text-amber-200' : unlocked ? 'bg-cyan-950 text-cyan-200 border border-cyan-700/60' : 'bg-slate-900 text-slate-400'}">
                         ${cleared ? '🚩 制圧済みCP' : isCurrent ? '⚔️ 交戦中' : unlocked ? '🚩 CP解放済み' : '未解放'}
                     </span>
                 </div>
-                <div class="text-[10px] tech-font text-slate-400 mt-0.5">${f.subtitle}</div>
-                <p class="text-xs text-slate-300 mt-1.5">${f.desc}</p>
+                <div class="mobile-faction-subtitle text-[10px] tech-font text-slate-400 mt-0.5">${f.subtitle}</div>
+                <p class="world-faction-description text-xs text-slate-300 mt-1.5">${f.desc}</p>
+                <details class="mobile-world-lore"><summary>戦線の説明</summary><p>${f.desc}</p></details>
                 ${bKey ? `<div class="text-[10px] mt-1 ${state.beaconKeys[bKey.id] ? 'text-cyan-300 font-bold' : 'text-slate-400'}">🔑 制圧報酬レリック: ${bKey.name} ${state.beaconKeys[bKey.id] ? '（入手済）' : ''}</div>` : ''}
-                <div class="flex justify-between items-center text-[11px] tech-font mt-1.5">
+                <div class="mobile-faction-progress flex justify-between items-center text-[11px] tech-font mt-1.5">
                     <span class="text-amber-300">到達: STAGE ${maxSt}${f.isEndless ? '' : `/${f.stageCount}`}</span>
                     <span class="text-red-300">敵: HP×${Math.round(getGlobalStageMult(f, 1)).toLocaleString()} / 報酬×${Math.round(getGlobalRewardMult(f, 1)).toLocaleString()}</span>
                 </div>
             </div>
             <div>
                 ${unlocked
-                    ? `<button onclick="switchFaction('${f.id}')" class="w-full ${isCurrent ? 'bg-slate-700 text-amber-300' : 'bg-amber-600 hover:bg-amber-500 text-slate-950 font-black'} py-1.5 rounded text-xs transition">
+                    ? `<button onclick="switchFaction('${f.id}')" class="mobile-faction-action w-full ${isCurrent ? 'bg-slate-700 text-amber-300' : 'bg-amber-600 hover:bg-amber-500 text-slate-950 font-black'} py-1.5 rounded text-xs transition">
                         ${isCurrent ? '現在この戦線に展開中' : 'この戦線へ転進する ▶'}
                     </button>`
                     : `<div class="text-center text-[11px] text-slate-500 bg-slate-900 py-1.5 rounded">前の戦線を制圧すると解放</div>`
@@ -8339,6 +8562,57 @@ function gameLoop() {
     requestAnimationFrame(gameLoop);
 }
 
+let mobileCommandDockMedia = null;
+const mobileDockPlacements = [];
+
+function initializeMobileCommandDock() {
+    const locations = [
+        ['mobile-header-controls', 'mobile-header-slot'],
+        ['mobile-battle-controls', 'mobile-battle-slot'],
+        ['mobile-bridge-nav', 'mobile-bridge-slot']
+    ];
+    locations.forEach(([elementId, slotId]) => {
+        const element = document.getElementById(elementId);
+        const slot = document.getElementById(slotId);
+        if (!element || !slot || !element.parentNode) return;
+        const placeholder = document.createComment(`restore:${elementId}`);
+        element.parentNode.insertBefore(placeholder, element);
+        mobileDockPlacements.push({ element, slot, placeholder });
+    });
+
+    const moveForViewport = event => {
+        const isMobile = typeof event === 'boolean' ? event : event.matches;
+        mobileDockPlacements.forEach(({ element, slot, placeholder }) => {
+            if (isMobile) {
+                if (element.parentNode !== slot) slot.appendChild(element);
+            } else if (placeholder.parentNode && element.parentNode !== placeholder.parentNode) {
+                placeholder.parentNode.insertBefore(element, placeholder.nextSibling);
+            }
+        });
+    };
+
+    mobileCommandDockMedia = window.matchMedia('(max-width: 639px)');
+    moveForViewport(mobileCommandDockMedia.matches);
+    mobileCommandDockMedia.addEventListener('change', moveForViewport);
+}
+
+function closeMobileCommandPanels() {
+    document.querySelectorAll('.mobile-command-panel').forEach(panel => panel.classList.remove('is-open'));
+    document.querySelectorAll('.mobile-dock-button[aria-expanded="true"]').forEach(button => button.setAttribute('aria-expanded', 'false'));
+}
+
+function toggleMobileCommandPanel(panelId) {
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+    const wasOpen = panel.classList.contains('is-open');
+    closeMobileCommandPanels();
+    if (!wasOpen) {
+        panel.classList.add('is-open');
+        const button = document.querySelector(`.mobile-dock-button[aria-controls="${panelId}"]`);
+        if (button) button.setAttribute('aria-expanded', 'true');
+    }
+}
+
 window.addEventListener('DOMContentLoaded', () => {
     initCars();
     initWeatherParticles();
@@ -8353,6 +8627,7 @@ window.addEventListener('DOMContentLoaded', () => {
     showEnemyPreviewTemporarily();
     updateHeaderUI();
     switchTab(state.activeTab || 'train');
+    initializeMobileCommandDock();
 
     if (hasSave) {
         closeStoryModal();
@@ -8361,4 +8636,28 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+    <!-- Edge-to-edge mobile command dock: HUD and bridge navigation live here. -->
+    <section id="mobile-operations-panel" class="mobile-command-panel" aria-label="戦況と運行操作">
+        <div class="flex items-center justify-between mb-2">
+            <div class="text-[10px] tech-font tracking-[.18em] text-amber-400 font-bold">OPERATIONS // 運行・戦闘管制</div>
+            <button type="button" onclick="closeMobileCommandPanels()" class="text-slate-400 px-2 py-1" aria-label="閉じる">×</button>
+        </div>
+        <div id="mobile-header-slot"></div>
+        <div id="mobile-battle-slot"></div>
+    </section>
+    <section id="mobile-bridge-panel" class="mobile-command-panel" aria-label="艦橋統制タブ">
+        <div id="mobile-bridge-slot"></div>
+    </section>
+    <nav class="mobile-command-dock" aria-label="艦橋コマンド">
+        <button type="button" class="mobile-dock-button mobile-dock-operations" onclick="toggleMobileCommandPanel('mobile-operations-panel')" aria-controls="mobile-operations-panel" aria-expanded="false">
+            <span class="mobile-dock-operations-main"><span class="mobile-dock-icon">◉</span><span>戦況・操作</span></span>
+            <span class="mobile-dock-status"><span id="mobile-dock-stage" class="mobile-dock-status-stage">ST.1</span><span id="mobile-dock-route" class="mobile-dock-status-route">0 m · 東京環状線・起点</span></span>
+        </button>
+        <button type="button" class="mobile-dock-button" data-mobile-dock-destination="bridge" aria-current="page" onclick="toggleMobileCommandPanel('mobile-bridge-panel')" aria-controls="mobile-bridge-panel" aria-expanded="false">
+            <span class="mobile-dock-icon">⚙</span><span>艦橋統制</span><span class="text-[8px] tech-font text-slate-400">8系統</span>
+        </button>
+        <button type="button" class="mobile-dock-button" onclick="manualSaveGame()" title="現在の進行状況をセーブ" aria-label="セーブ">
+            <span class="mobile-dock-icon">💾</span><span class="mobile-save-label">セーブ</span>
+        </button>
+    </nav>
 </body></html>
