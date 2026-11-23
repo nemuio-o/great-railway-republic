@@ -1,0 +1,418 @@
+
+        html, body {
+            font-family: 'Noto Serif JP', serif;
+            background-color: #0f1115;
+            color: #e2e8f0;
+            height: 100%;
+            overflow: hidden;
+            user-select: none;
+        }
+        .tech-font {
+            font-family: 'Share Tech Mono', monospace;
+        }
+        ::-webkit-scrollbar {
+            height: 6px;
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a1d24;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #b45309;
+            border-radius: 4px;
+        }
+        .train-car-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .train-car-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+        }
+        .synergy-active {
+            border-color: #f59e0b !important;
+            box-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
+        }
+        .emergency-btn-housing {
+            background: repeating-linear-gradient(
+                -45deg,
+                #f59e0b,
+                #f59e0b 8px,
+                #18181b 8px,
+                #18181b 16px
+            );
+            padding: 6px;
+            border-radius: 9999px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.85), inset 0 2px 4px rgba(255, 255, 255, 0.25);
+        }
+        .emergency-red-btn {
+            background: radial-gradient(circle at 35% 30%, #ff6b6b 0%, #dc2626 48%, #7f1d1d 100%);
+            box-shadow:
+                0 6px 0 #450a0a,
+                0 10px 20px rgba(220, 38, 38, 0.65),
+                inset 0 3px 6px rgba(255, 255, 255, 0.45);
+            transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s ease;
+        }
+        .emergency-red-btn:hover {
+            filter: brightness(1.12);
+            box-shadow:
+                0 6px 0 #450a0a,
+                0 0 28px rgba(248, 113, 113, 0.85),
+                inset 0 3px 8px rgba(255, 255, 255, 0.6);
+        }
+        .emergency-red-btn:active {
+            transform: translateY(5px);
+            box-shadow:
+                0 1px 0 #450a0a,
+                0 3px 10px rgba(220, 38, 38, 0.6),
+                inset 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        .hq-chassis {
+            background: linear-gradient(180deg, #181c24 0%, #0d1015 100%);
+            border: 3px solid #334155;
+            box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.95), 0 0 0 1px #090b0e;
+        }
+        .hq-scanlines {
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.14) 0px,
+                rgba(0, 0, 0, 0.14) 1px,
+                transparent 1px,
+                transparent 3px
+            );
+        }
+        .hq-corner-tl::before {
+            content: '';
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            width: 18px;
+            height: 18px;
+            border-top: 2px solid #f59e0b;
+            border-left: 2px solid #f59e0b;
+            pointer-events: none;
+            z-index: 15;
+        }
+        .hq-corner-tr::after {
+            content: '';
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 18px;
+            height: 18px;
+            border-top: 2px solid #f59e0b;
+            border-right: 2px solid #f59e0b;
+            pointer-events: none;
+            z-index: 15;
+        }
+        .hq-corner-bl::before {
+            content: '';
+            position: absolute;
+            bottom: 6px;
+            left: 6px;
+            width: 18px;
+            height: 18px;
+            border-bottom: 2px solid #f59e0b;
+            border-left: 2px solid #f59e0b;
+            pointer-events: none;
+            z-index: 15;
+        }
+        .hq-corner-br::after {
+            content: '';
+            position: absolute;
+            bottom: 6px;
+            right: 6px;
+            width: 18px;
+            height: 18px;
+            border-bottom: 2px solid #f59e0b;
+            border-right: 2px solid #f59e0b;
+            pointer-events: none;
+            z-index: 15;
+        }
+        .hq-hazard-bar {
+            height: 4px;
+            background: repeating-linear-gradient(
+                -45deg,
+                #b45309,
+                #b45309 6px,
+                #1e293b 6px,
+                #1e293b 12px
+            );
+        }
+        @keyframes cutinSlideIn {
+            0% { opacity: 0; transform: translateX(120%) skewX(-12deg); }
+            12% { opacity: 1; transform: translateX(0%) skewX(-12deg); }
+            88% { opacity: 1; transform: translateX(-1%) skewX(-12deg); }
+            100% { opacity: 0; transform: translateX(-120%) skewX(-12deg); }
+        }
+        @keyframes cutinTextSlide {
+            0% { opacity: 0; transform: translateX(-40px); }
+            14% { opacity: 1; transform: translateX(0); }
+            86% { opacity: 1; transform: translateX(4px); }
+            100% { opacity: 0; transform: translateX(40px); }
+        }
+        @keyframes warningStripeScroll {
+            0% { background-position: 0 0; }
+            100% { background-position: 40px 0; }
+        }
+        @keyframes radioPopIn {
+            0% { opacity: 0; transform: translateY(14px) scale(0.96); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes grandBossZoom {
+            0% { opacity: 0; transform: scale(1.28); filter: brightness(2.2); }
+            12% { opacity: 1; transform: scale(1.0); filter: brightness(1.0); }
+            88% { opacity: 1; transform: scale(1.02); filter: brightness(1.0); }
+            100% { opacity: 0; transform: scale(0.94); filter: brightness(0.4); }
+        }
+        .cutin-banner-active {
+            animation: cutinSlideIn 4.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .cutin-content-active {
+            animation: cutinTextSlide 4.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .grand-boss-cutin-active {
+            animation: grandBossZoom 4.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .radio-pop {
+            animation: radioPopIn 0.25s ease-out forwards;
+        }
+        .warning-hazard-strip {
+            background: repeating-linear-gradient(
+                -45deg,
+                #dc2626,
+                #dc2626 10px,
+                #090d16 10px,
+                #090d16 20px
+            );
+            background-size: 28.28px 28.28px;
+            animation: warningStripeScroll 0.8s linear infinite;
+        }
+        .sephira-node-btn {
+            transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+        }
+        .sephira-node-btn:hover {
+            transform: translate(-50%, -50%) scale(1.08);
+            z-index: 20;
+        }
+        /* アップグレード差分表示：現状 → 次Lv（テーマ色）＋増分チップ */
+        .delta-stat {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 0.28em;
+            white-space: nowrap;
+        }
+        .delta-stat .delta-from {
+            color: #94a3b8;
+            font-weight: 600;
+        }
+        .delta-stat .delta-arrow {
+            color: #475569;
+            font-size: 0.85em;
+            line-height: 1;
+        }
+        .delta-stat .delta-to {
+            font-weight: 800;
+        }
+        .delta-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 0 0.42em;
+            border-radius: 4px;
+            border: 1px solid transparent;
+            font-weight: 700;
+            font-size: 0.92em;
+            line-height: 1.55;
+            letter-spacing: 0.01em;
+            white-space: nowrap;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        /* 画面を上下に分ける比率。固定50%だと下段のタブが潰れるため、
+           上段を抑えて下段（管理画面）に余裕を持たせる。 */
+        .battle-upper {
+            height: 44%;
+            min-height: 250px;
+            max-height: 56%;
+        }
+        @media (max-height: 700px) {
+            .battle-upper {
+                height: 40%;
+                min-height: 220px;
+            }
+        }
+        /* 極端に低い画面では下段を優先する */
+        @media (max-height: 560px) {
+            .battle-upper {
+                height: 34%;
+                min-height: 180px;
+            }
+        }
+        /* Mobile edge-to-edge bridge dock */
+        .mobile-command-dock, .mobile-command-panel, .mobile-skills-ui, .mobile-world-lore { display: none; }
+        @media (max-width: 639px) {
+            html, body { width: 100%; max-width: 100%; overflow-x: clip; }
+            body.h-screen { height: 100vh; height: 100dvh; padding: env(safe-area-inset-top) 0 0; }
+            body > .battle-upper > header { display: none; }
+            .battle-upper { height: 34dvh; min-height: 190px; max-height: 38dvh; }
+            .battle-upper { width: 100%; margin: 0; }
+            #mobile-battle-shell { width: 100%; max-width: 100%; padding: 0 !important; border-left: 0; border-right: 0; }
+            #mobile-battle-shell .hq-chassis { border-left: 0; border-right: 0; }
+            #ui-weather-header { display: none; }
+            #mobile-management { width: 100%; max-width: 100%; margin: 0 !important; border-left: 0; border-right: 0; border-bottom: 0; border-radius: 0; box-shadow: none; }
+            #mobile-bridge-content { display: flex; flex-direction: column; padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+            #mobile-header-controls { display: none; }
+            .mobile-command-dock {
+                position: fixed; z-index: 45; inset: auto 0 0; width: 100%;
+                display: grid; grid-template-columns: 1.8fr 1fr .42fr; gap: 4px;
+                padding: 9px max(8px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));
+                background: linear-gradient(180deg, rgba(23,29,38,.98), rgba(7,10,15,.99));
+                border-top: 2px solid #9a661e;
+                box-shadow: 0 -8px 24px rgba(0,0,0,.72), inset 0 1px rgba(251,191,36,.18);
+            }
+            .mobile-command-dock::before {
+                content: ''; position: absolute; inset: 0 0 auto; height: 3px;
+                background: repeating-linear-gradient(-45deg,#b45309,#b45309 6px,#1e293b 6px,#1e293b 12px);
+                pointer-events: none;
+            }
+            .mobile-dock-button {
+                min-width: 0; min-height: 50px; display: flex; flex-direction: column;
+                justify-content: center; align-items: center; gap: 3px;
+                border: 1px solid #39485e; border-radius: 4px;
+                background: linear-gradient(180deg,#1a2432,#0c121b); color: #aab7c9;
+                font-size: 10px; font-weight: 800; line-height: 1.1;
+            }
+            .mobile-dock-button[aria-expanded="true"], .mobile-dock-button[aria-current="page"] {
+                border-color: #d99a28; color: #ffd05b;
+                background: linear-gradient(180deg,#342815,#17140f);
+                box-shadow: inset 0 2px #fbbf24, 0 0 12px rgba(245,158,11,.16);
+            }
+            .mobile-dock-icon { font-size: 18px; line-height: 1; }
+            .mobile-dock-operations { align-items: stretch; justify-content: center; gap: 3px; padding: 4px 7px; }
+            .mobile-dock-operations-main { display:flex; align-items:center; gap:6px; font-size:11px; }
+            .mobile-dock-operations-main .mobile-dock-icon { font-size:16px; }
+            .mobile-dock-status { min-width:0; display:flex; align-items:center; justify-content:space-between; gap:5px; color:#b7c5d8; font:10px/1.1 'Share Tech Mono',monospace; }
+            .mobile-dock-status-stage { flex-shrink:0; color:#fbbf24; font-weight:900; }
+            .mobile-dock-status-route { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:right; }
+            .mobile-save-label { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+            .mobile-command-panel {
+                position: fixed; z-index: 44; left: max(8px,env(safe-area-inset-left)); right: max(8px,env(safe-area-inset-right));
+                bottom: calc(74px + env(safe-area-inset-bottom)); max-height: min(68dvh, 520px);
+                overflow-y: auto; overscroll-behavior: contain;
+                padding: 10px; background: linear-gradient(180deg,rgba(16,24,37,.99),rgba(6,9,15,.99));
+                border: 2px solid #79571f; border-top: 4px solid #b45309; border-radius: 5px;
+                box-shadow: 0 14px 35px rgba(0,0,0,.82), inset 0 0 20px rgba(0,0,0,.45);
+            }
+            .mobile-command-panel.is-open { display: block; }
+            #mobile-header-slot #mobile-header-controls {
+                display: grid; grid-template-columns: 66px minmax(0,1fr) repeat(4,minmax(30px,34px));
+                grid-template-areas: 'stage route route route route route' 'modes modes sound save manage help';
+                align-items: stretch; gap: 5px; width: 100%; padding-bottom: 8px; border-bottom: 1px solid #334155;
+            }
+            #mobile-header-controls > * { min-height: 36px; min-width: 0; }
+            #mobile-header-controls > :nth-child(1) { grid-area: stage; justify-content: center; padding-inline: 4px; }
+            #mobile-header-controls > :nth-child(2) { grid-area: route; width: 100%; padding-inline: 6px; }
+            #mobile-header-controls > :nth-child(3) { grid-area: modes; width: 100%; justify-content: space-evenly; }
+            #mobile-header-controls > :nth-child(4) { grid-area: sound; }
+            #mobile-header-controls > :nth-child(5) { grid-area: save; }
+            #mobile-header-controls > :nth-child(6) { grid-area: manage; }
+            #mobile-header-controls > :nth-child(7) { grid-area: help; }
+            #mobile-header-controls > :nth-child(n+4) { width: 100%; min-width: 0; padding-inline: 0; display: flex; justify-content: center; align-items: center; }
+            #btn-auto, #btn-loop { padding-inline: 5px; }
+            #btn-speed { min-width: 34px; }
+            #mobile-battle-controls { position: static !important; inset: auto !important; width: 100%; display: flex !important; gap: 7px; margin-top: 8px; }
+            #mobile-battle-controls > :first-child { flex: 1 1 auto; min-height: 42px; }
+            #mobile-battle-controls #ui-weather-badge { flex: 1 1 100%; min-height: 38px; }
+            #mobile-bridge-slot > #mobile-bridge-nav { display: block; }
+            #mobile-bridge-nav { margin: 0; padding: 0; }
+            #mobile-bridge-nav > div:first-child { margin-bottom: 8px; }
+            #mobile-bridge-nav .grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
+            #mobile-bridge-nav .grid button { min-height: 44px; font-size: 12px; }
+            #train-intro-desktop, #skills-description-desktop { display: none; }
+            #train-intro-mobile, #skills-description-mobile { display: block; }
+            #train-action-row { display: grid; grid-template-columns: 78px minmax(0,1fr) 100px; align-items: stretch; gap: 6px; }
+            #train-action-row > div { min-width: 0; padding: 4px 5px; font-size: 9px; gap: 3px; }
+            #train-action-row > div span:first-child { display: none; }
+            #train-action-row > div .ui-gold-display { font-size: 13px; }
+            #train-action-row button { min-width: 0; min-height: 42px; padding: 5px 6px; font-size: 10px; line-height: 1.2; }
+            #train-slots-container { display: grid !important; grid-template-columns: minmax(0,1fr); overflow: visible; gap: 8px; padding: 0 0 8px; }
+            #train-slots-container .train-car-card { width: 100% !important; min-width: 0; min-height: 102px; display: grid !important; grid-template-columns: minmax(0,1fr) minmax(112px,.78fr); align-items: center; gap: 8px; padding: 9px !important; }
+            #train-slots-container .train-car-card > div:first-child { min-width: 0; }
+            #train-slots-container .train-car-card > div:first-child > div:last-child { margin-top: 5px; }
+            #train-slots-container .train-car-card > div:last-child { min-width: 0; margin: 0; }
+            #skills-description-mobile { color: #cbd5e1; font-size: 11px; line-height: 1.4; }
+            #skills-list-grid { display: none !important; }
+            #mobile-skills-tabs { display: grid !important; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
+            .mobile-skill-tab { min-width: 0; min-height: 72px; display: flex; flex-direction: column; justify-content: space-between; text-align: left; padding: 8px; border: 1px solid #475569; border-radius: 5px; background: linear-gradient(145deg,#1e293b,#0f172a); color: #cbd5e1; }
+            .mobile-skill-tab[aria-selected="true"] { border: 2px solid #fbbf24; color: #fde68a; box-shadow: inset 0 0 14px rgba(245,158,11,.12); }
+            .mobile-skill-tab-title { font-size: 12px; font-weight: 900; line-height: 1.25; }
+            .mobile-skill-tab-meta { display: flex; justify-content: space-between; gap: 4px; color: #94a3b8; font: 10px 'Share Tech Mono',monospace; }
+            #mobile-skill-detail { display: block; }
+            .mobile-skill-action { min-height: 44px; font-size: 12px; font-weight: 800; }
+            #world-overview-card { display: grid; grid-template-columns: 1fr; gap: 7px; padding: 8px; }
+            #world-subtab-container { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; width: 100%; }
+            #world-subtab-container button { min-height: 42px; padding: 6px 8px; font-size: 12px; }
+            #world-subtab-desc { font-size: 10px; line-height: 1.4; }
+            #faction-list-grid { grid-template-columns: minmax(0,1fr); gap: 8px; }
+            #faction-list-grid .mobile-faction-card { padding: 10px; gap: 8px; }
+            #faction-list-grid .mobile-faction-title { font-size: 14px; }
+            #faction-list-grid .mobile-faction-subtitle { font-size: 9px; }
+            #faction-list-grid .world-faction-description { display: none; }
+            #faction-list-grid .mobile-world-lore { display: block; color: #aebbd0; font-size: 11px; line-height: 1.45; }
+            #faction-list-grid .mobile-world-lore summary { color: #7dd3fc; cursor: pointer; padding: 3px 0; }
+            #faction-list-grid .mobile-world-lore p { margin-top: 4px; }
+            #faction-list-grid .mobile-faction-status { font-size: 9px; }
+            #faction-list-grid .mobile-faction-progress { font-size: 10px; flex-wrap: wrap; }
+            #faction-list-grid .mobile-faction-action { min-height: 44px; font-size: 12px; }
+            /* キャンバス内の左上にコンパクト表示。車両（下部）と重ならない */
+            #mobile-armor-hud {
+                position: absolute !important;
+                top: 44px !important;
+                left: 8px !important;
+                right: auto !important;
+                bottom: auto !important;
+                width: 150px !important;
+                min-width: 0 !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 3px 6px !important;
+                border-radius: 4px !important;
+                border-width: 1px !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
+                gap: 2px !important;
+            }
+            #mobile-armor-hud > div:first-child { font-size: 7px; letter-spacing: .03em; margin: 0 !important; }
+            #mobile-armor-hud > div:nth-child(2) { height: 6px; flex: 0 0 auto; margin: 0 !important; }
+            #mobile-armor-hud > div:last-child { font-size: 10px; line-height: 1; }
+            #mobile-armor-hud > div:last-child span:nth-child(2) { font-size: 8px; }
+            #world-overview-card { grid-template-columns: minmax(120px,.72fr) minmax(0,1.28fr); align-items: stretch; }
+            #world-overview-card #world-subtab-container { min-width: 0; grid-template-columns: minmax(0,1fr); }
+            #world-overview-card #world-subtab-container button { width: 100%; min-height: 80px; }
+            #world-overview-card #world-subtab-desc { display: flex; align-items: center; min-height: 80px; }
+            #mobile-skills-tabs { align-items: stretch; }
+            #tab-content-skills { flex: 1 0 100%; min-height: 100%; }
+            #mobile-skills-tabs { flex: 1; min-height: 0; grid-template-rows: repeat(2,minmax(0,1fr)); }
+            .mobile-skill-card { min-width: 0; min-height: clamp(156px,calc((100dvh - 550px) / 2),260px); height: 100%; display:flex; flex-direction:column; justify-content:space-between; gap:7px; padding:9px; border:1px solid #475569; border-radius:6px; background:linear-gradient(145deg,#1e293b,#0f172a); }
+            .mobile-skill-card.is-active { border:2px solid #fbbf24; box-shadow:inset 0 0 14px rgba(245,158,11,.12); }
+            .mobile-skill-card-title { font-size:12px; font-weight:900; line-height:1.25; }
+            .mobile-skill-card-desc { color:#cbd5e1; font-size:10px; line-height:1.35; }
+            .mobile-skill-card-effect { padding:5px; border:1px solid #334155; border-radius:4px; background:#0b1220; color:#fde68a; font-size:10px; font-weight:800; line-height:1.25; }
+            .mobile-skill-card-actions { display:grid; grid-template-columns:1fr; gap:4px; }
+            .mobile-skill-card-actions button { min-height:34px; padding:4px; font-size:10px; line-height:1.1; }
+            #mobile-skill-detail { display:none !important; }
+            #config-modal > div { max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px); }
+            #config-modal { padding: max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left)); }
+            #config-modal .config-mobile-switch { display:grid !important; }
+            #config-modal .config-modal-scroll { min-height:0; overflow:auto; }
+            #config-modal .config-mobile-switch { position:sticky; top:0; z-index:2; }
+            #config-modal .config-mobile-section { display:none; }
+            #config-modal .config-mobile-section.is-active { display:block; }
+        }
+        @media (max-width: 639px) and (max-height: 760px) {
+            .battle-upper { height: 31dvh; min-height: 165px; max-height: 34dvh; }
+        }
+    

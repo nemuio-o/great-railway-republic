@@ -39,7 +39,12 @@
 
 ## 構成
 
-- `game-deploy-v2/index.html` — ゲーム本体（HTML / CSS / JavaScript の1ファイル）
+- `game-deploy-v2/index.html` — HTML
+- `game-deploy-v2/css/styles.css` — カスタムCSS
+- `game-deploy-v2/css/tailwind.css` — Tailwindの生成CSS
+- `game-deploy-v2/js/data.js` — ゲームデータ（兵装・敵・勢力・セフィロト等）
+- `game-deploy-v2/js/state.js` — ゲーム状態・戦術定義
+- `game-deploy-v2/js/game.js` — 戦闘・UI・セーブ/ロード
 - Tailwind CSS（CDN）と Canvas 2D を使用
 
 ## 開発・デプロイ
