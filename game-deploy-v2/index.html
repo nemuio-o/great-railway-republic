@@ -507,7 +507,7 @@
                     🔬 研究開発
                 </button>
                 <button onclick="switchTab('skills')" id="tab-btn-skills" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-amber-300 hover:text-white hover:border-slate-500 transition text-center truncate">
-                    ⚡ スキル
+                    ⚡ 戦術
                 </button>
                 <button onclick="switchTab('escort')" id="tab-btn-escort" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-cyan-400 hover:text-white hover:border-slate-500 transition text-center truncate">
                     🤖 鹵獲 (<span id="tab-escort-count">0/1</span>)
@@ -907,16 +907,16 @@
                 </div>
             </div>
 
-            <!-- タブ: 戦術スキル -->
+            <!-- タブ: 戦術 -->
             <div id="tab-content-skills" class="p-3 sm:p-4 hidden flex-col gap-3">
                 <div class="bg-slate-800/90 border border-amber-600/70 rounded-lg p-3 flex flex-wrap justify-between items-center gap-2">
                     <div>
                         <div class="flex items-center gap-2">
-                            <span class="px-2 py-0.5 text-[10px] font-bold bg-amber-900 text-amber-200 rounded">司令部アクティブ指令</span>
-                            <h3 class="text-sm sm:text-base font-bold text-amber-300">戦術スキル発動 ＆ 出力強化</h3>
+                            <span class="px-2 py-0.5 text-[10px] font-bold bg-amber-900 text-amber-200 rounded">司令部常時指令</span>
+                            <h3 class="text-sm sm:text-base font-bold text-amber-300">戦術選択 ＆ レベル強化</h3>
                         </div>
                         <p class="text-xs text-slate-300 mt-1">
-                            この「⚡ スキル」タブから各戦術スキルの<strong>即時発動</strong>および<strong>資金によるレベル強化</strong>が行えます（スキルLvはプレステージ時にリセットされます）。
+                            4種の戦術から<strong>1つを選択</strong>すると常時稼働します（発動操作・クールダウンなし）。レベルは最大Lv.30で、プレステージ時にLv1へリセットされます。
                         </p>
                     </div>
                     <div class="bg-slate-950 border border-yellow-600/70 px-3 py-1.5 rounded text-xs tech-font shadow-inner flex items-center gap-1">
@@ -2329,6 +2329,64 @@ const ENEMY_TYPES = {
     drk_final: { id: 'drk_final', name: '【暗黒大ボス】暗黒世界統治神・クリフォトの王', attr: 'AIR', hp: 468000, speed: 0.35, reward: 24000, damage: 3060, color: '#f43f5e', radius: 60, isBoss: true, isGrandBoss: true }
 };
 
+// 各大ボスの固有特性。属性相性とは別に、攻略のリズムを変える修飾効果を持たせる。
+// 無効化・必須装備のような「これが無いと倒せない」設計は避け、数値と挙動の差で個性を出す。
+const BOSS_TRAITS = {
+    pol_final: {
+        name: '鎮圧装甲', desc: '被ダメージ -20%。硬いが攻撃間隔は標準。',
+        damageTakenMult: 0.80
+    },
+    un_final: {
+        name: '軌道修復', desc: '5秒ごとに最大HPの1.5%を自己修復。継続火力が有効。',
+        regenPct: 0.015, regenInterval: 300
+    },
+    usa_final: {
+        name: '絨毯爆撃', desc: '攻撃力 +40%。ただし攻撃間隔は25%長い。',
+        contactDmgMult: 1.40, attackIntervalMult: 1.25
+    },
+    chn_final: {
+        name: '龍脈暴走', desc: 'HP50%以下で攻撃力 +60% / 移動速度 +30%。',
+        enrageHp: 0.50, enrageAtkMult: 1.60, enrageSpeedMult: 1.30
+    },
+    isl_final: {
+        name: '太陽炉', desc: '受けたダメージの8%を反射する。大技の連発は危険。',
+        reflectPct: 0.08
+    },
+    rus_final: {
+        name: '絶対零度', desc: '被ダメージ -15% / 移動速度 -15%。',
+        damageTakenMult: 0.85, speedMult: 0.85
+    },
+    eu_final: {
+        name: '円卓の加護', desc: '8秒ごとに最大HPの2%を自己修復。',
+        regenPct: 0.02, regenInterval: 480
+    },
+    ter_final: {
+        name: '惑星中枢', desc: '被ダメージ -25% / 移動速度 -20%。',
+        damageTakenMult: 0.75, speedMult: 0.80
+    },
+    corp_final: {
+        name: '市場支配', desc: '攻撃力 +25% / 撃破時に得られる資金 -20%。',
+        contactDmgMult: 1.25, rewardMult: 0.80
+    },
+    gew_final: {
+        name: 'ゲリラ戦術', desc: '攻撃間隔 -25%（攻撃回数が増える）。',
+        attackIntervalMult: 0.75
+    },
+    ant_final: {
+        name: '次元召喚', desc: '12秒ごとに通常敵を1体召喚する（最大3体）。',
+        summonInterval: 720, summonType: 'infantry', summonMax: 3
+    },
+    gwb_final: {
+        name: '反転装甲', desc: '被ダメージ -15% / HP50%以下で攻撃力 +50%。',
+        damageTakenMult: 0.85, enrageHp: 0.50, enrageAtkMult: 1.50
+    },
+    drk_final: {
+        name: '虚無の帳', desc: '被ダメージ -20% / 8秒ごとに2%回復 / HP40%以下で攻撃力 +80%。',
+        damageTakenMult: 0.80, regenPct: 0.02, regenInterval: 480,
+        enrageHp: 0.40, enrageAtkMult: 1.80
+    }
+};
+
 
 // 全13大ボスの固有特別必殺技マスターデータ（出現時＆一定時間経過で定期発動）
 const GRAND_BOSS_ULTIMATES = {
@@ -2815,12 +2873,13 @@ const SEPHIROTH_TREE_NODES = [
         x: 50, y: 10,
         color: '#fef08a',
         borderHex: '#eab308',
-        baseCost: 20,
+        baseCost: 24,
+        maxLevel: 5,
         desc: 'セフィロトの頂点に位置する王冠の加護。全兵装基礎攻撃力と獲得資金を同時に永続増幅します。',
-        bonusText: (lv) => `全兵装攻撃力 +${lv * 45}% ＆ 獲得資金 +${lv * 30}%`,
+        bonusText: (lv) => `全兵装攻撃力 +${lv * 27}% ＆ 獲得資金 +${lv * 18}%`,
         bonusParts: [
-            { label: '攻撃力', get: (lv) => `+${lv * 45}%` },
-            { label: '獲得資金', get: (lv) => `+${lv * 30}%` }
+            { label: '攻撃力', get: (lv) => `+${lv * 27}%` },
+            { label: '獲得資金', get: (lv) => `+${lv * 18}%` }
         ],
     },
     {
@@ -2830,12 +2889,13 @@ const SEPHIROTH_TREE_NODES = [
         x: 78, y: 24,
         color: '#60a5fa',
         borderHex: '#3b82f6',
-        baseCost: 10,
+        baseCost: 12,
+        maxLevel: 5,
         desc: '知恵の柱を司る加護。全兵装の装填・連射速度と会心ダメージ倍率を永続的に引き上げます。',
-        bonusText: (lv) => `全兵装装填速度 +${lv * 14}% ＆ 会心倍率 +${(lv * 0.25).toFixed(2)}倍`,
+        bonusText: (lv) => `全兵装装填速度 +${lv * 8}% ＆ 会心倍率 +${(lv * 0.15).toFixed(2)}倍`,
         bonusParts: [
-            { label: '装填速度', get: (lv) => `+${lv * 14}%` },
-            { label: '会心倍率', get: (lv) => `+${(lv * 0.25).toFixed(2)}倍` }
+            { label: '装填速度', get: (lv) => `+${lv * 8}%` },
+            { label: '会心倍率', get: (lv) => `+${(lv * 0.15).toFixed(2)}倍` }
         ],
     },
     {
@@ -2845,11 +2905,12 @@ const SEPHIROTH_TREE_NODES = [
         x: 22, y: 24,
         color: '#2dd4bf',
         borderHex: '#14b8a6',
-        baseCost: 10,
+        baseCost: 12,
+        maxLevel: 5,
         desc: '峻厳の柱の頂を司る加護。ボスおよび重装甲目標に対する全兵装の最終与ダメージを永続強化します。',
-        bonusText: (lv) => `対ボス与ダメージ +${lv * 40}%`,
+        bonusText: (lv) => `対ボス与ダメージ +${lv * 24}%`,
         bonusParts: [
-            { label: '対ボス与ダメージ', get: (lv) => `+${lv * 40}%` }
+            { label: '対ボス与ダメージ', get: (lv) => `+${lv * 24}%` }
         ],
     },
     {
@@ -2859,11 +2920,12 @@ const SEPHIROTH_TREE_NODES = [
         x: 78, y: 44,
         color: '#f472b6',
         borderHex: '#ec4899',
-        baseCost: 10,
+        baseCost: 12,
+        maxLevel: 5,
         desc: '慈悲の柱を司る加護。敵撃破およびステージ制圧時の獲得資金を大幅に増加させます。',
-        bonusText: (lv) => `獲得資金 +${lv * 55}%`,
+        bonusText: (lv) => `獲得資金 +${lv * 33}%`,
         bonusParts: [
-            { label: '獲得資金', get: (lv) => `+${lv * 55}%` }
+            { label: '獲得資金', get: (lv) => `+${lv * 33}%` }
         ],
     },
     {
@@ -2873,11 +2935,12 @@ const SEPHIROTH_TREE_NODES = [
         x: 22, y: 44,
         color: '#f87171',
         borderHex: '#ef4444',
-        baseCost: 8,
+        baseCost: 9.6,
+        maxLevel: 5,
         desc: '峻厳の柱を司る加護。全兵装の基礎攻撃力を永続的に大きく強化します。',
-        bonusText: (lv) => `全兵装攻撃力 +${lv * 55}%`,
+        bonusText: (lv) => `全兵装攻撃力 +${lv * 33}%`,
         bonusParts: [
-            { label: '攻撃力', get: (lv) => `+${lv * 55}%` }
+            { label: '攻撃力', get: (lv) => `+${lv * 33}%` }
         ],
     },
     {
@@ -2887,11 +2950,12 @@ const SEPHIROTH_TREE_NODES = [
         x: 50, y: 48,
         color: '#fbbf24',
         borderHex: '#f59e0b',
-        baseCost: 13,
+        baseCost: 15.6,
+        maxLevel: 5,
         desc: '樹の中心・均衡の柱の要。セフィラ（駅員）のシナジー攻撃・装填速度ボーナスを増幅します。',
-        bonusText: (lv) => `セフィロト・シナジー効果 +${lv * 35}%`,
+        bonusText: (lv) => `セフィロト・シナジー効果 +${lv * 21}%`,
         bonusParts: [
-            { label: 'シナジー効果', get: (lv) => `+${lv * 35}%` }
+            { label: 'シナジー効果', get: (lv) => `+${lv * 21}%` }
         ],
     },
     {
@@ -2901,11 +2965,12 @@ const SEPHIROTH_TREE_NODES = [
         x: 78, y: 66,
         color: '#34d399',
         borderHex: '#10b981',
-        baseCost: 13,
+        baseCost: 15.6,
+        maxLevel: 5,
         desc: '勝利を約束する加護。出撃した鹵獲超兵器（縮小ボス護衛機）の攻撃力と耐久力を永続強化します。',
-        bonusText: (lv) => `鹵獲超兵器 攻撃＆HP +${lv * 50}%`,
+        bonusText: (lv) => `鹵獲超兵器 攻撃＆HP +${lv * 30}%`,
         bonusParts: [
-            { label: '鹵獲機 攻撃/HP', get: (lv) => `+${lv * 50}%` }
+            { label: '鹵獲機 攻撃/HP', get: (lv) => `+${lv * 30}%` }
         ],
     },
     {
@@ -2915,11 +2980,12 @@ const SEPHIROTH_TREE_NODES = [
         x: 22, y: 66,
         color: '#fde047',
         borderHex: '#ca8a04',
-        baseCost: 13,
+        baseCost: 15.6,
+        maxLevel: 5,
         desc: '戦術指令の栄光を司る加護。装甲強化（体力強化）1レベルあたりの最大耐久力の上昇幅を永続的に拡張します。',
-        bonusText: (lv) => `体力強化の上昇幅 +${lv * 20}%`,
+        bonusText: (lv) => `体力強化の上昇幅 +${lv * 12}%`,
         bonusParts: [
-            { label: '体力強化の上昇幅', get: (lv) => `+${lv * 20}%` }
+            { label: '体力強化の上昇幅', get: (lv) => `+${lv * 12}%` }
         ],
     },
     {
@@ -2929,11 +2995,12 @@ const SEPHIROTH_TREE_NODES = [
         x: 50, y: 74,
         color: '#fb923c',
         borderHex: '#ea580c',
-        baseCost: 8,
+        baseCost: 9.6,
+        maxLevel: 5,
         desc: 'すべてを支える基礎の加護。装甲列車の最大耐久力を永続的に引き上げます。',
-        bonusText: (lv) => `最大耐久力 +${lv * 65}%`,
+        bonusText: (lv) => `最大耐久力 +${lv * 39}%`,
         bonusParts: [
-            { label: '最大耐久力', get: (lv) => `+${lv * 65}%` }
+            { label: '最大耐久力', get: (lv) => `+${lv * 39}%` }
         ],
     },
     {
@@ -2943,12 +3010,15 @@ const SEPHIROTH_TREE_NODES = [
         x: 50, y: 91,
         color: '#c084fc',
         borderHex: '#9333ea',
-        baseCost: 25,
-        maxLevel: 3,
-        desc: '物質界の王国を統べる加護。鹵獲超兵器の同時出撃可能枠を +1 拡張します（初期1枠→最大4枠）。',
-        bonusText: (lv) => `鹵獲兵器 同時出撃枠: ${1 + lv} 体`,
+        baseCost: 30,
+        maxLevel: 5,
+        desc: '物質界の王国を統べる加護。鹵獲超兵器の同時出撃枠を拡張し、Lv5では鹵獲機の攻撃力とHPも強化します（初期1枠→最大5枠）。',
+        bonusText: (lv) => lv >= 5
+            ? `鹵獲兵器 同時出撃枠: 5 体 ＆ 鹵獲機 攻撃/HP +25%`
+            : `鹵獲兵器 同時出撃枠: ${1 + lv} 体`,
         bonusParts: [
-            { label: '出撃枠', get: (lv) => `${1 + lv} 体` }
+            { label: '出撃枠', get: (lv) => `${1 + Math.min(4, lv)} 体` },
+            { label: '鹵獲機 攻撃/HP', get: (lv) => lv >= 5 ? '+25%' : '+0%' }
         ],
     }
 ];
@@ -2972,6 +3042,10 @@ let state = {
     currentFactionId: 'pol',
     unlockedFactions: ['pol'],
     clearedFactions: [],
+    // 今回の周回で制圧した勢力。転生条件はこちらだけを見る（累積の clearedFactions と分離）。
+    runClearedFactions: [],
+    // ステージごとのクリア回数（周回報酬倍率の判定用）。キーは "factionId:stage"。
+    stageClearCounts: {},
     factionStages: { pol: 1, un: 1, usa: 1, chn: 1, isl: 1, rus: 1, eu: 1, ter: 1, corp: 1, gew: 1, ant: 1, endless: 1, gew_beacon: 1, dark_abyss: 1, dark_endless: 1 },
     maxReachedStages: { pol: 1, un: 1, usa: 1, chn: 1, isl: 1, rus: 1, eu: 1, ter: 1, corp: 1, gew: 1, ant: 1, endless: 1, gew_beacon: 1, dark_abyss: 1, dark_endless: 1 },
     stage: 1,
@@ -3016,7 +3090,8 @@ let state = {
         kether: 0, chokmah: 0, binah: 0, chesed: 0, geburah: 0,
         tiphareth: 0, netzach: 0, hod: 0, yesod: 0, malkuth: 0
     },
-    skillLevels: { salvo: 1, overdrive: 1, goldrush: 1, shield: 1 }
+    skillLevels: { salvo: 1, overdrive: 1, goldrush: 1, shield: 1 },
+    activeTactic: 'salvo'
 };
 
 function checkAndUnlockAntarcticBase(notify = true) {
@@ -3031,111 +3106,90 @@ function checkAndUnlockAntarcticBase(notify = true) {
     return false;
 }
 
-// 戦術スキルマスターデータ
+// 戦術マスターデータ
+const TACTICAL_MAX_LEVEL = 30;
 const TACTICAL_SKILLS = [
     {
         id: 'salvo',
-        name: '全車両・一斉斉射',
-        shortName: '一斉攻撃',
-        icon: '🔥',
+        name: '攻撃力上昇',
+        shortName: '攻撃力',
+        icon: '⚔️',
         color: '#ef4444',
         borderClass: 'border-red-500',
         btnBg: 'bg-red-900/90 hover:bg-red-800 text-red-100',
-        cooldownFrames: 900,
-        durationFrames: 0,
         baseUpgradeCost: 350,
-        desc: '全車両の砲塔が一斉に超出力砲撃を放ち、戦場内の全敵ユニットへ壊滅的な砲撃ダメージを与える。',
-        getPowerMult: (lv) => (2.2 + (lv - 1) * 0.55),
-        getEffectSummary: (lv) => `全敵へ搭載総火力 ×${((2.2 + (lv - 1) * 0.55)).toFixed(2)} 倍の集中砲撃`,
+        desc: '全兵装の攻撃力を常時強化する戦術。選択すると常時稼働する。',
+        getAtkBonus: (lv) => Math.min(1.50, lv * 0.05),
+        getEffectSummary: (lv) => `全兵装攻撃力 +${Math.round(Math.min(1.50, lv * 0.05) * 100)}%`,
         getEffectParts: (lv) => [
-            { label: '集中砲撃 倍率', now: `×${(2.2 + (lv - 1) * 0.55).toFixed(2)}`, next: `×${(2.2 + lv * 0.55).toFixed(2)}` }
+            { label: '攻撃力', now: `+${Math.round(Math.min(1.50, lv * 0.05) * 100)}%`, next: `+${Math.round(Math.min(1.50, (lv + 1) * 0.05) * 100)}%` }
         ]
     },
     {
         id: 'overdrive',
-        name: '限界突破オーバーロード',
-        shortName: '攻撃力UP',
-        icon: '⚔️',
+        name: '対ボス攻撃力上昇',
+        shortName: '対ボス',
+        icon: '🎯',
         color: '#f59e0b',
         borderClass: 'border-amber-500',
         btnBg: 'bg-amber-900/90 hover:bg-amber-800 text-amber-100',
-        cooldownFrames: 1350,
-        getDurationFrames: (lv) => Math.min(1800, 600 + (lv - 1) * 45),
         baseUpgradeCost: 380,
-        desc: '一定時間、全車両の兵器炉心を限界稼働させ、攻撃力と装填速度を劇的に引き上げる。',
-        getAtkBonus: (lv) => (0.80 + (lv - 1) * 0.25),
-        getSpeedBonus: (lv) => (0.45 + (lv - 1) * 0.10),
-        getEffectSummary: (lv) => {
-            const sec = (Math.min(1800, 600 + (lv - 1) * 45) / 60).toFixed(1);
-            const atk = Math.round((0.80 + (lv - 1) * 0.25) * 100);
-            const spd = Math.round((0.45 + (lv - 1) * 0.10) * 100);
-            return `${sec}秒間：攻撃力 +${atk}% ／ 装填速度 +${spd}%`;
-        },
+        desc: 'ボスへ与えるダメージを常時強化する戦術。選択すると常時稼働する。',
+        getBossBonus: (lv) => Math.min(3.00, lv * 0.10),
+        getEffectSummary: (lv) => `対ボス与ダメージ +${Math.round(Math.min(3.00, lv * 0.10) * 100)}%`,
         getEffectParts: (lv) => [
-            { label: '攻撃力', now: `+${Math.round((0.80 + (lv - 1) * 0.25) * 100)}%`, next: `+${Math.round((0.80 + lv * 0.25) * 100)}%` },
-            { label: '装填速度', now: `+${Math.round((0.45 + (lv - 1) * 0.10) * 100)}%`, next: `+${Math.round((0.45 + lv * 0.10) * 100)}%` },
-            { label: '効果時間', now: `${(Math.min(1800, 600 + (lv - 1) * 45) / 60).toFixed(1)}秒`, next: `${(Math.min(1800, 600 + lv * 45) / 60).toFixed(1)}秒` }
+            { label: '対ボス与ダメージ', now: `+${Math.round(Math.min(3.00, lv * 0.10) * 100)}%`, next: `+${Math.round(Math.min(3.00, (lv + 1) * 0.10) * 100)}%` }
         ]
     },
     {
         id: 'goldrush',
-        name: '戦時特別徴発令',
-        shortName: '獲得資金UP',
+        name: '取得コイン増量',
+        shortName: 'コイン',
         icon: '💰',
         color: '#eab308',
         borderClass: 'border-yellow-400',
         btnBg: 'bg-yellow-900/90 hover:bg-yellow-800 text-yellow-100',
-        cooldownFrames: 1500,
-        getDurationFrames: (lv) => Math.min(2100, 720 + (lv - 1) * 45),
         baseUpgradeCost: 420,
-        desc: '一定時間、撃破した敵部隊から戦時物資・資金を強制徴発し、獲得資金倍率を大幅に上昇させる。',
-        getGoldBonus: (lv) => (1.00 + (lv - 1) * 0.35),
-        getEffectSummary: (lv) => {
-            const sec = (Math.min(2100, 720 + (lv - 1) * 45) / 60).toFixed(1);
-            const gld = Math.round((1.00 + (lv - 1) * 0.35) * 100);
-            return `${sec}秒間：敵撃破時の獲得資金 +${gld}%`;
-        },
+        desc: '敵撃破およびステージクリアで得られる資金を常時増やす戦術。',
+        getGoldBonus: (lv) => Math.min(2.00, lv * (2.00 / TACTICAL_MAX_LEVEL)),
+        getEffectSummary: (lv) => `獲得資金 +${Math.round(Math.min(2.00, lv * (2.00 / TACTICAL_MAX_LEVEL)) * 100)}%`,
         getEffectParts: (lv) => [
-            { label: '獲得資金', now: `+${Math.round((1.00 + (lv - 1) * 0.35) * 100)}%`, next: `+${Math.round((1.00 + lv * 0.35) * 100)}%` },
-            { label: '効果時間', now: `${(Math.min(2100, 720 + (lv - 1) * 45) / 60).toFixed(1)}秒`, next: `${(Math.min(2100, 720 + lv * 45) / 60).toFixed(1)}秒` }
+            { label: '獲得資金', now: `+${Math.round(Math.min(2.00, lv * (2.00 / TACTICAL_MAX_LEVEL)) * 100)}%`, next: `+${Math.round(Math.min(2.00, (lv + 1) * (2.00 / TACTICAL_MAX_LEVEL)) * 100)}%` }
         ]
     },
     {
         id: 'shield',
-        name: '緊急電磁障壁展開',
-        shortName: '修復＆防御',
+        name: '被ダメージ軽減',
+        shortName: '防御',
         icon: '🛡️',
         color: '#38bdf8',
         borderClass: 'border-sky-400',
         btnBg: 'bg-sky-900/90 hover:bg-sky-800 text-sky-100',
-        cooldownFrames: 1200,
-        getDurationFrames: (lv) => Math.min(1500, 480 + (lv - 1) * 35),
         baseUpgradeCost: 340,
-        desc: '装甲列車の耐久値を即時修復すると同時に、一定時間、受けるダメージを半減する電磁障壁を展開する。',
-        getHealRatio: (lv) => Math.min(0.95, (0.20 + (lv - 1) * 0.05)),
-        getEffectSummary: (lv) => {
-            const sec = (Math.min(1500, 480 + (lv - 1) * 35) / 60).toFixed(1);
-            const heal = Math.min(95, Math.round((0.20 + (lv - 1) * 0.05) * 100));
-            return `HP ${heal}% 即時修復 ＋ ${sec}秒間 被ダメージ50%軽減`;
-        },
+        desc: '受けるダメージを常時軽減する戦術。選択すると常時稼働する。',
+        getDamageReduction: (lv) => Math.min(0.70, lv * (0.70 / TACTICAL_MAX_LEVEL)),
+        getEffectSummary: (lv) => `被ダメージ -${Math.round(Math.min(0.70, lv * (0.70 / TACTICAL_MAX_LEVEL)) * 100)}%`,
         getEffectParts: (lv) => [
-            { label: '即時修復', now: `${Math.min(95, Math.round((0.20 + (lv - 1) * 0.05) * 100))}%`, next: `${Math.min(95, Math.round((0.20 + lv * 0.05) * 100))}%` },
-            { label: '効果時間', now: `${(Math.min(1500, 480 + (lv - 1) * 35) / 60).toFixed(1)}秒`, next: `${(Math.min(1500, 480 + lv * 35) / 60).toFixed(1)}秒` }
+            { label: '被ダメージ', now: `-${Math.round(Math.min(0.70, lv * (0.70 / TACTICAL_MAX_LEVEL)) * 100)}%`, next: `-${Math.round(Math.min(0.70, (lv + 1) * (0.70 / TACTICAL_MAX_LEVEL)) * 100)}%` }
         ]
     }
 ];
 
-let skillRuntime = {
-    salvo: { cd: 0, active: 0 },
-    overdrive: { cd: 0, active: 0 },
-    goldrush: { cd: 0, active: 0 },
-    shield: { cd: 0, active: 0 }
-};
+// 戦術は「4種のうち1つを選択して常時稼働させる」パッシブ。
+// 発動ボタン・クールダウン・効果時間は廃止し、選択中の戦術だけが常に効果を発揮する。
+function getTacticById(skillId) {
+    return TACTICAL_SKILLS.find(s => s.id === skillId);
+}
 
-// スキルの再装填・効果時間は経過実時間から算出する。
-// フレーム数だけに依存すると、タブ非表示やウィンドウ遮蔽で requestAnimationFrame が
-// 抑制された際にクールダウンが進まず「再装填中のまま固まる」ため。
-let skillClockLastMs = 0;
+function getActiveTacticId() {
+    const id = state.activeTactic;
+    return TACTICAL_SKILLS.some(s => s.id === id) ? id : 'salvo';
+}
+
+function isTacticSelected(skillId) {
+    return getActiveTacticId() === skillId;
+}
+
 // 演出（カットイン／大ボス登場）表示中かどうか。
 // オーバーレイの表示状態から判定するため、タイマーが失われても固まらない。
 function isCutsceneActive() {
@@ -3146,54 +3200,8 @@ function isCutsceneActive() {
     return false;
 }
 
-function advanceSkillTimers() {
-    const now = performance.now();
-    if (!skillClockLastMs) {
-        skillClockLastMs = now;
-        return;
-    }
-    let deltaMs = now - skillClockLastMs;
-    skillClockLastMs = now;
-    if (!Number.isFinite(deltaMs) || deltaMs <= 0) return;
-    // 演出中はゲームが止まっているのでスキルも進めない
-    if (isCutsceneActive()) return;
-
-    // 60fps 換算のフレーム数。ゲーム速度倍率を掛けて従来の進行速度と一致させる。
-    const frames = (deltaMs / 1000) * 60 * (state.gameSpeed || 1);
-
-    let changed = false;
-    Object.keys(skillRuntime).forEach(skId => {
-        const rt = skillRuntime[skId];
-        if (rt.cd > 0) { rt.cd = Math.max(0, rt.cd - frames); changed = true; }
-        if (rt.active > 0) { rt.active = Math.max(0, rt.active - frames); changed = true; }
-    });
-
-    // rAF が抑制されている状況でもUI表示を追従させる
-    if (changed && state.activeTab === 'skills' && typeof updateSkillsTabUI === 'function') {
-        updateSkillsTabUI();
-    }
-}
-
-// スキルごとのレベル上限（全効果が頭打ちになる地点）。null は上限なし。
-// 攻撃力・獲得資金の倍率は上限がなく伸び続けるため、上限があるのは効果時間と修復率を持つ shield のみ。
-const SKILL_MAX_LEVEL = {
-    salvo: null,
-    overdrive: null,
-    goldrush: null,
-    shield: 31       // 効果時間25秒に到達（修復率はLv16で95%上限）
-};
-
-// 一部の効果だけが上限に達しているスキルの注意書き
-function getSkillCapNote(skillId) {
-    if (skillId === 'shield' && getSkillLevel('shield') >= 16) {
-        return '※修復率は95%で上限（効果時間はLv31まで伸びます）';
-    }
-    return '';
-}
-
 function isSkillMaxed(skillId) {
-    const cap = SKILL_MAX_LEVEL[skillId];
-    return typeof cap === 'number' && getSkillLevel(skillId) >= cap;
+    return getSkillLevel(skillId) >= TACTICAL_MAX_LEVEL;
 }
 
 function getSkillLevel(skillId) {
@@ -3218,22 +3226,28 @@ function getSkillUpgradeCost(skillId) {
 }
 
 function getActiveSkillAtkMult() {
-    if (skillRuntime.overdrive.active <= 0) return 1.0;
-    const sk = TACTICAL_SKILLS.find(s => s.id === 'overdrive');
-    return 1 + sk.getAtkBonus(getSkillLevel('overdrive'));
+    if (!isTacticSelected('salvo')) return 1.0;
+    const sk = getTacticById('salvo');
+    return 1 + sk.getAtkBonus(getSkillLevel('salvo'));
 }
+// 旧・装填速度戦術は廃止したが、呼び出し側との互換のため素通しにする。
 function getActiveSkillSpeedMult() {
-    if (skillRuntime.overdrive.active <= 0) return 1.0;
-    const sk = TACTICAL_SKILLS.find(s => s.id === 'overdrive');
-    return 1 + sk.getSpeedBonus(getSkillLevel('overdrive'));
+    return 1.0;
 }
 function getActiveSkillGoldMult() {
-    if (skillRuntime.goldrush.active <= 0) return 1.0;
-    const sk = TACTICAL_SKILLS.find(s => s.id === 'goldrush');
+    if (!isTacticSelected('goldrush')) return 1.0;
+    const sk = getTacticById('goldrush');
     return 1 + sk.getGoldBonus(getSkillLevel('goldrush'));
 }
+function getActiveTacticBossDmgMult() {
+    if (!isTacticSelected('overdrive')) return 1.0;
+    const sk = getTacticById('overdrive');
+    return 1 + sk.getBossBonus(getSkillLevel('overdrive'));
+}
 function getActiveSkillDamageTakenMult() {
-    return skillRuntime.shield.active > 0 ? 0.5 : 1.0;
+    if (!isTacticSelected('shield')) return 1.0;
+    const sk = getTacticById('shield');
+    return 1 - sk.getDamageReduction(getSkillLevel('shield'));
 }
 
 function getWeatherCollectibleBonuses() {
@@ -3274,21 +3288,24 @@ function getTreeLv(nodeId) {
     return (state.prestigeUpgrades && state.prestigeUpgrades[nodeId]) || 0;
 }
 function getMaxEscortSlots() {
-    return 1 + Math.min(3, getTreeLv('malkuth'));
+    return 1 + Math.min(4, getTreeLv('malkuth'));
+}
+// マルクトLv5の追加効果: 鹵獲機の攻撃力とHPを+25%
+function getMalkuthEscortBonus() {
+    return getTreeLv('malkuth') >= 5 ? 0.25 : 0;
 }
 function getNetzachEscortMult() {
-    return 1 + getTreeLv('netzach') * 0.50;
+    return 1 + getTreeLv('netzach') * 0.30;
 }
 function getHodArmorHpMult() {
-    // 体力強化の1Lvあたり成長率に掛かる倍率（Lv20で+400%）
-    return 1 + getTreeLv('hod') * 0.20;
+    return 1 + getTreeLv('hod') * 0.12;
 }
 function getBinahBossDmgMult() {
-    return 1 + getTreeLv('binah') * 0.40;
+    return 1 + getTreeLv('binah') * 0.24;
 }
 function getChokmahTreeCritBonus() {
     const lv = getTreeLv('chokmah');
-    return { reloadBonus: lv * 0.14, critMultBonus: lv * 0.25 };
+    return { reloadBonus: lv * 0.08, critMultBonus: lv * 0.15 };
 }
 
 function getEscortStats(bossId) {
@@ -3302,10 +3319,11 @@ function getEscortStatsAtLevel(bossId, lv) {
     // 1Lvあたり乗算 +18%（旧 線形+42% は低Lvで強すぎ、高Lvで弱すぎた）
     const lvMult = Math.pow(1.18, level - 1);
     const netzachMult = getNetzachEscortMult();
-    const maxHp = Math.floor((base.hp * 0.75 + 850) * lvMult * getPrestigeHpMult() * netzachMult);
+    const malkuthMult = 1 + getMalkuthEscortBonus();
+    const maxHp = Math.floor((base.hp * 0.75 + 850) * lvMult * getPrestigeHpMult() * netzachMult * malkuthMult);
     // 天候の攻撃倍率は発射時（updateAllyEscorts 内部）に一度だけ掛ける。
     // ここで掛けると発射時と二重掛けになるため、生成時のステータスには含めない。
-    const dmg = Math.floor((base.damage * 0.48 + 36) * lvMult * getPrestigeAtkMult() * netzachMult);
+    const dmg = Math.floor((base.damage * 0.48 + 36) * lvMult * getPrestigeAtkMult() * netzachMult * malkuthMult);
     const cooldown = base.attr === 'AIR' ? 38 : base.attr === 'SEA' ? 55 : 46;
     const moveSpeed = Math.max(0.55, (base.speed || 0.4) * 1.45);
     return {
@@ -3334,16 +3352,16 @@ function getCollectibleBonus(type) {
 }
 
 function getPrestigeAtkMult() {
-    return 1 + getTreeLv('geburah') * 0.55 + getTreeLv('kether') * 0.45 + getCollectibleBonus('atk');
+    return 1 + getTreeLv('geburah') * 0.33 + getTreeLv('kether') * 0.27 + getCollectibleBonus('atk');
 }
 function getPrestigeHpMult() {
-    return 1 + getTreeLv('yesod') * 0.65 + getCollectibleBonus('hp');
+    return 1 + getTreeLv('yesod') * 0.39 + getCollectibleBonus('hp');
 }
 function getPrestigeGoldMult() {
-    return 1 + getTreeLv('chesed') * 0.55 + getTreeLv('kether') * 0.30 + getCollectibleBonus('gold') + getWeatherCollectibleBonuses().goldBonus;
+    return 1 + getTreeLv('chesed') * 0.33 + getTreeLv('kether') * 0.18 + getCollectibleBonus('gold') + getWeatherCollectibleBonuses().goldBonus;
 }
 function getPrestigeSynergyMult() {
-    return 1 + getTreeLv('tiphareth') * 0.35 + getCollectibleBonus('synergy');
+    return 1 + getTreeLv('tiphareth') * 0.21 + getCollectibleBonus('synergy');
 }
 function getRelicReloadMult() {
     return 1 + getCollectibleBonus('reload') + getWeatherCollectibleBonuses().reloadBonus + getChokmahTreeCritBonus().reloadBonus;
@@ -3364,7 +3382,7 @@ function getRelicRegenRatio() {
 // ここでは コスト ×1.145 / 火力 ×1.08 と差をつけている。
 // この差が「進むほど1ステージが重くなる」壁になる。
 //
-// 検証済みの到達点（転生0回・スキルや鹵獲機なし）:
+// 検証済みの到達点（転生0回・戦術や鹵獲機なし）:
 //   アメリカ入口 n41   … 約0.15h
 //   イスラム大ボス n130 … 約2.1h（ここまでが1周目）
 //   ロシア入口 n131    … ここで完全に止まる（転生が必要）
@@ -3906,7 +3924,10 @@ function startWave() {
 
 // 大ボス必殺技の最終ダメージ。計算結果が5桁（10,000以上）に達する場合は半減させる。
 function calcGrandBossUltimateDamage(boss, ult) {
-    const raw = boss.damage * ult.dmgMult * getActiveSkillDamageTakenMult();
+    const trait = boss.trait || {};
+    const enraged = trait.enrageHp && boss.hp / boss.maxHp <= trait.enrageHp;
+    const traitDmgMult = (trait.contactDmgMult || 1) * (enraged ? (trait.enrageAtkMult || 1) : 1);
+    const raw = boss.damage * traitDmgMult * ult.dmgMult * getActiveSkillDamageTakenMult();
     const adjusted = raw >= 10000 ? raw * 0.5 : raw;
     return Math.max(1, Math.round(adjusted));
 }
@@ -3940,11 +3961,15 @@ function triggerGrandBossUltimate(boss, isEntranceCast = false) {
         });
     }
 
-    // 必殺技の標的: 出撃中の鹵獲護衛機がいればその1機、いなければ装甲列車本体
+    // 必殺技の標的: 通常敵と同じ方式で選ぶ。
+    // 同属性かつ護衛範囲内の鹵獲超兵器を配列の先頭から1機。いなければ列車本体。
+    // 肩代わり回数に上限は設けない（ボス撃破まで何度でも護衛機が身代わりになる）。
     const aliveEscorts = allyEscorts.filter(esc => esc.hp > 0);
-    const targetEscort = aliveEscorts.length > 0
-        ? aliveEscorts[Math.floor(Math.random() * aliveEscorts.length)]
-        : null;
+    const guardLeftX = getCarX(9) - 60;
+    const guardRightX = getCarX(0) + 280;
+    const targetEscort = aliveEscorts.find(esc =>
+        esc.attr === boss.attr && esc.x >= guardLeftX && esc.x <= guardRightX
+    ) || null;
 
     let finalTrainDmg = 0;
     let escortDmg = 0;
@@ -4228,6 +4253,33 @@ function getEnemyFactionMult(faction, tmpl) {
     };
 }
 
+// ステージ周回報酬。クリア回数が増えるほど報酬を減衰させる（最低50%は保証）。
+const STAGE_CLEAR_REWARDS = {
+    first: 1.00,   // 1回目
+    mid: 0.80,     // 2〜29回目
+    late: 0.70,    // 30〜99回目
+    floor: 0.50    // 100回目以降
+};
+
+function getStageClearKey(factionId, stage) {
+    return `${factionId}:${Math.max(1, Math.floor(stage) || 1)}`;
+}
+
+function getStageClearCount(factionId, stage) {
+    const counts = state.stageClearCounts;
+    if (!counts || typeof counts !== 'object') return 0;
+    const raw = Number(counts[getStageClearKey(factionId, stage)]);
+    return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 0;
+}
+
+function getStageRewardMultiplier(clearCount) {
+    const n = Math.max(1, Math.floor(clearCount) || 1);
+    if (n <= 1) return STAGE_CLEAR_REWARDS.first;
+    if (n <= 29) return STAGE_CLEAR_REWARDS.mid;
+    if (n <= 99) return STAGE_CLEAR_REWARDS.late;
+    return STAGE_CLEAR_REWARDS.floor;
+}
+
 function spawnEnemyUnit(typeId) {
     const tmpl = ENEMY_TYPES[typeId];
     if (!tmpl) return;
@@ -4239,9 +4291,11 @@ function spawnEnemyUnit(typeId) {
     const pr = getPrestigeEnemyScaling();
     const fm = getEnemyFactionMult(faction, tmpl);
 
+    const trait = BOSS_TRAITS[tmpl.id] || null;
     const finalHp = Math.max(40, Math.round(tmpl.hp * fm.hpMult * weather.enemyHpMult * pr.hpMult));
     const finalDmg = Math.max(5, Math.round(tmpl.damage * fm.dmgMult * pr.dmgMult));
-    const finalReward = Math.max(5, Math.round(tmpl.reward * fm.rewardMult * getPrestigeGoldMult() * sephPassive.goldMult * pr.rewardMult));
+    const traitRewardMult = trait && trait.rewardMult ? trait.rewardMult : 1;
+    const finalReward = Math.max(5, Math.round(tmpl.reward * fm.rewardMult * getPrestigeGoldMult() * sephPassive.goldMult * pr.rewardMult * traitRewardMult * getStageRewardMultiplier(getStageClearCount(faction.id, state.stage) + 1)));
 
     let yPos = h * 0.70;
     if (tmpl.attr === 'AIR') {
@@ -4259,7 +4313,7 @@ function spawnEnemyUnit(typeId) {
         attr: tmpl.attr,
         hp: finalHp,
         maxHp: finalHp,
-        speed: tmpl.speed * getRelicEnemySlowMult() * sephPassive.enemySlowMult * weather.enemySpeedMult,
+        speed: tmpl.speed * getRelicEnemySlowMult() * sephPassive.enemySlowMult * weather.enemySpeedMult * (trait && trait.speedMult ? trait.speedMult : 1),
         reward: finalReward,
         damage: finalDmg,
         color: tmpl.color,
@@ -4267,6 +4321,10 @@ function spawnEnemyUnit(typeId) {
         isBoss: !!tmpl.isBoss,
         isGrandBoss: !!tmpl.isGrandBoss,
         isWeatherBoss: !!tmpl.isWeatherBoss,
+        trait: trait,
+        traitRegenTimer: trait && trait.regenInterval ? trait.regenInterval : 0,
+        traitSummonTimer: trait && trait.summonInterval ? trait.summonInterval : 0,
+        traitSummons: 0,
         ultMaxCd: ultData ? ultData.interval : 0,
         ultCd: ultData ? ultData.interval : 0,
         entranceUltDelay: ultData ? 32 : 0,
@@ -4282,32 +4340,6 @@ function getCarX(carIndex) {
     const leadX = w * 0.41;
     const spacing = Math.min(26, Math.max(15, (w * 0.37) / 9));
     return leadX - carIndex * spacing;
-}
-
-// 一斉斉射用: 兵装の3属性倍率の平均
-function avgWeaponMult(weapon) {
-    const m = weapon && weapon.multipliers;
-    if (!m) return 1;
-    return (m.LAND + m.SEA + m.AIR) / 3;
-}
-
-// 一斉斉射用: 敵の属性に対する「斉射の代表倍率」。
-// 編成全体で最も火力の高い兵装の倍率を、その属性の攻撃倍率として扱う。
-function getSalvoAttrMultForEnemy(attr) {
-    if (!attr) return 1;
-    let best = 1;
-    let bestPower = -1;
-    state.cars.forEach(car => {
-        const st = getCarEffectiveStats(car);
-        if (!st) return;
-        const m = st.weapon.multipliers && st.weapon.multipliers[attr];
-        if (typeof m !== 'number') return;
-        if (st.damage > bestPower) {
-            bestPower = st.damage;
-            best = m;
-        }
-    });
-    return best;
 }
 
 function getCarEffectiveStats(car) {
@@ -4373,9 +4405,10 @@ function damageEnemy(enemy, dmg, hitColor = '#fbbf24') {
     if (!enemy || enemy.hp <= 0) return;
     const base = Number(dmg);
     if (!Number.isFinite(base) || base <= 0) return;
-    const bossBonusMult = enemy.isBoss ? getBinahBossDmgMult() : 1.0;
+    const bossBonusMult = enemy.isBoss ? getBinahBossDmgMult() * getActiveTacticBossDmgMult() : 1.0;
+    const traitTakenMult = enemy.trait && enemy.trait.damageTakenMult ? enemy.trait.damageTakenMult : 1.0;
     const scaled = Number.isFinite(bossBonusMult) ? base * bossBonusMult : base;
-    const finalDmg = Math.max(1, Math.round(scaled));
+    const finalDmg = Math.max(1, Math.round(scaled * traitTakenMult));
     enemy.hp -= finalDmg;
 
     floatingTexts.push({
@@ -4388,6 +4421,20 @@ function damageEnemy(enemy, dmg, hitColor = '#fbbf24') {
 
     if (enemy.hp <= 0) {
         handleEnemyDefeated(enemy);
+    } else if (enemy.trait && enemy.trait.reflectPct > 0) {
+        // 太陽炉などの反射特性。撃破時は反射しない。
+        const reflected = Math.max(1, Math.round(finalDmg * enemy.trait.reflectPct * getActiveSkillDamageTakenMult()));
+        state.hp = Math.max(0, state.hp - reflected);
+        floatingTexts.push({
+            x: getCarX(1),
+            y: (canvas.height || 260) * 0.58,
+            text: `↩-${reflected}`,
+            color: '#f43f5e',
+            life: 30
+        });
+        if (state.hp <= 0) {
+            handleStageDefeat();
+        }
     }
 }
 
@@ -4460,11 +4507,19 @@ function handleStageVictory() {
     SoundEngine.playStageClear();
 
     const faction = getCurrentFaction();
+    // ステージ周回報酬: 今回が何回目のクリアかを先に確定させ、報酬倍率を掛ける。
+    const clearKey = getStageClearKey(faction.id, state.stage);
+    const clearAttempt = getStageClearCount(faction.id, state.stage) + 1;
+    const stageRewardMult = getStageRewardMultiplier(clearAttempt);
+    if (!state.stageClearCounts || typeof state.stageClearCounts !== 'object') state.stageClearCounts = {};
+    state.stageClearCounts[clearKey] = clearAttempt;
+
     // ステージクリア報酬も、敵の勢力倍率と同じ報酬補正で伸ばす
-    const clearBonus = Math.round((40 + state.stage * 22) * getEnemyFactionMult(faction, null).rewardMult * getPrestigeGoldMult() * getActiveSkillGoldMult() * getPrestigeEnemyScaling().rewardMult);
+    const clearBonus = Math.round((40 + state.stage * 22) * getEnemyFactionMult(faction, null).rewardMult * getPrestigeGoldMult() * getActiveSkillGoldMult() * getPrestigeEnemyScaling().rewardMult * stageRewardMult);
     state.gold += clearBonus;
 
-    state.hp = state.maxHp;
+    // 勝利時は最大HPの30%だけ回復する（全回復はしない）
+    state.hp = Math.min(state.maxHp, state.hp + Math.round(state.maxHp * 0.30));
 
     const currentMax = state.maxReachedStages[faction.id] || 1;
     if (state.stage >= currentMax) {
@@ -4475,6 +4530,11 @@ function handleStageVictory() {
     if (isFactionFinalClear) {
         if (!state.clearedFactions.includes(faction.id)) {
             state.clearedFactions.push(faction.id);
+        }
+        // 転生条件は「今回の周回での制圧」だけを見るため、累積とは別に記録する。
+        if (!Array.isArray(state.runClearedFactions)) state.runClearedFactions = [];
+        if (!state.runClearedFactions.includes(faction.id)) {
+            state.runClearedFactions.push(faction.id);
         }
 
         const keyItem = BEACON_KEYS.find(k => k.factionId === faction.id);
@@ -4549,7 +4609,7 @@ function handleStageVictory() {
 
         if (state.loopStage) {
             rollStageWeather(state.stage, faction.id, true);
-            showToast(`🏆 ${faction.name} ST.${state.stage} 制圧＆装甲全回復！(+${clearBonus}G)${keyMsg} 周回継続`);
+            showToast(`🏆 ${faction.name} ST.${state.stage} 制圧＆装甲30%回復！(+${clearBonus}G)${keyMsg} 周回継続`);
         } else if (nextFaction) {
             showToast(`🚩 チェックポイント更新！${faction.name} 制圧${keyMsg} → 新戦線「${nextFaction.name}」へ転進！`);
             switchFaction(nextFaction.id, true);
@@ -4566,7 +4626,7 @@ function handleStageVictory() {
             }
         }
         rollStageWeather(state.stage, faction.id, true);
-        showToast(`✅ STAGE CLEAR! 装甲全回復 ＆ 報酬 +${clearBonus}G`);
+        showToast(`✅ STAGE CLEAR! 装甲30%回復 ＆ 報酬 +${clearBonus}G（${Math.round(stageRewardMult * 100)}%）`);
     }
 
     if (state.autoMarch) {
@@ -4585,7 +4645,8 @@ function handleStageDefeat() {
     projectiles = [];
     waveSpawnQueue = [];
     bossUltimateEffects = [];
-    state.hp = state.maxHp;
+    // 敗北時は最大HPの40%まで回復して立て直す（全回復はしない）
+    state.hp = Math.min(state.maxHp, Math.max(1, Math.round(state.maxHp * 0.40)));
 
     if (state.autoMarch) {
         if (state.stage > 1) {
@@ -4596,10 +4657,10 @@ function handleStageDefeat() {
         state.autoMarchTimer = 45;
         rollStageWeather(state.stage, state.currentFactionId, false);
         syncPlaybackControlsUI();
-        showToast(`⚠️ 装甲大破… AUTO防衛プロトコル作動：STAGE ${state.stage} へ後退し自動周回へ移行します`);
+        showToast(`⚠️ 装甲大破… AUTO防衛プロトコル作動：STAGE ${state.stage} へ後退し、装甲40%で自動周回へ移行します`);
     } else {
         rollStageWeather(state.stage, state.currentFactionId, false);
-        showToast('⚠️ 装甲大破… 戦線を立て直し、兵装強化や編成を見直して再出撃せよ！');
+        showToast('⚠️ 装甲大破… 装甲40%まで応急復旧。兵装強化や編成を見直して再出撃せよ！');
     }
 
     showEnemyPreviewTemporarily();
@@ -4942,14 +5003,42 @@ function updateSimulation() {
             }
         }
 
+        // ボス固有特性: 自己修復・増援召喚・激昂
+        const trait = e.trait;
+        if (trait) {
+            if (trait.regenPct && trait.regenInterval && e.traitRegenTimer > 0) {
+                e.traitRegenTimer--;
+                if (e.traitRegenTimer <= 0) {
+                    e.traitRegenTimer = trait.regenInterval;
+                    if (e.hp > 0 && e.hp < e.maxHp) {
+                        const heal = Math.max(1, Math.round(e.maxHp * trait.regenPct));
+                        e.hp = Math.min(e.maxHp, e.hp + heal);
+                        floatingTexts.push({ x: e.x, y: e.y - e.radius - 24, text: `✨+${heal}`, color: '#34d399', life: 40 });
+                    }
+                }
+            }
+            if (trait.summonInterval && trait.summonType && (e.traitSummons || 0) < (trait.summonMax || 1)) {
+                e.traitSummonTimer = (e.traitSummonTimer || trait.summonInterval) - 1;
+                if (e.traitSummonTimer <= 0) {
+                    e.traitSummonTimer = trait.summonInterval;
+                    spawnEnemyUnit(trait.summonType);
+                    e.traitSummons = (e.traitSummons || 0) + 1;
+                    showToast(`🌀 ${e.name.replace(/【.*?】/, '')} が増援を召喚！`);
+                }
+            }
+        }
+        const enraged = !!(trait && trait.enrageHp && (e.hp / e.maxHp) <= trait.enrageHp);
+        const traitContactMult = (trait && trait.contactDmgMult ? trait.contactDmgMult : 1) * (enraged && trait.enrageAtkMult ? trait.enrageAtkMult : 1);
+        const traitAttackIntervalMult = trait && trait.attackIntervalMult ? trait.attackIntervalMult : 1;
+
         const blocker = allyEscorts.find(esc => esc.hp > 0 && esc.attr === e.attr && e.x - e.radius <= esc.x + esc.radius + 18 && e.x + e.radius >= esc.x - esc.radius);
         if (blocker) {
             e.attackCd = (e.attackCd || 0) - 1;
             if (e.attackCd <= 0) {
                 // 列車本体への被弾と同じく、電磁障壁を適用してから最小1ダメージで丸める
-                const escortTaken = Math.max(1, Math.round(e.damage * getActiveSkillDamageTakenMult()));
+                const escortTaken = Math.max(1, Math.round(e.damage * traitContactMult * getActiveSkillDamageTakenMult()));
                 blocker.hp = Math.max(0, blocker.hp - escortTaken);
-                e.attackCd = 45;
+                e.attackCd = Math.max(1, Math.round(45 * traitAttackIntervalMult));
                 particles.push({
                     x: blocker.x + blocker.radius * 0.5,
                     y: blocker.y,
@@ -4976,10 +5065,10 @@ function updateSimulation() {
         if (e.x - e.radius <= frontX) {
             e.attackCd = (e.attackCd || 0) - 1;
             if (e.attackCd <= 0) {
-                const rawDmg = e.damage * getActiveSkillDamageTakenMult();
+                const rawDmg = e.damage * traitContactMult * getActiveSkillDamageTakenMult();
                 const finalDmg = Math.max(1, Math.round(rawDmg));
                 state.hp = Math.max(0, state.hp - finalDmg);
-                e.attackCd = 48;
+                e.attackCd = Math.max(1, Math.round(48 * traitAttackIntervalMult));
                 SoundEngine.playTrainDamage();
                 screenShake = Math.max(screenShake, e.isBoss ? 8 : 3);
                 floatingTexts.push({
@@ -4995,7 +5084,7 @@ function updateSimulation() {
                 }
             }
         } else {
-            e.x -= e.speed;
+            e.x -= e.speed * (enraged && trait.enrageSpeedMult ? trait.enrageSpeedMult : 1);
         }
     }
 
@@ -6165,7 +6254,7 @@ function drawScene() {
     ctx.stroke();
     ctx.restore();
 
-    if (skillRuntime.shield.active > 0) {
+    if (isTacticSelected('shield')) {
         const frontTrainX = getCarX(0);
         const backTrainX = getCarX(9);
         const midX = (frontTrainX + backTrainX) * 0.5;
@@ -7011,7 +7100,8 @@ function bulkUpgradeWeapons() {
     }
 }
 
-// --- タブ: 戦術スキル ---
+// --- タブ: 戦術 ---
+// 4種の戦術から1つを選択し、常時稼働させる。レベルは Lv1〜30。
 function renderSkillsTab() {
     const grid = document.getElementById('skills-list-grid');
     if (!grid) return;
@@ -7021,15 +7111,16 @@ function renderSkillsTab() {
         const lv = getSkillLevel(sk.id);
         const upgCost = getSkillUpgradeCost(sk.id);
         const maxed = isSkillMaxed(sk.id);
+        const selected = isTacticSelected(sk.id);
 
         const card = document.createElement('div');
         card.id = `skill-card-${sk.id}`;
-        card.className = `bg-slate-800 border-2 ${sk.borderClass}/70 rounded-lg p-3 flex flex-col justify-between gap-2.5`;
+        card.className = `bg-slate-800 border-2 ${selected ? 'border-amber-400 shadow-lg' : sk.borderClass + '/70'} rounded-lg p-3 flex flex-col justify-between gap-2.5`;
         card.innerHTML = `
             <div>
                 <div class="flex justify-between items-center">
                     <span class="text-sm font-bold text-white">${sk.icon} ${sk.name}</span>
-                    <span id="skill-lv-badge-${sk.id}" class="text-xs tech-font text-amber-300 font-bold">Lv.${lv}</span>
+                    <span id="skill-lv-badge-${sk.id}" class="text-xs tech-font text-amber-300 font-bold">Lv.${lv}/${TACTICAL_MAX_LEVEL}</span>
                 </div>
                 <p class="text-[11px] text-slate-300 mt-1">${sk.desc}</p>
                 <div id="skill-summary-${sk.id}" class="bg-slate-900/90 border border-slate-700 rounded p-2 mt-2 text-[11px] text-amber-200 font-bold">
@@ -7045,104 +7136,37 @@ function renderSkillsTab() {
                         </div>
                     `).join('')}
                 </div>` : ''}
-                ${getSkillCapNote(sk.id) ? `<div class="text-[10px] text-slate-400 mt-1">${getSkillCapNote(sk.id)}</div>` : ''}
+                ${selected ? '<div class="text-[10px] text-emerald-300 font-bold mt-1">✅ 常時稼働中（この戦術が有効）</div>' : ''}
             </div>
             <div class="space-y-1.5">
-                <button id="skill-act-btn-${sk.id}" onclick="activateTacticalSkill('${sk.id}')" class="w-full ${sk.btnBg} font-black py-2 rounded text-xs tech-font border border-slate-600 transition cursor-pointer">
-                    ▶ 今すぐ発動
+                <button id="skill-select-btn-${sk.id}" onclick="selectTacticalSkill('${sk.id}')" ${selected ? 'disabled' : ''} class="w-full ${selected ? 'bg-emerald-700 text-slate-950' : 'bg-slate-700 hover:bg-slate-600 text-emerald-200'} font-black py-2 rounded text-xs tech-font border border-slate-600 transition ${selected ? '' : 'cursor-pointer'}">
+                    ${selected ? '✅ 選択中（常時稼働）' : 'この戦術を選択'}
                 </button>
                 <button id="skill-upg-btn-${sk.id}" onclick="upgradeTacticalSkill('${sk.id}')" ${maxed ? 'disabled' : ''} class="w-full ${maxed ? 'bg-slate-900 text-slate-500 cursor-not-allowed' : 'bg-slate-700 hover:bg-slate-600 text-amber-300 cursor-pointer'} font-bold py-1.5 rounded text-xs tech-font transition">
-                    ${maxed ? '⚡ MAX LEVEL（効果上限到達）' : `出力強化 Lv.${lv + 1} (${upgCost.toLocaleString()} G)`}
+                    ${maxed ? `⚡ MAX LEVEL（Lv.${TACTICAL_MAX_LEVEL}）` : `戦術強化 Lv.${lv + 1} (${upgCost.toLocaleString()} G)`}
                 </button>
             </div>
         `;
         grid.appendChild(card);
     });
-    updateSkillsTabUI();
 }
 
-function updateSkillsTabUI() {
-    TACTICAL_SKILLS.forEach(sk => {
-        const rt = skillRuntime[sk.id];
-        const btn = document.getElementById(`skill-act-btn-${sk.id}`);
-        const card = document.getElementById(`skill-card-${sk.id}`);
-        if (!btn || !rt) return;
-
-        const isReady = rt.cd <= 0;
-        const isActive = rt.active > 0;
-
-        if (card) {
-            card.className = `bg-slate-800 border-2 ${isActive ? 'border-amber-400 shadow-lg' : sk.borderClass + '/70'} rounded-lg p-3 flex flex-col justify-between gap-2.5`;
-        }
-
-        if (isActive) {
-            btn.disabled = true;
-            btn.textContent = `⚡ 発動中 (${(rt.active / 60).toFixed(1)}s)`;
-            btn.className = 'w-full bg-amber-600 text-slate-950 font-black py-2 rounded text-xs tech-font border border-amber-300 transition';
-        } else if (isReady) {
-            btn.disabled = false;
-            btn.textContent = '▶ 今すぐ発動';
-            btn.className = `w-full ${sk.btnBg} font-black py-2 rounded text-xs tech-font border border-slate-600 transition cursor-pointer`;
-        } else {
-            btn.disabled = true;
-            btn.textContent = `⏳ 再装填中 (${(rt.cd / 60).toFixed(1)}s)`;
-            btn.className = 'w-full bg-slate-900 text-slate-500 font-black py-2 rounded text-xs tech-font border border-slate-800 transition';
-        }
-    });
-}
-
-function activateTacticalSkill(skillId) {
-    const sk = TACTICAL_SKILLS.find(s => s.id === skillId);
-    const rt = skillRuntime[skillId];
-    if (!sk || !rt || rt.cd > 0) return;
-    if (isCutsceneActive()) return;
-
-    const lv = getSkillLevel(skillId);
-    rt.cd = Math.max(120, Math.round(sk.cooldownFrames * 1));
-    if (sk.getDurationFrames) {
-        rt.active = sk.getDurationFrames(lv);
-    }
-
-    SoundEngine.playUI('launch');
-
-    if (skillId === 'salvo') {
-        // 車両ごとに属性倍率が異なるため、まず搭載火力の合計と「平均属性倍率」を出す。
-        // そのうえで敵1体ごとに、その属性への攻撃倍率が平均より高いか低いかで補正する。
-        let totalPower = 0;
-        let weightedMultSum = 0;
-        state.cars.forEach(c => {
-            const st = getCarEffectiveStats(c);
-            if (!st) return;
-            totalPower += st.damage;
-            weightedMultSum += st.damage * avgWeaponMult(st.weapon);
-        });
-        const weaponAvgMult = totalPower > 0 ? weightedMultSum / totalPower : 1;
-        const baseBlast = Math.max(80, Math.round(totalPower * sk.getPowerMult(lv)));
-
-        enemies.forEach(e => {
-            if (e.hp <= 0) return;
-            const attrRatio = weaponAvgMult > 0 ? getSalvoAttrMultForEnemy(e.attr) / weaponAvgMult : 1;
-            damageEnemy(e, Math.max(1, Math.round(baseBlast * attrRatio)), '#ef4444');
-        });
-        screenShake = 14;
-        showToast(`🔥 全車両一斉斉射！戦場の全敵へ 約 ${baseBlast.toLocaleString()} ダメージ！`);
-    } else if (skillId === 'shield') {
-        const healAmt = Math.round(state.maxHp * sk.getHealRatio(lv));
-        state.hp = Math.min(state.maxHp, state.hp + healAmt);
-        showToast(`🛡️ 電磁障壁展開！装甲耐久を +${healAmt.toLocaleString()} 修復！`);
-    } else {
-        showToast(`${sk.icon} ${sk.name} を発動しました！`);
-    }
-
+function selectTacticalSkill(skillId) {
+    const sk = getTacticById(skillId);
+    if (!sk) return;
+    state.activeTactic = skillId;
+    SoundEngine.playUI('click');
     updateHeaderUI();
-    updateSkillsTabUI();
+    renderSkillsTab();
+    showToast(`${sk.icon} 戦術「${sk.name}」を選択しました（常時稼働）`);
+    saveGame(true);
 }
 
 function upgradeTacticalSkill(skillId) {
-    const sk = TACTICAL_SKILLS.find(s => s.id === skillId);
+    const sk = getTacticById(skillId);
     if (!sk) return;
     if (isSkillMaxed(skillId)) {
-        showToast('このスキルは効果上限に到達しています');
+        showToast('この戦術は最大レベルに到達しています');
         return;
     }
     if (!state.skillLevels || typeof state.skillLevels !== 'object') {
@@ -7160,8 +7184,8 @@ function upgradeTacticalSkill(skillId) {
 
     SoundEngine.playUI('upgrade');
     updateHeaderUI();
-    // レベル・効果サマリ・差分パネル・上限表示をまとめて更新する
     renderSkillsTab();
+    showToast(`${sk.icon} 戦術「${sk.name}」を Lv.${nextLv} に強化しました`);
     saveGame(true);
 }
 
@@ -7527,7 +7551,8 @@ function getPrestigeRequirement() {
         factionName: faction ? faction.name : 'アメリカ合衆国',
         requiredStage,
         reached: state.maxReachedStages[factionId] || 1,
-        cleared: state.clearedFactions.includes(factionId)
+        // 累積の clearedFactions ではなく、今回の周回で制圧した記録だけを見る。
+        cleared: (state.runClearedFactions || []).includes(factionId)
     };
 }
 
@@ -7761,6 +7786,10 @@ function executePrestige() {
     state.sephirothShards += gain;
     state.prestigeCount += 1;
 
+    // 転生条件の判定用に「今回の周回の制圧記録」をリセットする。
+    // 累積の clearedFactions は図鑑・解放状態のため保持する。
+    state.runClearedFactions = ['pol'];
+
     state.currentFactionId = resumeFactionId;
     state.factionStages = { pol: 1, un: 1, usa: 1, chn: 1, isl: 1, rus: 1, eu: 1, ter: 1, corp: 1, gew: 1, ant: 1, endless: 1, gew_beacon: 1, dark_abyss: 1, dark_endless: 1 };
     state.maxReachedStages = { pol: 10, un: 1, usa: 1, chn: 1, isl: 1, rus: 1, eu: 1, ter: 1, corp: 1, gew: 1, ant: 1, endless: 1, gew_beacon: 1, dark_abyss: 1, dark_endless: 1 };
@@ -7951,6 +7980,8 @@ function renderBossDexGrid() {
                 </div>
                 <div class="text-xs font-bold text-white mt-1.5">${rec.seen ? tmpl.name.replace(/【.*?】/, '') : '？？？ 未遭遇超兵器'}</div>
                 ${rec.seen && ult ? `<div class="text-[10px] text-amber-300 font-bold mt-0.5">⚡ 必殺技: ${ult.name}</div>` : ''}
+                ${rec.seen && BOSS_TRAITS[bid] ? `<div class="text-[10px] text-cyan-300 font-bold mt-0.5">🔰 固有特性: ${BOSS_TRAITS[bid].name}</div>` : ''}
+                ${rec.seen && BOSS_TRAITS[bid] ? `<div class="text-[10px] text-slate-400 mt-0.5">${BOSS_TRAITS[bid].desc}</div>` : ''}
                 <p class="text-[11px] text-slate-400 mt-1 line-clamp-3">${rec.seen ? lore.lore : '該当戦線または対応天候へ出撃し、目標と交戦することで機体データが記録されます。'}</p>
             </div>
             <div class="text-[10px] tech-font text-slate-300 border-t border-slate-700/80 pt-1 flex justify-between">
@@ -8194,6 +8225,8 @@ function loadGame() {
 
         if (!Array.isArray(state.unlockedFactions)) state.unlockedFactions = ['pol'];
         if (!Array.isArray(state.clearedFactions)) state.clearedFactions = [];
+        if (!Array.isArray(state.runClearedFactions)) state.runClearedFactions = [];
+        if (!state.stageClearCounts || typeof state.stageClearCounts !== 'object') state.stageClearCounts = {};
         if (!state.factionStages || typeof state.factionStages !== 'object') state.factionStages = {};
         if (!state.maxReachedStages || typeof state.maxReachedStages !== 'object') state.maxReachedStages = {};
         if (!state.weaponLevels || typeof state.weaponLevels !== 'object') state.weaponLevels = {};
@@ -8224,6 +8257,8 @@ function loadGame() {
             if (state.prestigeUpgrades.escortSlots && !state.prestigeUpgrades.malkuth) state.prestigeUpgrades.malkuth = state.prestigeUpgrades.escortSlots;
             SEPHIROTH_TREE_NODES.forEach(n => {
                 if (typeof state.prestigeUpgrades[n.id] !== 'number') state.prestigeUpgrades[n.id] = 0;
+                const cap = n.maxLevel || 5;
+                if (state.prestigeUpgrades[n.id] > cap) state.prestigeUpgrades[n.id] = cap;
             });
         }
 
@@ -8272,8 +8307,9 @@ function loadGame() {
         }
         ['salvo', 'overdrive', 'goldrush', 'shield'].forEach(k => {
             const val = Number(state.skillLevels[k]);
-            state.skillLevels[k] = Number.isFinite(val) && val >= 1 ? Math.floor(val) : 1;
+            state.skillLevels[k] = Number.isFinite(val) && val >= 1 ? Math.min(TACTICAL_MAX_LEVEL, Math.floor(val)) : 1;
         });
+        if (!TACTICAL_SKILLS.some(s => s.id === state.activeTactic)) state.activeTactic = 'salvo';
 
         if (state.activeTab === 'faction') state.activeTab = 'world';
         if (state.activeTab === 'bossdex' || state.activeTab === 'relicdex') {
@@ -8294,22 +8330,14 @@ function loadGame() {
 }
 
 function gameLoop() {
-    advanceSkillTimers();
     const steps = state.gameSpeed || 1;
     for (let s = 0; s < steps; s++) {
         updateSimulation();
     }
     updateHeaderUI();
-    if (state.activeTab === 'skills') {
-        updateSkillsTabUI();
-    }
     drawScene();
     requestAnimationFrame(gameLoop);
 }
-
-// タブ非表示中は requestAnimationFrame が止まるため、スキルの再装填だけは
-// タイマーで進める（UIを開き直したときに「再装填中のまま」にならないようにする）。
-setInterval(advanceSkillTimers, 250);
 
 window.addEventListener('DOMContentLoaded', () => {
     initCars();
