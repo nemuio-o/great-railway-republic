@@ -398,6 +398,7 @@ const WEAPONS = {
     },
     'mg_vulcan': {
         id: 'mg_vulcan',
+        manufacturerId: 'usa',
         name: '重機関銃バルカン',
         type: 'MG',
         typeName: '機関銃',
@@ -413,6 +414,7 @@ const WEAPONS = {
     },
     'aa_flak': {
         id: 'aa_flak',
+        manufacturerId: 'gew',
         name: '88mm対空機関砲',
         type: 'AA',
         typeName: '対空砲',
@@ -428,6 +430,7 @@ const WEAPONS = {
     },
     'torpedo_launcher': {
         id: 'torpedo_launcher',
+        manufacturerId: 'un',
         name: '対艦重魚雷発射管',
         type: 'TORPEDO',
         typeName: '対艦兵装',
@@ -444,6 +447,7 @@ const WEAPONS = {
     },
     'howitzer_heavy': {
         id: 'howitzer_heavy',
+        manufacturerId: 'usa',
         name: '155mm重榴弾砲',
         type: 'CANNON',
         typeName: '重砲',
@@ -460,6 +464,7 @@ const WEAPONS = {
     },
     'missile_malkuth': {
         id: 'missile_malkuth',
+        manufacturerId: 'un',
         name: '多連装誘導ミサイル',
         type: 'SUPER',
         typeName: '超兵器',
@@ -476,6 +481,7 @@ const WEAPONS = {
     },
     'laser_kether': {
         id: 'laser_kether',
+        manufacturerId: 'gew',
         name: '超兵器・焦熱光線砲',
         type: 'SUPER',
         typeName: '超兵器',

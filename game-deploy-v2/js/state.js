@@ -53,7 +53,17 @@ let state = {
         tiphareth: 0, netzach: 0, hod: 0, yesod: 0, malkuth: 0
     },
     skillLevels: { salvo: 1, overdrive: 1, goldrush: 1, shield: 1 },
-    activeTactic: 'salvo'
+    activeTactic: 'salvo',
+    gachaTickets: { normal: 0, rare: 0 },
+    gachaLastResult: null,
+    gachaSubTab: 'normal',
+    weaponSubTab: 'inventory',
+    enhanceMaterials: 0,
+    escortEnhanceModules: 0,
+    escortModuleLevels: {},
+    weaponInstances: [],
+    weaponNextUid: 1,
+    manufacturerGachaUnlocked: {}
 };
 
 function checkAndUnlockAntarcticBase(notify = true) {

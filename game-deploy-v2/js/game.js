@@ -315,6 +315,7 @@ function spawnAllyEscorts() {
     state.equippedEscorts.forEach((bossId, idx) => {
         const stats = getEscortStats(bossId);
         if (!stats) return;
+        applyEscortModuleBonus(stats, bossId);
 
         let domainY = h * 0.71;
         if (stats.attr === 'AIR') {
@@ -866,7 +867,7 @@ function getCarEffectiveStats(car) {
     if (!w) return null;
     const sephPassive = getSephirahPassiveEffects();
 
-    let dmg = getWeaponDamage(car.weaponId);
+    let dmg = getEffectiveWeaponDamage(car.weaponId);
     let reloadMult = getRelicReloadMult() * getActiveSkillSpeedMult();
     let isSynergy = false;
 
@@ -1029,6 +1030,8 @@ function handleStageVictory() {
     const clearKey = getStageClearKey(faction.id, state.stage);
     const clearAttempt = getStageClearCount(faction.id, state.stage) + 1;
     const stageRewardMult = getStageRewardMultiplier(clearAttempt);
+    const ticketReward = grantStageClearTickets(faction, state.stage, clearAttempt);
+    const ticketMsg = formatTicketReward(ticketReward);
     if (!state.stageClearCounts || typeof state.stageClearCounts !== 'object') state.stageClearCounts = {};
     state.stageClearCounts[clearKey] = clearAttempt;
 
@@ -1048,6 +1051,7 @@ function handleStageVictory() {
     if (isFactionFinalClear) {
         if (!state.clearedFactions.includes(faction.id)) {
             state.clearedFactions.push(faction.id);
+            syncManufacturerGachaUnlocks();
         }
         // 転生条件は「今回の周回での制圧」だけを見るため、累積とは別に記録する。
         if (!Array.isArray(state.runClearedFactions)) state.runClearedFactions = [];
@@ -1080,7 +1084,7 @@ function handleStageVictory() {
                 isBoss: false,
                 durationMs: 5400
             });
-            showToast(`🌌 ビーコン作動イベント発生！「暗黒世界」タブが追加され「Gewinnerビーコン基地」が解放されました！ (+${clearBonus}G)`);
+            showToast(`🌌 ビーコン作動イベント発生！「暗黒世界」タブが追加され「Gewinnerビーコン基地」が解放されました！ (+${clearBonus}G)${ticketMsg}`);
             showEnemyPreviewTemporarily();
             updateHeaderUI();
             renderCurrentTab();
@@ -1094,9 +1098,9 @@ function handleStageVictory() {
 
             if (state.loopStage) {
                 rollStageWeather(state.stage, faction.id, true);
-                showToast(`🏆 ${faction.name} 制圧！(+${clearBonus}G)${keyMsg} 周回継続`);
+                showToast(`🏆 ${faction.name} 制圧！(+${clearBonus}G)${keyMsg} 周回継続${ticketMsg}`);
             } else {
-                showToast(`🚩 国家統治崩壊！「世界企業連合」とテロ組織「Gewinner」が同時に出現！${keyMsg}`);
+                showToast(`🚩 国家統治崩壊！「世界企業連合」とテロ組織「Gewinner」が同時に出現！${keyMsg}${ticketMsg}`);
                 switchFaction('corp', true);
             }
             showEnemyPreviewTemporarily();
@@ -1127,13 +1131,13 @@ function handleStageVictory() {
 
         if (state.loopStage) {
             rollStageWeather(state.stage, faction.id, true);
-            showToast(`🏆 ${faction.name} ST.${state.stage} 制圧＆装甲30%回復！(+${clearBonus}G)${keyMsg} 周回継続`);
+            showToast(`🏆 ${faction.name} ST.${state.stage} 制圧＆装甲30%回復！(+${clearBonus}G)${keyMsg} 周回継続${ticketMsg}`);
         } else if (nextFaction) {
-            showToast(`🚩 チェックポイント更新！${faction.name} 制圧${keyMsg} → 新戦線「${nextFaction.name}」へ転進！`);
+            showToast(`🚩 チェックポイント更新！${faction.name} 制圧${keyMsg} → 新戦線「${nextFaction.name}」へ転進！${ticketMsg}`);
             switchFaction(nextFaction.id, true);
         } else {
             rollStageWeather(state.stage, faction.id, true);
-            showToast(`👑 戦線完全制覇！(+${clearBonus}G)${keyMsg}`);
+            showToast(`👑 戦線完全制覇！(+${clearBonus}G)${keyMsg}${ticketMsg}`);
         }
     } else {
         if (!state.loopStage) {
@@ -1144,7 +1148,7 @@ function handleStageVictory() {
             }
         }
         rollStageWeather(state.stage, faction.id, true);
-        showToast(`✅ STAGE CLEAR! 装甲30%回復 ＆ 報酬 +${clearBonus}G（${Math.round(stageRewardMult * 100)}%）`);
+        showToast(`✅ STAGE CLEAR! 装甲30%回復 ＆ 報酬 +${clearBonus}G（${Math.round(stageRewardMult * 100)}%）${ticketMsg}`);
     }
 
     if (state.autoMarch) {
@@ -3092,6 +3096,12 @@ function updateHeaderUI() {
 
     const escCountEl = document.getElementById('tab-escort-count');
     if (escCountEl) escCountEl.textContent = `${state.equippedEscorts.length}/${getMaxEscortSlots()}`;
+
+    const ticketCountEl = document.getElementById('tab-gacha-ticket-count');
+    if (ticketCountEl) {
+        const tickets = state.gachaTickets || {};
+        ticketCountEl.textContent = (toNonNegativeInt(tickets.normal) + toNonNegativeInt(tickets.rare)).toLocaleString();
+    }
 }
 
 function changeStage(delta) {
@@ -3116,7 +3126,7 @@ function switchTab(tabId) {
         tabId = 'dex';
     }
     state.activeTab = tabId;
-    const tabs = ['train', 'staff', 'rd', 'skills', 'escort', 'world', 'prestige', 'dex'];
+    const tabs = ['train', 'staff', 'rd', 'skills', 'escort', 'gacha', 'weapons', 'world', 'prestige', 'dex'];
     tabs.forEach(t => {
         const btn = document.getElementById(`tab-btn-${t}`);
         const content = document.getElementById(`tab-content-${t}`);
@@ -3126,7 +3136,7 @@ function switchTab(tabId) {
             content.classList.remove('hidden');
             content.classList.add('flex');
         } else {
-            const baseTextColor = t === 'skills' ? 'text-amber-300' : t === 'escort' ? 'text-cyan-400' : t === 'world' ? 'text-sky-300' : t === 'prestige' ? 'text-emerald-400' : t === 'dex' ? 'text-amber-300' : 'text-slate-300';
+            const baseTextColor = t === 'skills' ? 'text-amber-300' : t === 'escort' ? 'text-cyan-400' : t === 'gacha' ? 'text-purple-300' : t === 'weapons' ? 'text-emerald-300' : t === 'world' ? 'text-sky-300' : t === 'prestige' ? 'text-emerald-400' : t === 'dex' ? 'text-amber-300' : 'text-slate-300';
             btn.className = `px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 ${baseTextColor} hover:text-white hover:border-slate-500 transition text-center truncate`;
             content.classList.add('hidden');
             content.classList.remove('flex');
@@ -3148,6 +3158,8 @@ function renderCurrentTab() {
         case 'rd': renderRDTab(); break;
         case 'skills': renderSkillsTab(); break;
         case 'escort': renderEscortTab(); break;
+        case 'gacha': renderGachaTab(); break;
+        case 'weapons': renderWeaponsTab(); break;
         case 'world': renderWorldTab(); break;
         case 'prestige': renderPrestigeTab(); break;
         case 'dex': renderDexTab(); break;
@@ -3896,6 +3908,10 @@ function renderEscortTab() {
         const upgCost = isMax ? Infinity : getEscortUpgradeCost(bid, stats.lv);
         const sellPrice = getEscortSellPrice(bid);
         const nextStats = isMax ? stats : getEscortStatsAtLevel(bid, stats.lv + 1);
+        const moduleLv = clampInt((state.escortModuleLevels || {})[bid], 0, ESCORT_MODULE_MAX_LEVEL, 0);
+        const modulePct = Math.round(moduleLv * ESCORT_MODULE_PER_LEVEL * 100);
+        const moduleMaxed = moduleLv >= ESCORT_MODULE_MAX_LEVEL;
+        const moduleCount = toNonNegativeInt(state.escortEnhanceModules);
 
         const card = document.createElement('div');
         if (isSold) {
@@ -3931,6 +3947,15 @@ function renderEscortTab() {
                         <div>耐久(HP): ${isMax ? stats.maxHp.toLocaleString() : deltaStatHTML(stats.maxHp.toLocaleString(), nextStats.maxHp.toLocaleString(), `+${(nextStats.maxHp - stats.maxHp).toLocaleString()}`, '#34d399')}</div>
                         <div>火力: ${isMax ? stats.damage.toLocaleString() : deltaStatHTML(stats.damage.toLocaleString(), nextStats.damage.toLocaleString(), `+${(nextStats.damage - stats.damage).toLocaleString()}`, '#fbbf24')}</div>
                     </div>
+                </div>
+                <div class="rounded border border-purple-500/40 bg-purple-950/25 px-2 py-1.5 flex items-center justify-between gap-2">
+                    <div class="min-w-0 text-[10px] tech-font">
+                        <div class="text-purple-200 font-bold">🛠 強化モジュール Lv.${moduleLv}/${ESCORT_MODULE_MAX_LEVEL}</div>
+                        <div class="text-purple-300/80">戦闘時 +${modulePct}% HP/攻撃</div>
+                    </div>
+                    <button onclick="enhanceEscortWithModule('${bid}')" class="flex-shrink-0 bg-purple-700 hover:bg-purple-600 text-white px-2.5 py-1 rounded text-[10px] font-bold transition disabled:opacity-30 disabled:pointer-events-none" ${moduleMaxed || moduleCount < 1 ? 'disabled' : ''}>
+                        ${moduleMaxed ? 'MAX' : `強化 (所持 ${moduleCount})`}
+                    </button>
                 </div>
                 <div class="grid grid-cols-3 gap-1.5 pt-1">
                     <button onclick="toggleEquipEscort('${bid}')" class="${isEquipped ? 'bg-slate-700 hover:bg-slate-600 text-slate-200' : 'bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-black'} py-1.5 rounded text-[11px] transition">
@@ -4981,7 +5006,7 @@ function loadGame() {
         if (typeof state.armorLevel !== 'number' || state.armorLevel < 1) state.armorLevel = 1;
         state.armorLevel = Math.min(ARMOR_MAX_LEVEL, Math.floor(state.armorLevel));
         if (typeof state.currentFactionId !== 'string') state.currentFactionId = 'pol';
-        if (!['train', 'skills', 'escort', 'rd', 'staff', 'world', 'prestige', 'dex'].includes(state.activeTab)) state.activeTab = 'train';
+        if (!['train', 'skills', 'escort', 'rd', 'staff', 'gacha', 'weapons', 'world', 'prestige', 'dex'].includes(state.activeTab)) state.activeTab = 'train';
 
         if (!state.prestigeUpgrades || typeof state.prestigeUpgrades !== 'object') {
             state.prestigeUpgrades = {
@@ -5060,6 +5085,8 @@ function loadGame() {
         }
         if (!Array.isArray(state.soldEscorts)) state.soldEscorts = [];
         if (!Array.isArray(state.equippedEscorts)) state.equippedEscorts = [];
+        if (typeof normalizeGachaState === 'function') normalizeGachaState();
+        if (typeof syncManufacturerGachaUnlocks === 'function') syncManufacturerGachaUnlocks();
         state.maxHp = calcMaxHp();
         state.hp = Math.min(state.maxHp, Math.max(1, state.hp));
         return true;
@@ -5143,6 +5170,7 @@ window.addEventListener('DOMContentLoaded', () => {
     showEnemyPreviewTemporarily();
     updateHeaderUI();
     switchTab(state.activeTab || 'train');
+    initializeGacha();
     initializeMobileCommandDock();
 
     if (hasSave) {

@@ -252,6 +252,12 @@
         }
         /* Mobile edge-to-edge bridge dock */
         .mobile-command-dock, .mobile-command-panel, .mobile-skills-ui, .mobile-world-lore { display: none; }
+        @media (min-width: 640px) {
+            #mobile-bridge-nav > .grid { grid-template-columns: repeat(5, minmax(0,1fr)); }
+        }
+        @media (min-width: 1024px) {
+            #mobile-bridge-nav > .grid { grid-template-columns: repeat(10, minmax(0,1fr)); }
+        }
         @media (max-width: 639px) {
             html, body { width: 100%; max-width: 100%; overflow-x: clip; }
             body.h-screen { height: 100vh; height: 100dvh; padding: env(safe-area-inset-top) 0 0; }
@@ -330,6 +336,11 @@
             #mobile-bridge-nav > div:first-child { margin-bottom: 8px; }
             #mobile-bridge-nav .grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
             #mobile-bridge-nav .grid button { min-height: 44px; font-size: 12px; }
+            #gacha-subtabs { grid-template-columns: repeat(3,minmax(0,1fr)); }
+            #weapon-subtabs { grid-template-columns: repeat(2,minmax(0,1fr)); }
+            #gacha-pickup-grid, #weapon-inventory-grid, #weapon-merge-grid { grid-template-columns: minmax(0,1fr) !important; }
+            #gacha-normal-draw, #gacha-rare-draw, .gacha-pickup-draw { min-height: 44px; }
+            .weapon-action-btn { min-height: 40px; }
             #train-intro-desktop, #skills-description-desktop { display: none; }
             #train-intro-mobile, #skills-description-mobile { display: block; }
             #train-action-row { display: grid; grid-template-columns: 78px minmax(0,1fr) 100px; align-items: stretch; gap: 6px; }
