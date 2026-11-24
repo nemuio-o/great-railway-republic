@@ -546,8 +546,12 @@ function drawGachaFromPool(poolKey, manufacturerId) {
             return;
         }
     }
-    const ticketType = pool.ticketType || 'normal';
-    const cost = toNonNegativeInt(pool.ticketCost || 1);
+    const ticketType = (poolKey === 'pickup' && man && man.ticketType)
+        ? man.ticketType
+        : (pool.ticketType || 'normal');
+    const cost = toNonNegativeInt((poolKey === 'pickup' && man && man.ticketCost)
+        ? man.ticketCost
+        : (pool.ticketCost || 1));
     if (getGachaTicketCount(ticketType) < cost) {
         showToast(`${GACHA_TICKET_LABELS[ticketType] || ticketType}が不足しています`);
         return;
@@ -669,9 +673,9 @@ function renderGachaResultCard(result) {
 }
 
 function renderManufacturerPickupCards() {
-    const ticketType = GACHA_POOLS.pickup.ticketType;
-    const ticketCost = toNonNegativeInt(GACHA_POOLS.pickup.ticketCost || 1);
     return MANUFACTURERS.map(man => {
+        const ticketType = man.ticketType || GACHA_POOLS.pickup.ticketType;
+        const ticketCost = toNonNegativeInt(man.ticketCost || GACHA_POOLS.pickup.ticketCost || 1);
         const unlocked = isManufacturerUnlocked(man);
         const weaponIds = getManufacturerWeaponIds(man);
         const target = WEAPONS[man.mythicWeaponId];
@@ -1039,7 +1043,10 @@ function openWeaponMergeConfirm(weaponId, rarity, plus) {
     const body = document.getElementById('weapon-merge-confirm-body');
     const execBtn = document.getElementById('weapon-merge-confirm-execute');
     const modal = document.getElementById('weapon-merge-confirm-modal');
-    if (!body || !execBtn || !modal) return;
+    if (!body || !execBtn || !modal) {
+        pendingWeaponMerge = null;
+        return;
+    }
     body.innerHTML = `
         <div class="rounded-lg border p-3" style="border-color:${meta.color}77;background:${meta.color}12">
             <div class="text-sm font-bold text-white">${getWeaponName(weaponId)}</div>
