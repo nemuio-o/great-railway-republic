@@ -43,6 +43,7 @@ let state = {
     skipSeenBossCutscene: false,
     equippedEscorts: [],
     escortLevels: {},
+    escortDuplicateCounts: {},
     soldEscorts: [],
     beaconKeys: {},
     relics: {},

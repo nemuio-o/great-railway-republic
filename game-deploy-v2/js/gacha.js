@@ -124,6 +124,16 @@ const TICKET_REWARDS = {
     bigBossRepeatBonus: { rare: 1 }
 };
 
+// レールガン専用の自動レアリティ。ガチャ／＋値／マージ／上限突破とは別系統。
+// 最終段階は「転生15回 + クリフォト中枢（dark_abyss）制圧」でちょうど Legendary。
+const RAILGUN_RARITY_STAGES = [
+    { rarity: 'Common', prestige: 0, factionId: null, bonus: 0.00 },
+    { rarity: 'Uncommon', prestige: 3, factionId: null, bonus: 0.12 },
+    { rarity: 'Rare', prestige: 6, factionId: null, bonus: 0.28 },
+    { rarity: 'Epic', prestige: 10, factionId: null, bonus: 0.48 },
+    { rarity: 'Legendary', prestige: 15, factionId: 'dark_abyss', bonus: 0.70 }
+];
+
 // ==========================================================
 // 共通ヘルパー
 // ==========================================================
@@ -164,6 +174,44 @@ function pickWeighted(items, weightFn = item => item.weight) {
 
 function getRarityMeta(rarity) {
     return WEAPON_RARITIES[rarity] || WEAPON_RARITIES.Common;
+}
+
+function getRailgunRarityInfo() {
+    const prestige = Math.max(0, Math.floor(Number(state.prestigeCount) || 0));
+    const cleared = Array.isArray(state.clearedFactions) ? state.clearedFactions : [];
+    let index = 0;
+    for (let i = 0; i < RAILGUN_RARITY_STAGES.length; i++) {
+        const stage = RAILGUN_RARITY_STAGES[i];
+        if (prestige >= stage.prestige && (!stage.factionId || cleared.includes(stage.factionId))) {
+            index = i;
+        }
+    }
+    const current = RAILGUN_RARITY_STAGES[index];
+    const next = RAILGUN_RARITY_STAGES[index + 1] || null;
+    return {
+        current,
+        next,
+        index,
+        bonus: current.bonus,
+        meta: getRarityMeta(current.rarity)
+    };
+}
+
+function getRailgunRarityBonus() {
+    return getRailgunRarityInfo().bonus;
+}
+
+function getRailgunRequirementText(stage) {
+    if (!stage) return '';
+    const prestige = Math.max(0, Math.floor(Number(state.prestigeCount) || 0));
+    const cleared = Array.isArray(state.clearedFactions) ? state.clearedFactions : [];
+    const parts = [];
+    if (prestige < stage.prestige) parts.push(`転生${stage.prestige}回`);
+    if (stage.factionId && !cleared.includes(stage.factionId)) {
+        const faction = (typeof FACTIONS !== 'undefined' ? FACTIONS : []).find(f => f.id === stage.factionId);
+        parts.push(`${faction ? faction.name : stage.factionId} 制圧`);
+    }
+    return parts.length ? parts.join(' + ') : '達成済み';
 }
 
 function getRarityData(weaponId, rarity) {
@@ -237,7 +285,10 @@ function getBestWeaponInstanceBonus(weaponId) {
 
 function getEffectiveWeaponDamage(weaponId) {
     const base = getWeaponDamage(weaponId);
-    if (isRailgunWeapon(weaponId)) return base;
+    if (isRailgunWeapon(weaponId)) {
+        const railBonus = getRailgunRarityBonus();
+        return railBonus > 0 ? Math.round(base * (1 + railBonus)) : base;
+    }
     if (!state.unlockedWeapons.includes(weaponId)) return base;
     const bonus = getBestWeaponInstanceBonus(weaponId);
     return bonus > 0 ? Math.round(base * (1 + bonus)) : base;

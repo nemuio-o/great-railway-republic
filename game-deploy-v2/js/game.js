@@ -957,6 +957,34 @@ function damageEnemy(enemy, dmg, hitColor = '#fbbf24') {
     }
 }
 
+function registerEscortCapture(enemyId, enemyName) {
+    if (!enemyId) return;
+    if (!state.escortDuplicateCounts || typeof state.escortDuplicateCounts !== 'object') {
+        state.escortDuplicateCounts = {};
+    }
+    const name = enemyName || enemyId;
+    if (!state.escortLevels[enemyId]) {
+        state.escortLevels[enemyId] = 1;
+        state.escortDuplicateCounts[enemyId] = 0;
+        showToast(`🤖 鹵獲超兵器「${name}」を格納庫へ収容しました！`);
+        return;
+    }
+    const lv = Math.max(1, Math.floor(Number(state.escortLevels[enemyId]) || 1));
+    if (lv >= ESCORT_MAX_LEVEL) {
+        showToast(`⚡ 鹵獲超兵器「${name}」は最大Lv.${ESCORT_MAX_LEVEL}です`);
+        return;
+    }
+    const dup = Math.min(9, Math.max(0, Math.floor(Number(state.escortDuplicateCounts[enemyId]) || 0))) + 1;
+    if (dup >= 10) {
+        state.escortDuplicateCounts[enemyId] = dup - 10;
+        state.escortLevels[enemyId] = Math.min(ESCORT_MAX_LEVEL, lv + 1);
+        showToast(`⚡ 鹵獲超兵器「${name}」10体集めて1凸！ 機体Lv.${state.escortLevels[enemyId]} に上昇！`);
+    } else {
+        state.escortDuplicateCounts[enemyId] = dup;
+        showToast(`⚡ 鹵獲超兵器「${name}」の重複 ${dup}/10（あと${10 - dup}体で1凸）`);
+    }
+}
+
 function handleEnemyDefeated(enemy) {
     SoundEngine.playEnemyExplode(enemy.isBoss);
     const gainGold = Math.max(1, Math.round(enemy.reward * getActiveSkillGoldMult()));
@@ -997,12 +1025,8 @@ function handleEnemyDefeated(enemy) {
             const sellBonus = Math.max(50, Math.round(enemy.reward * 1.5));
             state.gold += sellBonus;
             showToast(`💰 ロック中機体「${enemy.name.replace(/【.*?】/, '')}」を即時自動売却 (+${sellBonus}G)`);
-        } else if (!state.escortLevels[enemy.id]) {
-            state.escortLevels[enemy.id] = 1;
-            showToast(`🤖 鹵獲超兵器「${enemy.name.replace(/【.*?】/, '')}」を格納庫へ収容しました！`);
         } else {
-            state.escortLevels[enemy.id] += 1;
-            showToast(`⚡ 鹵獲超兵器「${enemy.name.replace(/【.*?】/, '')}」の機体Lvが ${state.escortLevels[enemy.id]} に上昇！`);
+            registerEscortCapture(enemy.id, enemy.name.replace(/【.*?】/, ''));
         }
 
         if (enemy.isWeatherBoss) {
@@ -3557,6 +3581,23 @@ function renderRDTab() {
         const upgCost = isMax ? Infinity : getWeaponUpgradeCost(w.id);
         // 次のレベルの威力（getWeaponDamageAtLevel と同式）
         const nextDmg = isMax ? dmg : getWeaponDamageAtLevel(w.id, lv + 1);
+        const railInfo = isRailgunWeapon(w.id) ? getRailgunRarityInfo() : null;
+        const railBlock = railInfo ? `
+            <div class="mt-1.5 rounded border p-2" style="border-color:${railInfo.meta.color}66;background:${railInfo.meta.color}12">
+                <div class="flex justify-between items-center gap-2">
+                    <span class="text-[10px] font-black px-1.5 py-0.5 rounded" style="background:${railInfo.meta.color}22;color:${railInfo.meta.color};border:1px solid ${railInfo.meta.color}66">${railInfo.meta.label}</span>
+                    <span class="text-[9px] tech-font text-slate-400">レールガン自動レアリティ</span>
+                </div>
+                <div class="text-[10px] tech-font text-slate-300 mt-1">
+                    補正: <span class="text-emerald-300">+${Math.round(railInfo.bonus * 100)}%</span>
+                    <span class="text-slate-500">|</span>
+                    実効威力: <span class="text-amber-300">${getEffectiveWeaponDamage(w.id).toLocaleString()}</span>
+                </div>
+                <div class="text-[10px] text-slate-400 mt-0.5">
+                    ${railInfo.next ? `次: ${getRarityMeta(railInfo.next.rarity).label}（${getRailgunRequirementText(railInfo.next)}）` : '最大レアリティ'}
+                </div>
+            </div>
+        ` : '';
 
         const card = document.createElement('div');
         card.className = `bg-slate-800 border ${unlocked ? 'border-amber-600/60' : 'border-slate-700'} rounded-lg p-3 flex flex-col justify-between gap-2`;
@@ -3573,6 +3614,7 @@ function renderRDTab() {
                         ? (isMax ? dmg.toLocaleString() : deltaStatHTML(dmg.toLocaleString(), nextDmg.toLocaleString(), `+${(nextDmg - dmg).toLocaleString()}`, '#fbbf24'))
                         : dmg.toLocaleString()}
                 </div>
+                ${railBlock}
             </div>
             <div>
                 ${unlocked
@@ -3912,6 +3954,7 @@ function renderEscortTab() {
         const modulePct = Math.round(moduleLv * ESCORT_MODULE_PER_LEVEL * 100);
         const moduleMaxed = moduleLv >= ESCORT_MODULE_MAX_LEVEL;
         const moduleCount = toNonNegativeInt(state.escortEnhanceModules);
+        const dupCount = Math.min(9, Math.max(0, Math.floor(Number((state.escortDuplicateCounts || {})[bid]) || 0)));
 
         const card = document.createElement('div');
         if (isSold) {
@@ -3946,6 +3989,9 @@ function renderEscortTab() {
                     <div class="text-[11px] tech-font text-slate-300 mt-0.5 space-y-0.5">
                         <div>耐久(HP): ${isMax ? stats.maxHp.toLocaleString() : deltaStatHTML(stats.maxHp.toLocaleString(), nextStats.maxHp.toLocaleString(), `+${(nextStats.maxHp - stats.maxHp).toLocaleString()}`, '#34d399')}</div>
                         <div>火力: ${isMax ? stats.damage.toLocaleString() : deltaStatHTML(stats.damage.toLocaleString(), nextStats.damage.toLocaleString(), `+${(nextStats.damage - stats.damage).toLocaleString()}`, '#fbbf24')}</div>
+                    </div>
+                    <div class="text-[10px] tech-font text-cyan-300 mt-0.5">
+                        重複: ${dupCount}/10 体（${isMax ? 'Lv.MAX' : `あと${10 - dupCount}体で1凸`}）
                     </div>
                 </div>
                 <div class="rounded border border-purple-500/40 bg-purple-950/25 px-2 py-1.5 flex items-center justify-between gap-2">
@@ -4089,6 +4135,7 @@ function executeSellEscort() {
     state.gold += price;
     state.equippedEscorts = state.equippedEscorts.filter(id => id !== bossId);
     delete state.escortLevels[bossId];
+    if (state.escortDuplicateCounts) delete state.escortDuplicateCounts[bossId];
     if (!state.soldEscorts.includes(bossId)) {
         state.soldEscorts.push(bossId);
     }
@@ -4997,6 +5044,15 @@ function loadGame() {
         Object.keys(state.escortLevels).forEach(id => {
             const v = Number(state.escortLevels[id]);
             state.escortLevels[id] = Number.isFinite(v) && v >= 1 ? Math.min(ESCORT_MAX_LEVEL, Math.floor(v)) : 1;
+        });
+        if (!state.escortDuplicateCounts || typeof state.escortDuplicateCounts !== 'object') state.escortDuplicateCounts = {};
+        Object.keys(state.escortDuplicateCounts).forEach(id => {
+            if (!ENEMY_TYPES[id]) {
+                delete state.escortDuplicateCounts[id];
+                return;
+            }
+            const v = Number(state.escortDuplicateCounts[id]);
+            state.escortDuplicateCounts[id] = Number.isFinite(v) && v >= 0 ? Math.min(9, Math.floor(v)) : 0;
         });
         if (!state.relics || typeof state.relics !== 'object') state.relics = {};
         if (!Array.isArray(state.unlockedWeapons)) state.unlockedWeapons = ['railgun_tiphareth', 'mg_vulcan', 'aa_flak'];
