@@ -88,47 +88,48 @@
         }
         .train-seph-name.is-assigned { color: #d8b4fe; }
         .train-seph-skill { font-size: 9px; color: #fcd34d; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        /* スロット行：2段組み。上段にラベルと兵装名、下段に威力と強化。 */
+        /* スロット行：搭載兵器を真上から見たシルエットで示す。
+           左に形、右に「上部 / 兵装名」と「威力 / 強化」の2段。 */
         .train-slot-row {
             display: grid;
-            grid-template-columns: 34px minmax(0, 1fr) auto;
-            grid-template-areas: "tag main main" "tag power upgrade";
-            align-items: center; column-gap: 6px; row-gap: 2px;
-            padding: 5px 6px; border-radius: var(--hud-radius);
-            border: 1px solid var(--hud-line-soft);
-            border-inline-start: 3px solid var(--slot-accent, var(--hud-brass-bright));
-            background: linear-gradient(90deg, color-mix(in srgb, var(--slot-accent, #fbbf24) 10%, #0b1220), #0b1220 60%);
+            grid-template-columns: 68px minmax(0, 1fr) auto;
+            grid-template-areas: "icon head head" "icon foot upgrade";
+            align-items: center; column-gap: 8px; row-gap: 2px;
+            padding: 6px 7px 6px 6px; border-radius: var(--hud-radius);
+            border: 1px solid var(--hud-line-soft); background: #0b1220;
             cursor: pointer;
         }
-        /* 上部＝主砲（金）、側面＝補助席（水色）。色で役割を語る。 */
-        .train-slot-row[data-slot-row="upper"] { --slot-accent: #fbbf24; }
-        .train-slot-row[data-slot-row="side"] { --slot-accent: #22d3ee; }
-        .train-slot-row.is-empty { border-style: dashed; background: #0b1220; }
+        .train-slot-row.is-empty { border-style: dashed; }
         .train-slot-row.is-empty .train-slot-main { color: #b8c4d4; }
-        .train-slot-row:focus-visible { outline: 2px solid var(--slot-accent, var(--hud-brass-bright)); outline-offset: 2px; }
+        .train-slot-row:focus-visible { outline: 2px solid var(--hud-brass-bright); outline-offset: 2px; }
+        /* 兵器シルエット。内部座標は 64x34、CSS 側で実寸を決める。 */
+        .train-slot-silhouette {
+            grid-area: icon; align-self: center; justify-self: start;
+            width: 68px; height: 36px; display: block;
+        }
+        .train-slot-head { grid-area: head; display: flex; align-items: baseline; gap: 6px; min-width: 0; overflow: hidden; }
+        .train-slot-foot { grid-area: foot; display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+        .train-slot-foot[hidden] { display: none; }
         .train-slot-tag {
-            grid-area: tag; align-self: stretch;
-            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
             font: 700 9px/1 'Share Tech Mono', monospace; letter-spacing: .02em;
-            color: var(--slot-accent, var(--hud-brass-bright)); text-align: center;
-            border-inline-end: 1px solid var(--hud-line-soft);
-            padding-inline-end: 5px; white-space: nowrap;
+            color: var(--hud-text-dim);
+            border: 1px solid var(--hud-line-soft); border-radius: 2px;
+            padding: 1px 4px; white-space: nowrap;
         }
         .train-slot-main {
-            grid-area: main; min-width: 0;
-            font-size: 11px; font-weight: 700; color: #e2e8f0; line-height: 1.25;
+            min-width: 0;
+            font-size: 11px; font-weight: 700; color: #e2e8f0; line-height: 1.3;
             overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
-        .train-slot-lv { font: 10px 'Share Tech Mono', monospace; color: var(--slot-accent, var(--hud-brass-bright)); margin-inline-start: 2px; }
-        .train-slot-power { grid-area: power; justify-self: start; font: 700 10px 'Share Tech Mono', monospace; color: var(--slot-accent, var(--hud-brass-bright)); }
+        .train-slot-lv { font: 10px 'Share Tech Mono', monospace; color: var(--hud-brass-bright); margin-inline-start: 3px; }
+        .train-slot-power { font: 700 10px 'Share Tech Mono', monospace; color: var(--hud-brass-bright); }
         .train-slot-upgrade { grid-area: upgrade; justify-self: end; }
-        /* 機関車の「側面なし」は操作できない注記なので、帯ではなく1行に沈める。 */
+        /* 機関車の「側面なし」は操作できない注記。シルエットも描かない。 */
         .train-slot-row.is-disabled {
-            grid-template-columns: 34px minmax(0, 1fr);
-            grid-template-areas: "tag main";
-            padding-block: 4px; cursor: default;
-            border-inline-start-color: var(--hud-line);
-            background: repeating-linear-gradient(-45deg, #0d1520, #0d1520 5px, #101a27 5px, #101a27 10px);
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-areas: "head";
+            padding-block: 4px; cursor: default; background: #0d1520;
         }
         .train-slot-row.is-disabled .train-slot-tag { color: var(--hud-text-dim); }
         .train-slot-row.is-disabled .train-slot-main { color: #a8b6c8; font-size: 10px; font-weight: 600; }
@@ -204,7 +205,6 @@
             .train-fleet-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
         }
         /* スロット行の強化ボタン。棚の「+○○G」を押すだけで強化できる。 */
-        .train-slot-row { grid-template-columns: 34px minmax(0, 1fr) auto auto; }
         .train-slot-upgrade, .train-seph-upgrade {
             font: 700 9px/1 'Share Tech Mono', monospace;
             padding: 4px 6px; border-radius: 3px;
@@ -220,7 +220,6 @@
         .train-slot-upgrade:focus-visible, .train-seph-upgrade:focus-visible {
             outline: 2px solid var(--hud-brass-bright); outline-offset: 2px;
         }
-        .train-slot-row.is-empty { grid-template-columns: 34px minmax(0, 1fr) auto; }
         .train-car-card {
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
@@ -734,9 +733,10 @@
             #mobile-armor-hud > div:first-child { font-size: 7px; }
             #mobile-armor-hud > div:last-child { font-size: 10px; }
             #enemy-preview-box { top: 58px; max-width: 50%; font-size: 10px; }
-            /* 狭幅ではスロット行の威力を兵装名の下へ回し、名前の幅を確保する。 */
-            .train-slot-row { grid-template-columns: 30px minmax(0, 1fr) auto; column-gap: 4px; }
-            .train-slot-tag { font-size: 8px; padding-inline-end: 4px; }
+            /* 狭幅ではシルエットを小さくし、兵装名の幅を確保する。 */
+            .train-slot-row { grid-template-columns: 54px minmax(0, 1fr) auto; column-gap: 6px; }
+            .train-slot-silhouette { width: 54px; height: 29px; }
+            .train-slot-tag { font-size: 8px; padding: 1px 3px; }
             #mobile-bridge-nav .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .mobile-dock-row { grid-template-columns: 58px minmax(0, 1fr) 58px; gap: 5px; }
             .mobile-dock-launch { font-size: 13px; }

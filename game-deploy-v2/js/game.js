@@ -2686,6 +2686,168 @@ function drawCarWeaponSprite(ctx, weaponId) {
     }
 }
 
+// 兵器を真上から見たシルエット。編成画面のスロットは「色」ではなく
+// 「何が載っているか」の形で識別させる。キャンバスは2倍解像度で描く。
+//
+// どの兵器も「砲塔リング（円形の基部）＋特徴のある砲身」で構成し、
+// 砲身の本数・太さ・長さで見分けられるようにする。
+function drawWeaponTopDown(canvas, weaponId) {
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const k = 2;
+    const W = 64, H = 34;
+    if (canvas.width !== W * k) { canvas.width = W * k; canvas.height = H * k; }
+    ctx.setTransform(k, 0, 0, k, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+
+    const w = weaponId ? WEAPONS[weaponId] : null;
+    if (!w) {
+        ctx.strokeStyle = 'rgba(148, 163, 184, .55)';
+        ctx.setLineDash([4, 3]);
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.roundRect(9.5, 8.5, W - 19, H - 17, 4);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        return;
+    }
+
+    const color = w.color || '#94a3b8';
+    const ink = '#0b1220';
+    const steel = '#cbd5e1';
+    const cx = 22, cy = H / 2;
+
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = 1.6;
+
+    // 基部（砲塔リング）は全兵器共通。これが「上から見た兵器」の基準になる。
+    const mount = (r) => {
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fillStyle = weaponTint(color, 0.28);
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(cx, cy, Math.max(2, r - 3), 0, Math.PI * 2);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = 1.6;
+    };
+    const barrel = (x, y, len, th, fill) => {
+        ctx.fillStyle = fill || steel;
+        ctx.fillRect(x, y, len, th);
+        ctx.strokeRect(x, y, len, th);
+    };
+
+    switch (weaponId) {
+        case 'railgun_tiphareth': {
+            // 二連レール＋後部の蓄電ブロック。
+            mount(8);
+            ctx.fillStyle = color;
+            ctx.fillRect(cx - 12, cy - 9, 9, 18); ctx.strokeRect(cx - 12, cy - 9, 9, 18);
+            barrel(cx + 5, cy - 8, 29, 3.4, color);
+            barrel(cx + 5, cy + 4.6, 29, 3.4, color);
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(cx + 8, cy - 1.6, 22, 3.2);
+            break;
+        }
+        case 'mg_vulcan': {
+            // 細い多連装。束ねた砲身が上からだと縞に見える。
+            mount(6.5);
+            for (let i = 0; i < 3; i++) barrel(cx + 4, cy - 8 + i * 5.6, 26, 2.2);
+            ctx.fillStyle = '#fde047';
+            for (let i = 0; i < 3; i++) ctx.fillRect(cx + 28, cy - 8 + i * 5.6, 2, 2.2);
+            break;
+        }
+        case 'aa_flak': {
+            // 高角砲。砲身が左右に開いて上を向く。
+            mount(7);
+            ctx.save();
+            ctx.translate(cx + 4, cy);
+            ctx.fillStyle = steel;
+            ctx.strokeStyle = ink;
+            [-0.5, 0.16].forEach(a => {
+                ctx.save();
+                ctx.rotate(a);
+                ctx.fillRect(0, -1.4, 26, 2.8);
+                ctx.strokeRect(0, -1.4, 26, 2.8);
+                ctx.restore();
+            });
+            ctx.restore();
+            break;
+        }
+        case 'torpedo_launcher': {
+            // 3連装の太い発射管。
+            mount(7.5);
+            for (let i = 0; i < 3; i++) barrel(cx + 4, cy - 9 + i * 6.4, 24, 4.2, steel);
+            ctx.fillStyle = color;
+            for (let i = 0; i < 3; i++) ctx.fillRect(cx + 24, cy - 9 + i * 6.4, 4, 4.2);
+            break;
+        }
+        case 'howitzer_heavy': {
+            // 単装の極太短砲＋大きな駐退器。
+            mount(8.5);
+            barrel(cx + 4, cy - 5.5, 21, 11, color);
+            barrel(cx + 22, cy - 6.5, 8, 13, '#fdba74');
+            ctx.fillStyle = ink;
+            ctx.fillRect(cx + 8, cy - 2, 12, 4);
+            break;
+        }
+        case 'missile_malkuth': {
+            // 箱型ランチャー。セルが格子に見える。
+            ctx.fillStyle = weaponTint(color, 0.35);
+            ctx.fillRect(cx - 12, cy - 12, 24, 24);
+            ctx.strokeRect(cx - 12, cy - 12, 24, 24);
+            ctx.fillStyle = color;
+            for (let gx = 0; gx < 3; gx++) {
+                for (let gy = 0; gy < 3; gy++) {
+                    ctx.fillRect(cx - 9 + gx * 7, cy - 9 + gy * 7, 5, 5);
+                }
+            }
+            ctx.strokeStyle = ink;
+            ctx.strokeRect(cx + 12, cy - 6, 12, 12);
+            break;
+        }
+        case 'laser_kether': {
+            // 円形の集光レンズ＋放熱フィン。
+            mount(9);
+            ctx.beginPath();
+            ctx.arc(cx, cy, 5.6, 0, Math.PI * 2);
+            ctx.fillStyle = color; ctx.fill();
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(cx, cy, 2.6, 0, Math.PI * 2);
+            ctx.fillStyle = '#f5d0fe'; ctx.fill();
+            ctx.strokeStyle = color; ctx.lineWidth = 1.6;
+            ctx.beginPath();
+            ctx.moveTo(cx + 9, cy - 7);  ctx.lineTo(cx + 25, cy - 7);
+            ctx.moveTo(cx + 9, cy);      ctx.lineTo(cx + 27, cy);
+            ctx.moveTo(cx + 9, cy + 7);  ctx.lineTo(cx + 25, cy + 7);
+            ctx.stroke();
+            break;
+        }
+        default:
+            mount(7);
+            barrel(cx + 4, cy - 2.5, 24, 5);
+            break;
+    }
+}
+
+// 兵器のテーマ色を暗い下地へ寄せた面（砲塔リングの塗り用）。
+function weaponTint(hex, amount) {
+    const h = (hex || '#94a3b8').replace('#', '');
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    const base = [11, 18, 32];
+    const mix = (c, v) => Math.round(c + (v - c) * amount);
+    return `rgb(${mix(base[0], r)}, ${mix(base[1], g)}, ${mix(base[2], b)})`;
+}
+
 function drawScene() {
     if (!ctx || !canvas) return;
     const w = canvas.width;
@@ -3415,15 +3577,15 @@ function renderTrainSlots() {
                 </div>
                 <div class="train-car-slots">
                     <div class="train-slot-row" data-slot-row="${CAR_SLOT_UPPER}" role="button" tabindex="0">
-                        <span class="train-slot-tag">上部</span>
-                        <span class="train-slot-main"></span>
-                        <span class="train-slot-power"></span>
+                        <canvas class="train-slot-silhouette" aria-hidden="true"></canvas>
+                        <span class="train-slot-head"><span class="train-slot-tag">上部</span><span class="train-slot-main"></span></span>
+                        <span class="train-slot-foot"><span class="train-slot-power"></span></span>
                         <button type="button" class="train-slot-upgrade" hidden></button>
                     </div>
                     <div class="train-slot-row" data-slot-row="${CAR_SLOT_SIDE}" role="button" tabindex="0">
-                        <span class="train-slot-tag">側面</span>
-                        <span class="train-slot-main"></span>
-                        <span class="train-slot-power"></span>
+                        <canvas class="train-slot-silhouette" aria-hidden="true"></canvas>
+                        <span class="train-slot-head"><span class="train-slot-tag">側面</span><span class="train-slot-main"></span></span>
+                        <span class="train-slot-foot"><span class="train-slot-power"></span></span>
                         <button type="button" class="train-slot-upgrade" hidden></button>
                     </div>
                 </div>
@@ -3482,6 +3644,7 @@ function renderTrainSlots() {
             const mainEl = row.querySelector('.train-slot-main');
             const powerEl = row.querySelector('.train-slot-power');
             const btn = row.querySelector('.train-slot-upgrade');
+            const silhouette = row.querySelector('.train-slot-silhouette');
             const weaponId = getCarSlotWeaponId(car, slot);
             const w = weaponId ? WEAPONS[weaponId] : null;
 
@@ -3492,13 +3655,21 @@ function renderTrainSlots() {
             row.setAttribute('aria-disabled', disabled ? 'true' : 'false');
             row.tabIndex = disabled ? -1 : 0;
 
+            // 色ではなく「載っている兵器の形」で識別させる。
+            drawWeaponTopDown(silhouette, disabled ? null : weaponId);
+
             if (disabled) {
+                // シルエットも威力も出さず、1行の注記だけ残す。
+                silhouette.hidden = true;
+                row.querySelector('.train-slot-foot').hidden = true;
                 mainEl.textContent = '側面スロットなし（機関車）';
                 powerEl.textContent = '';
                 row.setAttribute('aria-label', `${car.name} は側面スロットを持ちません`);
                 btn.hidden = true;
                 return;
             }
+            silhouette.hidden = false;
+            row.querySelector('.train-slot-foot').hidden = false;
 
             row.setAttribute('aria-label', `${car.name} ${label}スロット ${w ? `${w.name} レベル${state.weaponLevels[weaponId] || 1}` : '未搭載。選択する'}`);
             mainEl.textContent = w ? `${w.name} ` : '未搭載';
