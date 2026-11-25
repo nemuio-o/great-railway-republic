@@ -4443,13 +4443,13 @@ function bulkUpgradeWeapons() {
 
 // --- タブ: 戦術 ---
 // 4種の戦術から1つを選択し、常時稼働させる。レベルは Lv1〜30。
-let mobileSkillFocusId = null;
 let configSectionFocus = 'weapon';
 
+// 戦術は1つの縦リストだけを描画する。
+// 以前はデスクトップ用グリッドとモバイル用カードの両方を出しており、
+// 隠した側が領域を占有してクリックを奪っていた（ボタンが押せない原因）。
 function renderSkillsTab() {
     const grid = document.getElementById('skills-list-grid');
-    const mobileTabs = document.getElementById('mobile-skills-tabs');
-    const mobileDetail = document.getElementById('mobile-skill-detail');
     if (!grid) return;
     grid.innerHTML = '';
 
@@ -4461,71 +4461,43 @@ function renderSkillsTab() {
 
         const card = document.createElement('div');
         card.id = `skill-card-${sk.id}`;
-        card.className = `bg-slate-800 border-2 ${selected ? 'border-amber-400 shadow-lg' : sk.borderClass + '/70'} rounded-lg p-3 flex flex-col justify-between gap-2.5`;
+        card.className = `tactic-card${selected ? ' is-active' : ''}`;
+        card.style.setProperty('--tactic-accent', sk.color);
         card.innerHTML = `
-            <div>
-                <div class="flex justify-between items-center">
-                    <span class="text-sm font-bold text-white">${sk.icon} ${sk.name}</span>
-                    <span id="skill-lv-badge-${sk.id}" class="text-xs tech-font text-amber-300 font-bold">Lv.${lv}/${TACTICAL_MAX_LEVEL}</span>
+            <div class="tactic-head">
+                <div class="min-w-0">
+                    <div class="tactic-title">
+                        <span>${sk.icon} ${sk.name}</span>
+                        ${selected ? '<span class="tactic-active-tag">稼働中</span>' : ''}
+                    </div>
+                    <p class="tactic-desc">${sk.desc}</p>
                 </div>
-                <p class="text-[11px] text-slate-300 mt-1">${sk.desc}</p>
-                <div id="skill-summary-${sk.id}" class="bg-slate-900/90 border border-slate-700 rounded p-2 mt-2 text-[11px] text-amber-200 font-bold">
-                    ${sk.getEffectSummary(lv)}
-                </div>
-                ${sk.getEffectParts && !maxed ? `
-                <div class="bg-slate-900/60 border border-slate-700/70 rounded p-2 mt-1 space-y-0.5">
-                    <div class="text-[10px] tech-font text-slate-400">Lv.${lv} → Lv.${lv + 1}</div>
-                    ${sk.getEffectParts(lv).map(part => `
-                        <div class="flex items-center justify-between gap-2 text-[10px] tech-font">
-                            <span class="text-slate-400">${part.label}</span>
-                            ${deltaStatHTML(part.now, part.next, '', sk.color)}
-                        </div>
-                    `).join('')}
-                </div>` : ''}
-                ${selected ? '<div class="text-[10px] text-emerald-300 font-bold mt-1">✅ 常時稼働中（この戦術が有効）</div>' : ''}
+                <span class="tactic-lv">Lv.${lv}/${TACTICAL_MAX_LEVEL}</span>
             </div>
-            <div class="space-y-1.5">
-                <button id="skill-select-btn-${sk.id}" onclick="selectTacticalSkill('${sk.id}')" ${selected ? 'disabled' : ''} class="w-full ${selected ? 'bg-emerald-700 text-slate-950' : 'bg-slate-700 hover:bg-slate-600 text-emerald-200'} font-black py-2 rounded text-xs tech-font border border-slate-600 transition ${selected ? '' : 'cursor-pointer'}">
-                    ${selected ? '✅ 選択中（常時稼働）' : 'この戦術を選択'}
+            <div class="tactic-effect">${sk.getEffectSummary(lv)}</div>
+            ${sk.getEffectParts && !maxed ? `
+            <div class="tactic-delta">
+                <span class="tactic-delta-label">Lv.${lv} → Lv.${lv + 1}</span>
+                ${sk.getEffectParts(lv).map(part => `
+                    <div class="tactic-delta-row">
+                        <span class="text-slate-400">${part.label}</span>
+                        ${deltaStatHTML(part.now, part.next, '', sk.color)}
+                    </div>
+                `).join('')}
+            </div>` : ''}
+            <div class="tactic-actions">
+                <button type="button" id="skill-select-btn-${sk.id}" onclick="selectTacticalSkill('${sk.id}')"
+                    class="tactic-select${selected ? ' is-current' : ''}" ${selected ? 'disabled' : ''}>
+                    ${selected ? '選択中' : 'この戦術を選択'}
                 </button>
-                <button id="skill-upg-btn-${sk.id}" onclick="upgradeTacticalSkill('${sk.id}')" ${maxed ? 'disabled' : ''} class="w-full ${maxed ? 'bg-slate-900 text-slate-500 cursor-not-allowed' : 'bg-slate-700 hover:bg-slate-600 text-amber-300 cursor-pointer'} font-bold py-1.5 rounded text-xs tech-font transition">
-                    ${maxed ? `⚡ MAX LEVEL（Lv.${TACTICAL_MAX_LEVEL}）` : `戦術強化 Lv.${lv + 1} (${upgCost.toLocaleString()} G)`}
+                <button type="button" id="skill-upg-btn-${sk.id}" onclick="upgradeTacticalSkill('${sk.id}')"
+                    class="tactic-upgrade" ${maxed ? 'disabled' : ''}>
+                    ${maxed ? `MAX Lv.${TACTICAL_MAX_LEVEL}` : `強化 Lv.${lv + 1}（${upgCost.toLocaleString()} G）`}
                 </button>
             </div>
         `;
         grid.appendChild(card);
     });
-
-    if (!mobileTabs || !mobileDetail) return;
-    mobileTabs.innerHTML = '';
-    TACTICAL_SKILLS.forEach(sk => {
-        const lv = getSkillLevel(sk.id);
-        const active = isTacticSelected(sk.id);
-        const maxed = isSkillMaxed(sk.id);
-        const cost = getSkillUpgradeCost(sk.id);
-        const card = document.createElement('article');
-        card.id = `mobile-skill-card-${sk.id}`;
-        card.className = `mobile-skill-card ${active ? 'is-active' : ''}`;
-        card.innerHTML = `
-            <div>
-                <div class="flex justify-between items-start gap-1"><h4 class="mobile-skill-card-title ${active ? 'text-amber-200' : 'text-white'}">${sk.icon} ${sk.name}</h4><span class="flex-shrink-0 text-[9px] tech-font text-amber-300 font-bold">Lv.${lv}/${TACTICAL_MAX_LEVEL}</span></div>
-                <p class="mobile-skill-card-desc mt-1">${sk.desc}</p>
-            </div>
-            <div class="mobile-skill-card-effect">${sk.getEffectSummary(lv)}</div>
-            <div class="mobile-skill-card-actions">
-                <button class="rounded border ${active ? 'border-emerald-600 bg-emerald-900/70 text-emerald-200' : 'border-slate-600 bg-slate-700 text-slate-100'}" onclick="selectTacticalSkill('${sk.id}')" ${active ? 'disabled' : ''}>${active ? '● 稼働中' : 'この戦術を選択'}</button>
-                <button class="rounded border border-amber-700 ${maxed ? 'bg-slate-900 text-slate-500' : 'bg-amber-900/70 text-amber-200'}" onclick="upgradeTacticalSkill('${sk.id}')" ${maxed ? 'disabled' : ''}>${maxed ? 'MAX Lv.30' : `強化 ${cost.toLocaleString()} G`}</button>
-            </div>
-        `;
-        mobileTabs.appendChild(card);
-    });
-    mobileDetail.innerHTML = '';
-}
-
-function focusMobileTactic(skillId) {
-    if (!TACTICAL_SKILLS.some(sk => sk.id === skillId)) return;
-    mobileSkillFocusId = skillId;
-    renderSkillsTab();
 }
 
 function selectTacticalSkill(skillId) {
@@ -5044,8 +5016,10 @@ function selectSephirothTreeNode(nodeId) {
     state.selectedSephirothTreeNode = nodeId;
     renderPrestigeTab();
 }
-// 転生（プレステージ）の実行条件。転生2回ごとに要求戦線が1つ先へ進む。
-// 例: 0〜1回目=アメリカ大ボス / 2〜3回目=中華 / 4〜5回目=イスラム …
+// 転生（プレステージ）の実行条件。
+// 一度でも制圧した戦線は、以後の周回で再制圧を要求しない
+// （累積の clearedFactions を見る）。転生2回ごとに要求戦線が1つ先へ進む。
+//   例: 0〜1回目=アメリカ / 2〜3回目=中華 / 4〜5回目=イスラム …
 const PRESTIGE_REQUIRE_FACTIONS = ['usa', 'chn', 'isl', 'rus', 'eu', 'ter', 'corp', 'gew', 'ant'];
 
 function getPrestigeRequirement() {
@@ -5053,13 +5027,15 @@ function getPrestigeRequirement() {
     const factionId = PRESTIGE_REQUIRE_FACTIONS[Math.min(step, PRESTIGE_REQUIRE_FACTIONS.length - 1)];
     const faction = FACTIONS.find(f => f.id === factionId);
     const requiredStage = faction ? faction.stageCount : 30;
+    const everCleared = Array.isArray(state.clearedFactions) && state.clearedFactions.includes(factionId);
     return {
         factionId,
         factionName: faction ? faction.name : 'アメリカ合衆国',
         requiredStage,
         reached: state.maxReachedStages[factionId] || 1,
-        // 累積の clearedFactions ではなく、今回の周回で制圧した記録だけを見る。
-        cleared: (state.runClearedFactions || []).includes(factionId)
+        // 一度でも制圧していれば、その戦線の再制圧は不要。
+        cleared: everCleared,
+        everCleared
     };
 }
 
@@ -5086,15 +5062,20 @@ function renderPrestigeTab() {
     if (btnEl) btnEl.disabled = !canPrestige || gain <= 0;
 
     // 転生条件は回数ごとに要求戦線が進む。未達なら現在の進捗を添えて表示する。
+    // 過去に制圧済みの戦線は再制圧が不要なので、その旨を明示する。
     const reqEl = document.getElementById('prestige-requirement');
     if (reqEl) {
-        const progress = req.cleared ? '制圧済み' : `到達 ST.${req.reached}/${req.requiredStage}`;
-        reqEl.textContent = canPrestige
-            ? `条件達成: ${req.factionName}（${progress}）`
-            : `次の条件: ${req.factionName} 大ボス突破（${progress}）`;
-        reqEl.className = canPrestige
-            ? 'text-[10px] tech-font text-emerald-300'
-            : 'text-[10px] tech-font text-amber-300';
+        const progress = req.everCleared
+            ? '制圧済み・再制圧不要'
+            : `到達 ST.${req.reached}/${req.requiredStage}`;
+        if (canPrestige) {
+            reqEl.textContent = `条件達成: ${req.factionName}（${progress}）`;
+            reqEl.className = 'text-[10px] tech-font text-emerald-300';
+        } else {
+            // 未達のときだけ「大ボス突破」を要求として出す。
+            reqEl.textContent = `次の条件: ${req.factionName} 大ボス突破（${progress}）`;
+            reqEl.className = 'text-[10px] tech-font text-amber-300';
+        }
     }
 
     const speedStatusEl = document.getElementById('prestige-speed-status');

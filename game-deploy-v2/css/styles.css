@@ -361,6 +361,77 @@
             text-align: center; letter-spacing: .04em;
         }
         .gacha-bulk-note { font-size: 10px; color: var(--hud-text-dim); line-height: 1.4; }
+        /* 戦術も研究開発と同じく縦に読み進める。末尾は固定ドックの分だけ空ける。 */
+        #tab-content-skills {
+            padding-bottom: calc(var(--chrome-inset, 0px) + 16px);
+        }
+        /* ---- 戦術：1本の縦リスト（研究開発と同じ読み進め方） ---- */
+        .tactic-list { display: flex; flex-direction: column; gap: 8px; }
+        .tactic-card {
+            display: flex; flex-direction: column; gap: 7px;
+            padding: 10px 12px; border-radius: var(--hud-radius);
+            background: linear-gradient(180deg, #101827, #0a1018);
+            border: 1px solid var(--hud-line);
+            border-inline-start: 3px solid var(--tactic-accent, var(--hud-line));
+        }
+        .tactic-card.is-active {
+            border-color: var(--hud-brass-dim);
+            border-inline-start-color: var(--hud-brass-bright);
+            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hud-brass-bright) 22%, transparent);
+        }
+        .tactic-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+        .tactic-title {
+            display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+            font-size: 13px; font-weight: 800; color: #e2e8f0; line-height: 1.3;
+        }
+        .tactic-active-tag {
+            font: 700 9px/1 'Share Tech Mono', monospace; letter-spacing: .06em;
+            color: #0f1115; background: var(--hud-brass-bright);
+            border-radius: 2px; padding: 2px 5px;
+        }
+        .tactic-desc { margin: 3px 0 0; font-size: 11px; line-height: 1.5; color: var(--hud-text-dim); }
+        .tactic-lv {
+            flex-shrink: 0; font: 700 10px 'Share Tech Mono', monospace;
+            color: var(--hud-brass-bright); border: 1px solid var(--hud-line);
+            border-radius: 3px; padding: 1px 6px;
+        }
+        .tactic-effect {
+            font-size: 11.5px; font-weight: 800; color: #fde68a; line-height: 1.35;
+            padding: 5px 7px; border-radius: 3px;
+            background: #0b1220; border: 1px solid var(--hud-line-soft);
+        }
+        .tactic-delta {
+            display: flex; flex-direction: column; gap: 2px;
+            padding: 5px 7px; border-radius: 3px;
+            background: rgba(11, 18, 32, .7); border: 1px dashed var(--hud-line-soft);
+        }
+        .tactic-delta-label { font: 700 9px 'Share Tech Mono', monospace; color: var(--hud-text-dim); }
+        .tactic-delta-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 10px; }
+        .tactic-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 6px; }
+        .tactic-select, .tactic-upgrade {
+            min-height: 40px; border-radius: 4px; cursor: pointer;
+            font-size: 11px; font-weight: 800; font-family: inherit;
+            padding: 4px 8px; line-height: 1.25;
+        }
+        .tactic-select {
+            border: 1px solid var(--hud-line); background: #131c29; color: var(--hud-text);
+        }
+        .tactic-select.is-current {
+            border-color: var(--hud-brass-dim); background: #241d10;
+            color: var(--hud-brass-bright); cursor: default;
+        }
+        .tactic-upgrade {
+            border: 1px solid #4b3a12; background: #241d10; color: var(--hud-brass-bright);
+        }
+        .tactic-upgrade:disabled, .tactic-select:disabled {
+            border-color: var(--hud-line-soft); background: #0b1220; color: #7c8ba1; cursor: default;
+        }
+        .tactic-select:focus-visible, .tactic-upgrade:focus-visible {
+            outline: 2px solid var(--hud-brass-bright); outline-offset: 2px;
+        }
+        @media (max-width: 400px) {
+            .tactic-actions { grid-template-columns: minmax(0, 1fr); }
+        }
         .train-car-card {
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
@@ -815,14 +886,7 @@
             #train-action-row { display: none !important; }
             /* 車両カードは共通の .train-fleet-grid / .train-car-* に従う（ここでの上書きはしない）。 */
             #skills-description-mobile { color: #cbd5e1; font-size: 11px; line-height: 1.4; }
-            #skills-list-grid { display: none !important; }
-            #mobile-skills-tabs { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
-            .mobile-skill-tab { min-width: 0; min-height: 72px; display: flex; flex-direction: column; justify-content: space-between; text-align: start; padding: 8px; border: 1px solid #475569; border-radius: var(--hud-radius); background: linear-gradient(145deg, #1e293b, #0f172a); color: #cbd5e1; }
-            .mobile-skill-tab[aria-selected="true"] { border: 2px solid #fbbf24; color: #fde68a; }
-            .mobile-skill-tab-title { font-size: 12px; font-weight: 900; line-height: 1.25; }
-            .mobile-skill-tab-meta { display: flex; justify-content: space-between; gap: 4px; color: #94a3b8; font: 10px 'Share Tech Mono', monospace; }
-            #mobile-skill-detail { display: block; }
-            .mobile-skill-action { min-height: var(--hud-tap); font-size: 12px; font-weight: 800; }
+            /* 戦術は PC/モバイル共通の縦リストを使う（旧モバイル専用UIは廃止）。 */
             #world-overview-card { display: grid; grid-template-columns: minmax(120px, .72fr) minmax(0, 1.28fr); gap: 7px; padding: 8px; align-items: stretch; }
             #world-subtab-container { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; width: 100%; min-width: 0; }
             #world-subtab-container button { width: 100%; min-height: 80px; padding: 6px 8px; font-size: 12px; }
@@ -838,16 +902,6 @@
             #faction-list-grid .mobile-faction-status { font-size: 9px; }
             #faction-list-grid .mobile-faction-progress { font-size: 10px; flex-wrap: wrap; }
             #faction-list-grid .mobile-faction-action { min-height: var(--hud-tap); font-size: 12px; }
-            #mobile-skills-tabs { align-items: stretch; flex: 1; min-height: 0; grid-template-rows: repeat(2, minmax(0, 1fr)); }
-            #tab-content-skills { flex: 1 0 100%; min-height: 100%; }
-            .mobile-skill-card { min-width: 0; min-height: clamp(156px, calc((100dvh - 550px) / 2), 260px); height: 100%; display: flex; flex-direction: column; justify-content: space-between; gap: 7px; padding: 9px; border: 1px solid #475569; border-radius: var(--hud-radius); background: linear-gradient(145deg, #1e293b, #0f172a); }
-            .mobile-skill-card.is-active { border: 2px solid #fbbf24; }
-            .mobile-skill-card-title { font-size: 12px; font-weight: 900; line-height: 1.25; }
-            .mobile-skill-card-desc { color: #cbd5e1; font-size: 10px; line-height: 1.35; }
-            .mobile-skill-card-effect { padding: 5px; border: 1px solid #334155; border-radius: 4px; background: #0b1220; color: #fde68a; font-size: 10px; font-weight: 800; line-height: 1.25; }
-            .mobile-skill-card-actions { display: grid; grid-template-columns: 1fr; gap: 4px; }
-            .mobile-skill-card-actions button { min-height: 34px; padding: 4px; font-size: 10px; line-height: 1.1; }
-            #mobile-skill-detail { display: none !important; }
             #config-modal > div { max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px); }
             #config-modal { padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
             #config-modal .config-mobile-switch { display: grid !important; position: sticky; top: 0; z-index: 2; }
