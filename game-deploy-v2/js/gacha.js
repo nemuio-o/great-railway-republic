@@ -592,6 +592,78 @@ function formatGachaReward(reward) {
     return '';
 }
 
+// 連続抽選の回数。UI とロジックの両方がこの配列を参照する。
+const GACHA_BULK_COUNTS = [10, 50, 100];
+
+// count 回まとめて引く。チケットが足りなければ何も消費しない。
+// 1回ずつと同じ抽選経路を通すので、排出率は単発と完全に一致する。
+function drawGachaBulk(poolKey, count, manufacturerId) {
+    const pool = GACHA_POOLS[poolKey];
+    if (!pool) return;
+    const n = Math.max(1, Math.floor(Number(count) || 1));
+    const man = poolKey === 'pickup' ? getManufacturer(manufacturerId) : null;
+    if (poolKey === 'pickup') {
+        if (!man) { showToast('ピックアップ対象が不明です'); return; }
+        if (!isManufacturerUnlocked(man)) {
+            showToast('この製造元のピックアップは未解放です');
+            return;
+        }
+    }
+    const ticketType = (poolKey === 'pickup' && man && man.ticketType)
+        ? man.ticketType
+        : (pool.ticketType || 'normal');
+    const unitCost = toNonNegativeInt((poolKey === 'pickup' && man && man.ticketCost)
+        ? man.ticketCost
+        : (pool.ticketCost || 1));
+    const totalCost = unitCost * n;
+    const owned = getGachaTicketCount(ticketType);
+    if (owned < totalCost) {
+        showToast(`${GACHA_TICKET_LABELS[ticketType] || ticketType}が不足しています（必要 ${totalCost} / 所持 ${owned}）`);
+        return;
+    }
+
+    const rewards = [];
+    for (let i = 0; i < n; i++) {
+        const reward = rollGachaReward(poolKey, manufacturerId);
+        if (!reward) break;
+        rewards.push(reward);
+    }
+    if (rewards.length === 0) {
+        showToast('抽選できる報酬がありません');
+        return;
+    }
+    // 実際に引けた回数ぶんだけ消費する。
+    if (!spendGachaTickets(ticketType, unitCost * rewards.length)) {
+        showToast('チケットが不足しています');
+        return;
+    }
+
+    const summary = { weapon: 0, material: 0, escort_module: 0, quantity: 0, mythic: 0 };
+    rewards.forEach(reward => {
+        applyGachaReward(reward);
+        summary[reward.type] = (summary[reward.type] || 0) + 1;
+        if (reward.type === 'material' || reward.type === 'escort_module') {
+            summary.quantity += toNonNegativeInt(reward.quantity);
+        }
+        if (reward.rarity === 'Mythic') summary.mythic += 1;
+    });
+
+    state.gachaLastResult = {
+        type: 'bulk',
+        count: rewards.length,
+        summary,
+        rewards: rewards.slice(0, 100),
+        at: Date.now(),
+        poolKey,
+        manufacturerId: manufacturerId || null
+    };
+    SoundEngine.playUI('upgrade');
+    showToast(`🎟 ${rewards.length}連 完了！ 武装${summary.weapon} / 素材${summary.material} / モジュール${summary.escort_module}` + (summary.mythic ? ` ／ Mythic ×${summary.mythic}‼` : ''));
+    updateHeaderUI();
+    renderGachaTab();
+    saveGame(true);
+}
+
 function drawGachaFromPool(poolKey, manufacturerId) {
     const pool = GACHA_POOLS[poolKey];
     if (!pool) return;
@@ -712,6 +784,35 @@ function renderGachaResultCard(result) {
             </div>
         `;
     }
+    if (result.type === 'bulk') {
+        const s = result.summary || {};
+        const counts = [
+            { label: '武装', n: s.weapon || 0, color: '#38bdf8' },
+            { label: '強化素材', n: s.material || 0, color: '#fbbf24' },
+            { label: '強化モジュール', n: s.escort_module || 0, color: '#c084fc' }
+        ];
+        const mythicLine = s.mythic
+            ? `<div class="gacha-bulk-mythic">神話的 ×${s.mythic} 獲得！</div>`
+            : '';
+        return `
+            <div class="gacha-bulk-result">
+                <div class="gacha-bulk-head">
+                    <span class="text-[10px] tech-font text-slate-400">LAST SUPPLY // ${timeText}</span>
+                    <span class="gacha-bulk-count">${result.count} 連</span>
+                </div>
+                <div class="gacha-bulk-grid">
+                    ${counts.map(c => `
+                        <div class="gacha-bulk-cell">
+                            <span class="gacha-bulk-num" style="color:${c.color}">${c.n}</span>
+                            <span class="gacha-bulk-label">${c.label}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                ${mythicLine}
+                <div class="gacha-bulk-note">武装は「武装」タブ、素材とモジュールは各画面で確認できます。</div>
+            </div>
+        `;
+    }
     if (result.type === 'material') {
         return `
             <div class="bg-slate-900/80 border-2 border-amber-600/70 rounded-lg p-3 sm:p-4">
@@ -766,9 +867,57 @@ function renderManufacturerPickupCards() {
                     ${disabled ? 'disabled' : ''}>
                     ${unlocked ? `🎟 ${GACHA_TICKET_LABELS[ticketType]}で抽選 (所持 ${ticketCount})` : '🔒 未解放'}
                 </button>
+                <div class="gacha-bulk-row is-compact" data-bulk-pool="pickup" data-bulk-man="${man.id}">
+                    ${GACHA_BULK_COUNTS.map(n => {
+                        const enough = unlocked && ticketCount >= ticketCost * n;
+                        return `<button type="button" data-bulk-count="${n}"
+                            class="${enough ? '' : 'is-short'}"
+                            ${unlocked ? '' : 'disabled'}>${n}連</button>`;
+                    }).join('')}
+                </div>
             </div>
         `;
     }).join('');
+}
+
+// 連続抽選ボタンは描画のたびに作り直されるので、委譲で1回だけ拾う。
+// 単発ボタンと同じ判定（残数・解放）をここでも反映する。
+function syncGachaBulkRows() {
+    document.querySelectorAll('.gacha-bulk-row').forEach(row => {
+        const poolKey = row.dataset.bulkPool;
+        const manId = row.dataset.bulkMan || null;
+        const pool = GACHA_POOLS[poolKey];
+        if (!pool) return;
+        const man = poolKey === 'pickup' ? getManufacturer(manId) : null;
+        const ticketType = (poolKey === 'pickup' && man && man.ticketType) ? man.ticketType : (pool.ticketType || 'normal');
+        const unitCost = toNonNegativeInt((poolKey === 'pickup' && man && man.ticketCost) ? man.ticketCost : (pool.ticketCost || 1));
+        const owned = getGachaTicketCount(ticketType);
+        const unlocked = poolKey === 'pickup' ? isManufacturerUnlocked(man) : true;
+        row.querySelectorAll('[data-bulk-count]').forEach(btn => {
+            const n = toNonNegativeInt(btn.dataset.bulkCount);
+            const enough = unlocked && owned >= unitCost * n;
+            btn.disabled = !enough;
+            btn.classList.toggle('is-short', !enough);
+            btn.title = enough
+                ? `${n}回抽選（${GACHA_TICKET_LABELS[ticketType] || ticketType} ${unitCost * n}枚）`
+                : `${GACHA_TICKET_LABELS[ticketType] || ticketType}が足りません（必要 ${unitCost * n} / 所持 ${owned}）`;
+        });
+    });
+}
+
+let gachaBulkHandlerBound = false;
+
+function bindGachaBulkHandlers() {
+    if (gachaBulkHandlerBound) return;
+    gachaBulkHandlerBound = true;
+    document.addEventListener('click', event => {
+        const btn = event.target.closest('.gacha-bulk-row [data-bulk-count]');
+        if (!btn || btn.disabled) return;
+        const row = btn.closest('.gacha-bulk-row');
+        if (!row) return;
+        event.preventDefault();
+        drawGachaBulk(row.dataset.bulkPool, toNonNegativeInt(btn.dataset.bulkCount), row.dataset.bulkMan || null);
+    });
 }
 
 function renderGachaTab() {
@@ -826,6 +975,8 @@ function renderGachaTab() {
 
     const pickupGrid = document.getElementById('gacha-pickup-grid');
     if (pickupGrid) pickupGrid.innerHTML = renderManufacturerPickupCards();
+
+    syncGachaBulkRows();
 
     const resultEl = document.getElementById('gacha-last-result');
     if (resultEl) resultEl.innerHTML = renderGachaResultCard(state.gachaLastResult);
@@ -1179,6 +1330,81 @@ function executeWeaponMerge() {
 }
 
 // ==========================================================
+// 一括合成
+// ==========================================================
+
+// その武器・レアリティで、3個以上そろっている最小の＋値を探す。
+// マージすると＋値が繰り上がるので、毎回引き直す必要がある。
+function getMergeablePlus(weaponId, rarity) {
+    const groups = getWeaponInstanceGroups().filter(g =>
+        g.weaponId === weaponId && g.rarity === rarity && g.count >= 3 && g.plus < WEAPON_MAX_PLUS
+    );
+    if (!groups.length) return -1;
+    return Math.min(...groups.map(g => g.plus));
+}
+
+// 1グループぶんのマージを、条件を満たす限り繰り返す。
+function mergeGroupRepeatedly(weaponId, rarity) {
+    let merged = 0;
+    // 暴走しないための上限（＋値の最大段数ぶん）。
+    for (let guard = 0; guard <= WEAPON_MAX_PLUS + 1; guard++) {
+        const plus = getMergeablePlus(weaponId, rarity);
+        if (plus < 0) break;
+        const group = getWeaponInstanceGroup(weaponId, rarity, plus);
+        if (!group) break;
+        const consume = getMergeConsumeCandidates(group);
+        if (consume.length < 3) break;
+        const preview = getMergeResultPreview(consume, weaponId, rarity, plus);
+        const result = createWeaponInstance(weaponId, rarity, {
+            plus: plus + 1,
+            level: preview.level,
+            unlockedMaxLevel: preview.unlockedMaxLevel
+        });
+        if (!result) break;
+        const uidSet = new Set(consume.map(inst => inst.uid));
+        state.weaponInstances = (state.weaponInstances || []).filter(inst => !uidSet.has(inst.uid));
+        state.weaponInstances.push(result);
+        merged++;
+    }
+    return merged;
+}
+
+// すべての武装・レアリティを対象に、可能なマージを一気に実行する。
+function executeBulkMergeAll() {
+    const groups = getWeaponInstanceGroups()
+        .filter(g => !isRailgunWeapon(g.weaponId) && g.plus < WEAPON_MAX_PLUS)
+        .sort((a, b) =>
+            WEAPON_RARITY_ORDER.indexOf(a.rarity) - WEAPON_RARITY_ORDER.indexOf(b.rarity)
+            || a.plus - b.plus
+            || getWeaponName(a.weaponId).localeCompare(getWeaponName(b.weaponId), 'ja'));
+    if (!groups.length) {
+        showToast('合成できる武装がありません（同条件3個以上）');
+        return;
+    }
+
+    let totalMerged = 0;
+    let touchedKinds = 0;
+    const seen = new Set();
+    groups.forEach(group => {
+        const key = `${group.weaponId}|${group.rarity}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        const merged = mergeGroupRepeatedly(group.weaponId, group.rarity);
+        if (merged > 0) { totalMerged += merged; touchedKinds++; }
+    });
+
+    if (totalMerged === 0) {
+        showToast('合成できる組み合わせがありませんでした');
+        return;
+    }
+    SoundEngine.playUI('upgrade');
+    showToast(`🔧 一括合成 完了！ ${touchedKinds}種 ${totalMerged}回マージしました`);
+    updateHeaderUI();
+    renderWeaponsTab();
+    saveGame(true);
+}
+
+// ==========================================================
 // レベルアップ・上限突破
 // ==========================================================
 
@@ -1353,4 +1579,5 @@ function normalizeGachaState() {
 
 function initializeGacha() {
     syncManufacturerGachaUnlocks();
+    bindGachaBulkHandlers();
 }

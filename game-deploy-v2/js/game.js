@@ -381,6 +381,10 @@ function hasSeenTutorial(id) {
 function markTutorialSeen(id) {
     if (!Array.isArray(state.tutorialSeen)) state.tutorialSeen = [];
     if (!state.tutorialSeen.includes(id)) state.tutorialSeen.push(id);
+    // セーブとは別のキーにも書く（セーブ初期化後も既読を維持するため）。
+    try {
+        localStorage.setItem(TUTORIAL_SEEN_KEY, JSON.stringify(state.tutorialSeen));
+    } catch (e) {}
     saveGame(true);
 }
 
@@ -864,6 +868,11 @@ function getGlobalStageNumber(faction, stage) {
     return Math.max(1, stage);
 }
 
+// 敵軍の強化を全体で軟化する係数。HP・攻撃力の両方に掛ける。
+// 1.0 が従来の強さ。0.7 で「現在の約70%の手応え」になる。
+// 報酬は据え置きなので、同じ敵から得られる資金は相対的に増える。
+const ENEMY_POWER_SCALE = 0.7;
+
 function getGlobalStageMult(faction, stage) {
     const n = getGlobalStageNumber(faction, stage);
     return Math.pow(GLOBAL_STAGE_STEP, n - 1);
@@ -900,9 +909,9 @@ function getEnemyFactionMult(faction, tmpl) {
     const stageMult = faction.isTutorial
         ? getTutorialStageMult(state.stage)
         : getGlobalStageMult(faction, state.stage);
-    const hpMult = stageMult * bossScale;
+    const hpMult = stageMult * bossScale * ENEMY_POWER_SCALE;
     // 攻撃力はHPほど急がせない（HPの平方根相当）。急に即死させないため。
-    const dmgMult = Math.sqrt(stageMult) * 1.15;
+    const dmgMult = Math.sqrt(stageMult) * 1.15 * ENEMY_POWER_SCALE;
 
     return {
         hpMult,
@@ -5310,7 +5319,12 @@ function executePrestige() {
         railgun_tiphareth: 1, mg_vulcan: 1, aa_flak: 1,
         torpedo_launcher: 1, howitzer_heavy: 1, missile_malkuth: 1, laser_kether: 1
     };
-    state.hiredSephiroth = ['tiphareth'];
+    // セフィラの解放（雇用）は転生で失わない。レベルだけ初期化する。
+    // 解放条件は到達ステージ基準なので、maxReachedStages を初期化した後でも
+    // ここで明示的に引き継がないと、また条件を満たすまで使えなくなる。
+    const keptSephiroth = Array.isArray(state.hiredSephiroth) ? state.hiredSephiroth.slice() : ['tiphareth'];
+    if (!keptSephiroth.includes('tiphareth')) keptSephiroth.push('tiphareth');
+    state.hiredSephiroth = keptSephiroth;
     state.sephirahLevels = {
         tiphareth: 1, geburah: 1, netzach: 1, chokmah: 1, hod: 1,
         binah: 1, yesod: 1, chesed: 1, malkuth: 1, kether: 1
@@ -5660,11 +5674,45 @@ function hideResetConfirm() {
     if (box) box.classList.add('hidden');
 }
 
+// セーブデータを初期化する。進行は消えるが、一度読んだ機能説明は
+// 引き続き既読として扱う（同じ説明を何度も見せない）。
+// 説明まで完全にやり直したい場合に備え、既読の消去は別操作に分ける。
+const TUTORIAL_SEEN_KEY = 'great_railway_republic_tutorial_seen_v1';
+
+function loadTutorialSeenOutsideSave() {
+    try {
+        const raw = localStorage.getItem(TUTORIAL_SEEN_KEY);
+        const list = raw ? JSON.parse(raw) : null;
+        if (Array.isArray(list)) {
+            if (!Array.isArray(state.tutorialSeen)) state.tutorialSeen = [];
+            list.forEach(id => {
+                if (typeof id === 'string' && !state.tutorialSeen.includes(id)) {
+                    state.tutorialSeen.push(id);
+                }
+            });
+        }
+    } catch (e) {}
+}
+
 function executeResetSaveData() {
     try {
+        // 既読状態はセーブとは別の場所へ退避してからセーブを消す。
+        localStorage.setItem(TUTORIAL_SEEN_KEY, JSON.stringify(
+            Array.isArray(state.tutorialSeen) ? state.tutorialSeen : []
+        ));
         localStorage.removeItem(SAVE_STORAGE_KEY);
     } catch (e) {}
     location.reload();
+}
+
+// 機能説明を最初から見直したいとき用（進行データは消さない）。
+function resetTutorialHistory() {
+    state.tutorialSeen = [];
+    try {
+        localStorage.removeItem(TUTORIAL_SEEN_KEY);
+    } catch (e) {}
+    saveGame(true);
+    showToast('📖 機能説明の既読状態をリセットしました。各メニューで再度表示されます');
 }
 
 // ==========================================
@@ -6077,6 +6125,8 @@ window.addEventListener('DOMContentLoaded', () => {
     initCars();
     initWeatherParticles();
     const hasSave = loadGame();
+    // セーブ初期化後も既読の機能説明を復元する。
+    loadTutorialSeenOutsideSave();
     if (!hasSave) {
         state.weather = 'cloudy';
     }

@@ -447,6 +447,12 @@
                         <button id="gacha-normal-draw" onclick="drawGachaFromPool('normal')" class="w-full min-h-[48px] rounded bg-amber-600 hover:bg-amber-500 text-slate-950 font-black text-sm transition disabled:opacity-30 disabled:pointer-events-none">
                             🎟 ノーマルチケットで抽選
                         </button>
+                        <div class="gacha-bulk-row" data-bulk-pool="normal">
+                            <span class="gacha-bulk-row-label">連続抽選</span>
+                            <button type="button" data-bulk-count="10">10連</button>
+                            <button type="button" data-bulk-count="50">50連</button>
+                            <button type="button" data-bulk-count="100">100連</button>
+                        </div>
                     </div>
                 </div>
 
@@ -456,6 +462,12 @@
                         <button id="gacha-rare-draw" onclick="drawGachaFromPool('rare')" class="w-full min-h-[48px] rounded bg-sky-600 hover:bg-sky-500 text-white font-black text-sm transition disabled:opacity-30 disabled:pointer-events-none">
                             🎟 レアチケットで抽選
                         </button>
+                        <div class="gacha-bulk-row" data-bulk-pool="rare">
+                            <span class="gacha-bulk-row-label">連続抽選</span>
+                            <button type="button" data-bulk-count="10">10連</button>
+                            <button type="button" data-bulk-count="50">50連</button>
+                            <button type="button" data-bulk-count="100">100連</button>
+                        </div>
                     </div>
                 </div>
 
@@ -499,6 +511,16 @@
                 </div>
 
                 <div id="weapon-subview-merge" class="hidden flex-col gap-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-800/80 border border-emerald-700/60 rounded-lg p-2.5">
+                        <div class="min-w-0 text-[11px] text-slate-300 leading-snug">
+                            <div class="font-bold text-emerald-300">一括合成</div>
+                            <div class="text-slate-400">同条件3個以上そろった武装を、可能な限りまとめてマージします。</div>
+                        </div>
+                        <button type="button" id="btn-bulk-merge" onclick="executeBulkMergeAll()"
+                            class="flex-shrink-0 min-h-[44px] px-4 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-black text-xs transition">
+                            🔧 すべて合成
+                        </button>
+                    </div>
                     <div id="weapon-merge-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
                 </div>
             </div>

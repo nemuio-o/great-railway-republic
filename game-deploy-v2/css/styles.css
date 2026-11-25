@@ -294,6 +294,73 @@
             .tutorial-portrait { width: 72px; height: 90px; }
             .tutorial-text { font-size: 12px; line-height: 1.65; }
         }
+        /* プレステージ画面：ツリーとノード詳細が縦に伸びるため、
+           タブ内で確実にスクロールできるようにする。 */
+        #tab-content-prestige {
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            min-height: 0;
+            padding-bottom: calc(var(--chrome-inset, 0px) + 16px);
+        }
+        /* ツリーの固定高は画面高に合わせて縮め、詳細パネルを見失わないようにする。 */
+        #sephiroth-tree-stage {
+            height: clamp(280px, 52vh, 440px);
+        }
+        @media (max-width: 639px) {
+            #tab-content-prestige {
+                /* モバイルではタブ内スクロールを明示（親のスクロールと競合させない）。 */
+                max-height: 100%;
+                -webkit-overflow-scrolling: touch;
+            }
+            #sephiroth-tree-stage { height: clamp(240px, 44vh, 360px); }
+        }
+        /* ---- ガチャ連続抽選 ---- */
+        .gacha-bulk-row {
+            display: grid; grid-template-columns: auto repeat(3, minmax(0, 1fr));
+            gap: 5px; align-items: center;
+            padding-top: 6px; border-top: 1px solid var(--hud-line-soft);
+        }
+        .gacha-bulk-row.is-compact { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .gacha-bulk-row-label {
+            font: 700 9px/1 'Share Tech Mono', monospace; letter-spacing: .08em;
+            color: var(--hud-text-dim); padding-inline-end: 2px;
+        }
+        .gacha-bulk-row button {
+            min-height: 38px; border-radius: 4px; cursor: pointer;
+            border: 1px solid #4b3a12; background: #241d10; color: var(--hud-brass-bright);
+            font-size: 11px; font-weight: 800; font-family: inherit;
+            touch-action: manipulation;
+        }
+        .gacha-bulk-row button.is-short {
+            border-color: var(--hud-line); background: #131c29; color: #b8c4d4;
+        }
+        .gacha-bulk-row button:disabled { opacity: .55; cursor: default; }
+        .gacha-bulk-row button:focus-visible { outline: 2px solid var(--hud-brass-bright); outline-offset: 2px; }
+        /* 連続抽選の結果要約 */
+        .gacha-bulk-result {
+            display: flex; flex-direction: column; gap: 7px;
+            padding: 10px 12px; border-radius: var(--hud-radius);
+            border: 1px solid var(--hud-brass-dim);
+            background: linear-gradient(180deg, #171208, #0b1220);
+        }
+        .gacha-bulk-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .gacha-bulk-count {
+            font: 900 12px 'Share Tech Mono', monospace; color: var(--hud-brass-bright);
+            border: 1px solid var(--hud-brass-dim); border-radius: 3px; padding: 1px 7px;
+        }
+        .gacha-bulk-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+        .gacha-bulk-cell {
+            display: flex; flex-direction: column; align-items: center; gap: 1px;
+            padding: 5px 4px; border-radius: 4px; background: #0b1220;
+            border: 1px solid var(--hud-line-soft);
+        }
+        .gacha-bulk-num { font: 700 17px/1.1 'Share Tech Mono', monospace; }
+        .gacha-bulk-label { font-size: 9px; color: var(--hud-text-dim); }
+        .gacha-bulk-mythic {
+            font: 900 11px 'Share Tech Mono', monospace; color: #f43f5e;
+            text-align: center; letter-spacing: .04em;
+        }
+        .gacha-bulk-note { font-size: 10px; color: var(--hud-text-dim); line-height: 1.4; }
         .train-car-card {
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
