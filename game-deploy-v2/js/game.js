@@ -2996,6 +2996,15 @@ function weaponTint(hex, amount) {
     return `rgb(${mix(base[0], r)}, ${mix(base[1], g)}, ${mix(base[2], b)})`;
 }
 
+// 敵HPの表示用短縮。4桁以上は 1.2k / 3.4M のように丸めて幅を抑える。
+function formatEnemyHp(value) {
+    const n = Math.max(0, Math.round(Number(value) || 0));
+    if (n >= 1000000) return `${(n / 1000000).toFixed(n >= 10000000 ? 0 : 1)}M`;
+    if (n >= 10000) return `${Math.round(n / 1000)}k`;
+    if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+    return `${n}`;
+}
+
 function drawScene() {
     if (!ctx || !canvas) return;
     const w = canvas.width;
@@ -3264,10 +3273,30 @@ function drawScene() {
         const barW = e.isGrandBoss ? 68 : e.isBoss ? 56 : 24;
         const barH = e.isGrandBoss ? 6 : e.isBoss ? 5 : 3;
         const ratio = Math.max(0, e.hp / e.maxHp);
+        const barX = e.x - barW * 0.5;
+        const barY = e.y - e.radius - 9;
         ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-        ctx.fillRect(e.x - barW * 0.5, e.y - e.radius - 9, barW, barH);
+        ctx.fillRect(barX, barY, barW, barH);
         ctx.fillStyle = e.isGrandBoss ? '#f43f5e' : e.isWeatherBoss ? '#c084fc' : e.isBoss ? '#ef4444' : '#f59e0b';
-        ctx.fillRect(e.x - barW * 0.5, e.y - e.radius - 9, barW * ratio, barH);
+        ctx.fillRect(barX, barY, barW * ratio, barH);
+
+        // HPの数値を併記する（バーだけでは残量が読めないため）。
+        // 通常敵は現在値のみ、ボスは現在値/最大値を出す。
+        ctx.save();
+        ctx.font = e.isBoss ? '700 10px "Share Tech Mono", monospace' : '700 9px "Share Tech Mono", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        const hpText = e.isBoss
+            ? `${formatEnemyHp(e.hp)} / ${formatEnemyHp(e.maxHp)}`
+            : formatEnemyHp(e.hp);
+        const textY = barY - 1;
+        // 背景に暗い帯を敷いて、地形の上でも読めるようにする。
+        const tw = ctx.measureText(hpText).width;
+        ctx.fillStyle = 'rgba(2, 6, 23, 0.72)';
+        ctx.fillRect(e.x - tw / 2 - 3, textY - (e.isBoss ? 10 : 9), tw + 6, e.isBoss ? 11 : 10);
+        ctx.fillStyle = ratio > 0.5 ? '#e2e8f0' : ratio > 0.2 ? '#fde68a' : '#fca5a5';
+        ctx.fillText(hpText, e.x, textY);
+        ctx.restore();
     });
 
     projectiles.forEach(p => {
@@ -3618,6 +3647,67 @@ function getLoadoutSummary() {
     return { totalDps, slotCount, synergyCount, perCar, maxHp: state.maxHp, hp: state.hp };
 }
 
+// 編成中の兵装とセフィラを、資金が続く限りまとめて強化する。
+// 対象は「実際に列車へ搭載・配属されているもの」だけ。
+function upgradeEquippedAll() {
+    const weaponIds = [];
+    const sephIds = [];
+    state.cars.forEach(car => {
+        [CAR_SLOT_UPPER, CAR_SLOT_SIDE].forEach(slot => {
+            const wid = getCarSlotWeaponId(car, slot);
+            if (wid && !weaponIds.includes(wid)) weaponIds.push(wid);
+        });
+        if (car.sephirahId && !sephIds.includes(car.sephirahId)) sephIds.push(car.sephirahId);
+    });
+
+    const spentStart = state.gold;
+    let weaponUps = 0;
+    let sephUps = 0;
+
+    // 安い順に1段ずつ上げていく。1種類に資金を吸わせないため、
+    // 「全対象を1段ずつ」を繰り返す。
+    let progressed = true;
+    let guard = 0;
+    while (progressed && guard < 5000) {
+        progressed = false;
+        guard++;
+        weaponIds.forEach(wid => {
+            if (!state.unlockedWeapons.includes(wid)) return;
+            if ((state.weaponLevels[wid] || 1) >= WEAPON_MAX_LEVEL) return;
+            const cost = getWeaponUpgradeCost(wid);
+            if (!Number.isFinite(cost) || state.gold < cost) return;
+            state.gold -= cost;
+            state.weaponLevels[wid] = (state.weaponLevels[wid] || 1) + 1;
+            weaponUps++;
+            progressed = true;
+        });
+        sephIds.forEach(sid => {
+            if (!state.hiredSephiroth.includes(sid)) return;
+            if ((state.sephirahLevels[sid] || 1) >= SEPHIRAH_MAX_LEVEL) return;
+            const cost = getSephirahUpgradeCost(sid);
+            if (!Number.isFinite(cost) || state.gold < cost) return;
+            state.gold -= cost;
+            state.sephirahLevels[sid] = (state.sephirahLevels[sid] || 1) + 1;
+            sephUps++;
+            progressed = true;
+        });
+    }
+
+    const spent = spentStart - state.gold;
+    if (weaponUps === 0 && sephUps === 0) {
+        const anyTarget = weaponIds.length + sephIds.length > 0;
+        showToast(anyTarget
+            ? '資金が足りません（編成中の兵装・セフィラを1段も強化できませんでした）'
+            : '編成中の兵装・セフィラがありません');
+        return;
+    }
+    SoundEngine.playUI('upgrade');
+    updateHeaderUI();
+    renderTrainSlots();
+    showToast(`⚡ 編成一括強化：兵装 ${weaponUps}段 / セフィラ ${sephUps}段（-${spent.toLocaleString()} G）`);
+    saveGame(true);
+}
+
 // 骨組みは1度だけ作り、以後は数値だけ書き換える。
 // innerHTML を毎フレーム差し替えると、押した瞬間にボタンが破棄されて
 // クリックが成立しない（実際にその不具合が出たため）。
@@ -3654,9 +3744,13 @@ function renderLoadoutSummary() {
                 <button type="button" data-loadout-action="autoEquip">補助席をまとめて武装</button>
                 <button type="button" class="secondary" data-loadout-action="repair">装甲修復</button>
             </div>
+            <div class="loadout-actions is-single">
+                <button type="button" class="primary" data-loadout-action="upgradeEquipped">編成中の兵装・セフィラを一括強化</button>
+            </div>
         `;
         host.querySelector('[data-loadout-action="autoEquip"]').addEventListener('click', autoEquipAllWeapons);
         host.querySelector('[data-loadout-action="repair"]').addEventListener('click', repairTrain);
+        host.querySelector('[data-loadout-action="upgradeEquipped"]').addEventListener('click', upgradeEquippedAll);
         host.dataset.built = '1';
     }
 
@@ -5017,10 +5111,14 @@ function selectSephirothTreeNode(nodeId) {
     renderPrestigeTab();
 }
 // 転生（プレステージ）の実行条件。
-// 一度でも制圧した戦線は、以後の周回で再制圧を要求しない
-// （累積の clearedFactions を見る）。転生2回ごとに要求戦線が1つ先へ進む。
-//   例: 0〜1回目=アメリカ / 2〜3回目=中華 / 4〜5回目=イスラム …
+// 一度でも転生したら、以後は条件を問わずいつでも実行できる（永続解禁）。
+// 未転生のうちだけ、到達戦線で解禁する。
+//   例: 0回目=アメリカ / 2〜3回目=中華 / 4〜5回目=イスラム …
 const PRESTIGE_REQUIRE_FACTIONS = ['usa', 'chn', 'isl', 'rus', 'eu', 'ter', 'corp', 'gew', 'ant'];
+
+function isPrestigeUnlocked() {
+    return (Number(state.prestigeCount) || 0) > 0;
+}
 
 function getPrestigeRequirement() {
     const step = Math.max(0, Math.floor((Number(state.prestigeCount) || 0) / 2));
@@ -5028,19 +5126,23 @@ function getPrestigeRequirement() {
     const faction = FACTIONS.find(f => f.id === factionId);
     const requiredStage = faction ? faction.stageCount : 30;
     const everCleared = Array.isArray(state.clearedFactions) && state.clearedFactions.includes(factionId);
+    const unlocked = isPrestigeUnlocked();
     return {
         factionId,
         factionName: faction ? faction.name : 'アメリカ合衆国',
         requiredStage,
         reached: state.maxReachedStages[factionId] || 1,
         // 一度でも制圧していれば、その戦線の再制圧は不要。
-        cleared: everCleared,
-        everCleared
+        cleared: everCleared || unlocked,
+        everCleared,
+        // 転生済みなら条件自体が恒久解禁される。
+        permanentlyUnlocked: unlocked
     };
 }
 
 function canPrestigeNow() {
     const req = getPrestigeRequirement();
+    if (req.permanentlyUnlocked) return true;
     return req.cleared || req.reached >= req.requiredStage;
 }
 
@@ -5061,20 +5163,28 @@ function renderPrestigeTab() {
     if (resumeEl) resumeEl.textContent = '国連防衛軍 STAGE 1';
     if (btnEl) btnEl.disabled = !canPrestige || gain <= 0;
 
-    // 転生条件は回数ごとに要求戦線が進む。未達なら現在の進捗を添えて表示する。
-    // 過去に制圧済みの戦線は再制圧が不要なので、その旨を明示する。
+    // 転生条件の表示。一度でも転生していれば永続解禁として扱う。
     const reqEl = document.getElementById('prestige-requirement');
     if (reqEl) {
-        const progress = req.everCleared
-            ? '制圧済み・再制圧不要'
-            : `到達 ST.${req.reached}/${req.requiredStage}`;
-        if (canPrestige) {
-            reqEl.textContent = `条件達成: ${req.factionName}（${progress}）`;
+        if (req.permanentlyUnlocked) {
+            // 解禁後は条件を出さない。実行できないのは欠片0のときだけなので、
+            // 「なぜ押せないか」を条件説明と混同させない。
+            reqEl.textContent = gain > 0
+                ? '転生解禁済み：いつでも実行できます'
+                : '転生解禁済み（戦線を進めると獲得欠片が増えます）';
             reqEl.className = 'text-[10px] tech-font text-emerald-300';
         } else {
-            // 未達のときだけ「大ボス突破」を要求として出す。
-            reqEl.textContent = `次の条件: ${req.factionName} 大ボス突破（${progress}）`;
-            reqEl.className = 'text-[10px] tech-font text-amber-300';
+            const progress = req.everCleared
+                ? '制圧済み・再制圧不要'
+                : `到達 ST.${req.reached}/${req.requiredStage}`;
+            if (canPrestige) {
+                reqEl.textContent = `条件達成: ${req.factionName}（${progress}）`;
+                reqEl.className = 'text-[10px] tech-font text-emerald-300';
+            } else {
+                // 未達のときだけ「大ボス突破」を要求として出す。
+                reqEl.textContent = `次の条件: ${req.factionName} 大ボス突破（${progress}）`;
+                reqEl.className = 'text-[10px] tech-font text-amber-300';
+            }
         }
     }
 

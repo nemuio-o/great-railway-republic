@@ -36,7 +36,7 @@ const TAB_UNLOCKS = {
     escort: { type: 'faction', factionId: 'un', requirement: '国連防衛軍を制圧' },
     gacha:  { type: 'faction', factionId: 'usa', requirement: 'アメリカ合衆国を制圧' },
     weapons:{ type: 'faction', factionId: 'chn', requirement: '中華人民共和国を制圧' },
-    prestige:{ type: 'stage', factionId: 'usa', stage: 30, requirement: 'アメリカ合衆国 STAGE 30 到達' },
+    prestige:{ type: 'prestigeOrStage', factionId: 'usa', stage: 30, count: 1, requirement: 'アメリカ合衆国 STAGE 30 到達' },
     dex:    { type: 'prestige', count: 1, requirement: '転生 1 回' }
 };
 
@@ -85,6 +85,11 @@ function isTabUnlocked(tabId) {
     const def = TAB_UNLOCKS[tabId];
     if (!def || def.type === 'none') return true;
     if (def.type === 'prestige') return (Number(state.prestigeCount) || 0) >= (def.count || 1);
+    // 一度転生していれば、以後は到達条件を問わず解放する（永続解禁）。
+    if (def.type === 'prestigeOrStage') {
+        if ((Number(state.prestigeCount) || 0) >= (def.count || 1)) return true;
+        return (state.maxReachedStages[def.factionId] || 1) >= def.stage;
+    }
     if (def.type === 'faction') return Array.isArray(state.clearedFactions) && state.clearedFactions.includes(def.factionId);
     if (def.type === 'stage') {
         const reached = state.maxReachedStages[def.factionId] || 1;

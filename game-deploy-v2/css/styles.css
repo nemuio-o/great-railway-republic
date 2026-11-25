@@ -189,6 +189,13 @@
             padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .loadout-actions button.secondary { border-color: var(--hud-line); background: #131c29; color: var(--hud-text); }
+        .loadout-actions.is-single { grid-template-columns: minmax(0, 1fr); }
+        .loadout-actions button.primary {
+            border-color: #f2b13a;
+            background: linear-gradient(180deg, #3a2c12, #241d10);
+            color: var(--hud-brass-bright);
+        }
+        .loadout-actions button:active { transform: translateY(1px); }
         .loadout-actions button:focus-visible { outline: 2px solid var(--hud-brass-bright); outline-offset: 2px; }
         @media (max-width: 400px) {
             .loadout-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
