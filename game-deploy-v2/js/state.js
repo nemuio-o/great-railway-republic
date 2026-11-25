@@ -478,9 +478,14 @@ function getSephirahMatchingWeaponId(sephId) {
         .filter(w => state.unlockedWeapons.includes(w.id))
         .map(w => w.id);
     const equipped = state.cars.find(car =>
-        car.sephirahId === sephId && WEAPONS[car.weaponId] && WEAPONS[car.weaponId].type === s.specialty
+        car.sephirahId === sephId
+        && [car.weaponId, car.sideWeaponId].some(wid => WEAPONS[wid] && WEAPONS[wid].type === s.specialty)
     );
-    if (equipped && !ids.includes(equipped.weaponId)) ids.push(equipped.weaponId);
+    if (equipped) {
+        const equippedWeaponId = [equipped.weaponId, equipped.sideWeaponId]
+            .find(wid => WEAPONS[wid] && WEAPONS[wid].type === s.specialty);
+        if (equippedWeaponId && !ids.includes(equippedWeaponId)) ids.push(equippedWeaponId);
+    }
     const pool = ids.length ? ids : all.map(w => w.id);
 
     let bestId = pool[0];
@@ -583,14 +588,76 @@ function getCurrentFaction() {
     return FACTIONS.find(f => f.id === state.currentFactionId) || FACTIONS[0];
 }
 
+// 装甲列車の両数とスロット。1両目は機関車でレールガン固定、2〜4両目は上部・側面の2スロット。
+const CAR_COUNT = 4;
+const CAR_SLOT_UPPER = 'upper';
+const CAR_SLOT_SIDE = 'side';
+// 側面スロットは斜射になるため射程を落とし、空中目標への倍率も下げる。
+// 上部＝主力（対空含む）、側面＝対地・対艦の補助という役割差を作るための係数。
+const SIDE_SLOT_RANGE_MULT = 0.85;
+const SIDE_SLOT_AIR_MULT = 0.8;
+// 10両×1兵装（10スロット）から4両×2＋1（7スロット）へ減るぶんの火力補填。
+// 旧仕様でも最初の2スロット（レールガン＋初期機関銃）は同じだけ埋まっていたので、
+// その2枠は等倍のまま。3枠目以降を埋めたぶんだけ補填を効かせ、7枠で最大1.5倍。
+// これで序盤の手応えは旧仕様と一致し、編成を埋めるほど旧仕様の総火力へ近づく。
+const CAR_DPS_COMPENSATION = 1.5;
+const CAR_TOTAL_SLOTS = 1 + (CAR_COUNT - 1) * 2;
+const CAR_BASE_SLOTS = 2;
+
+function getCarDpsCompensation() {
+    const cars = Array.isArray(state.cars) ? state.cars : [];
+    const filled = cars.reduce((n, car) =>
+        n + (car.weaponId ? 1 : 0) + (car.sideWeaponId ? 1 : 0), 0);
+    const extra = Math.max(0, filled - CAR_BASE_SLOTS);
+    const extraSlots = Math.max(1, CAR_TOTAL_SLOTS - CAR_BASE_SLOTS);
+    return 1 + (CAR_DPS_COMPENSATION - 1) * Math.min(1, extra / extraSlots);
+}
+
+function createCar(index) {
+    if (index === 0) {
+        return {
+            index: 0,
+            name: '第1両目（先頭機関車）',
+            weaponId: 'railgun_tiphareth',
+            sideWeaponId: null,
+            sephirahId: 'tiphareth',
+            cdTimer: 0,
+            sideCdTimer: 0,
+            locked: true
+        };
+    }
+    return {
+        index,
+        name: `第${index + 1}両目`,
+        weaponId: index === 1 ? 'mg_vulcan' : null,
+        sideWeaponId: null,
+        sephirahId: null,
+        cdTimer: 0,
+        sideCdTimer: 0,
+        locked: false
+    };
+}
+
 function initCars() {
     state.cars = [];
-    for (let i = 0; i < 10; i++) {
-        if (i === 0) {
-            state.cars.push({ index: 0, name: '第1両目（先頭機関車）', weaponId: 'railgun_tiphareth', sephirahId: 'tiphareth', cdTimer: 0, locked: true });
-        } else {
-            state.cars.push({ index: i, name: `第${i + 1}両目`, weaponId: i === 1 ? 'mg_vulcan' : null, sephirahId: null, cdTimer: 0, locked: false });
-        }
+    for (let i = 0; i < CAR_COUNT; i++) {
+        state.cars.push(createCar(i));
     }
+}
+
+function getCarSlotWeaponId(car, slot) {
+    if (!car) return null;
+    return slot === CAR_SLOT_SIDE ? car.sideWeaponId : car.weaponId;
+}
+
+function setCarSlotWeaponId(car, slot, weaponId) {
+    if (!car) return;
+    if (slot === CAR_SLOT_SIDE) car.sideWeaponId = weaponId;
+    else car.weaponId = weaponId;
+}
+
+// その兵装が列車のどこかに搭載されているか（上部・側面の両方を見る）。
+function isWeaponMounted(weaponId) {
+    return (state.cars || []).some(car => car.weaponId === weaponId || car.sideWeaponId === weaponId);
 }
 

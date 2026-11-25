@@ -829,7 +829,11 @@ function updateSephirahAutoSkills() {
         sephirahAutoTimers[s.id] = s.autoInterval;
 
         const lv = state.sephirahLevels[s.id] || 1;
-        const carStats = getCarEffectiveStats(car);
+        // 自動スキルの威力は上部・側面のうち高いほうを基準にする。
+        const upperStats = getCarEffectiveStats(car, CAR_SLOT_UPPER);
+        const sideStats = getCarEffectiveStats(car, CAR_SLOT_SIDE);
+        const carStats = [upperStats, sideStats].filter(Boolean)
+            .sort((a, b) => b.damage - a.damage)[0] || null;
         const basePower = carStats ? carStats.damage : Math.max(30, getWeaponDamage('railgun_tiphareth') * 0.5);
         const cx = getCarX(car.index);
         const cy = h * 0.62;
@@ -850,7 +854,7 @@ function updateSephirahAutoSkills() {
         // 自動スキルも射程の制約を受ける。射程外の敵をここで処理してしまうと、
         // 画面外に滞留した敵が自動スキルだけでゆっくり溶け、
         // 「攻撃が届いていないのに勝手にステージが進む」状態になるため。
-        const autoRange = (getCarEffectiveStats(car) || { weapon: { range: 480 } }).weapon.range;
+        const autoRange = carStats ? carStats.range : 480;
         const carXForRange = getCarX(car.index);
         const aliveEnemies = aliveEnemiesAll.filter(e => (e.x - carXForRange) <= autoRange);
         if (aliveEnemies.length === 0) return;

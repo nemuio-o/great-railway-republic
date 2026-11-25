@@ -1,4 +1,16 @@
 
+        /* 計器盤の共通トークン。既存の配色（金の警戒色＋暗い計器筐体）を
+           そのまま変数化しただけで、新しい色相は持ち込まない。 */
+        :root {
+            --hud-brass-dim: #b45309;
+            --hud-brass-bright: #fbbf24;
+            --hud-line: #334155;
+            --hud-line-soft: #1e293b;
+            --hud-text: #cbd5e1;
+            --hud-text-dim: #94a3b8;
+            --hud-radius: 5px;
+            --hud-tap: 46px;
+        }
         html, body {
             font-family: 'Noto Serif JP', serif;
             background-color: #0f1115;
@@ -21,6 +33,29 @@
             background: #b45309;
             border-radius: 4px;
         }
+        /* 車両カード内の兵装スロット行（上部・側面）。 */
+        .train-slot-row {
+            display: grid; grid-template-columns: 34px minmax(0, 1fr) auto;
+            align-items: center; gap: 6px;
+            padding: 4px 6px; border-radius: var(--hud-radius);
+            border: 1px solid var(--hud-line-soft); background: #0b1220;
+            cursor: pointer;
+        }
+        .train-slot-row.is-empty { border-style: dashed; }
+        .train-slot-row.is-empty .train-slot-main { color: #64748b; }
+        .train-slot-row.is-disabled { cursor: default; opacity: .55; }
+        .train-slot-row:focus-visible { outline: 2px solid var(--hud-brass-bright); outline-offset: 2px; }
+        .train-slot-tag {
+            font: 700 9px/1 'Share Tech Mono', monospace; letter-spacing: .08em;
+            color: var(--hud-brass-bright); text-align: center;
+            border-inline-end: 1px solid var(--hud-line-soft); padding-inline-end: 5px;
+        }
+        .train-slot-main {
+            min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            font-size: 11px; font-weight: 700; color: #e2e8f0;
+        }
+        .train-slot-lv { font: 10px 'Share Tech Mono', monospace; color: var(--hud-brass-bright); }
+        .train-slot-power { font: 700 10px 'Share Tech Mono', monospace; color: #fbbf24; }
         .train-car-card {
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
@@ -251,14 +286,18 @@
             }
         }
         /* Mobile edge-to-edge bridge dock */
-        .mobile-command-dock, .mobile-command-panel, .mobile-skills-ui, .mobile-world-lore { display: none; }
+        .mobile-command-dock, .mobile-command-panel, .mobile-skills-ui, .mobile-world-lore, #mobile-tab-rail-slot { display: none; }
         @media (min-width: 640px) {
             #mobile-bridge-nav > .grid { grid-template-columns: repeat(5, minmax(0,1fr)); }
         }
         @media (min-width: 1024px) {
             #mobile-bridge-nav > .grid { grid-template-columns: repeat(10, minmax(0,1fr)); }
         }
+        /* 指で押せる最小寸法と、iOSのフォーカス時ズーム回避。 */
+        .mobile-command-panel button,
+        .mobile-command-dock button { touch-action: manipulation; -webkit-tap-highlight-color: rgba(245, 158, 11, .16); }
         @media (max-width: 639px) {
+            input, select, textarea { font-size: 1rem; }
             html, body { width: 100%; max-width: 100%; overflow-x: clip; }
             body.h-screen { height: 100vh; height: 100dvh; padding: env(safe-area-inset-top) 0 0; }
             body > .battle-upper > header { display: none; }
@@ -268,105 +307,230 @@
             #mobile-battle-shell .hq-chassis { border-left: 0; border-right: 0; }
             #ui-weather-header { display: none; }
             #mobile-management { width: 100%; max-width: 100%; margin: 0 !important; border-left: 0; border-right: 0; border-bottom: 0; border-radius: 0; box-shadow: none; }
-            #mobile-bridge-content { display: flex; flex-direction: column; padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+            /* ドック（ルート行＋操作行）とタブレールの実高に合わせて末尾の余白を確保する。 */
+            #mobile-bridge-content { display: flex; flex-direction: column; padding-bottom: calc(134px + env(safe-area-inset-bottom)); }
             #mobile-header-controls { display: none; }
+
+            /* ---- 戦闘モニター：キャンバス内の計器を再配置 ---- */
+            #mobile-armor-hud {
+                position: absolute !important;
+                top: 6px !important;
+                left: 8px !important;
+                right: auto !important;
+                bottom: auto !important;
+                width: 158px !important;
+                min-width: 0 !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 4px 7px !important;
+                border-radius: var(--hud-radius) !important;
+                border-width: 1px !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: space-between !important;
+                gap: 2px !important;
+            }
+            #mobile-armor-hud > div:first-child { font-size: 8px; letter-spacing: .03em; margin: 0 !important; }
+            #mobile-armor-hud > div:nth-child(2) { height: 8px; flex: 0 0 auto; margin: 0 !important; }
+            #mobile-armor-hud > div:last-child { font-size: 11px; line-height: 1; }
+            #mobile-armor-hud > div:last-child span:nth-child(2) { font-size: 9px; }
+            /* キャンバス内の操作系はパネルへ退避し、モニターは戦況だけを見せる。 */
+            #mobile-battle-controls { display: none !important; }
+            #mobile-battle-shell .absolute.bottom-2.right-3 { display: none; }
+            #enemy-preview-box { top: 62px; right: 8px; max-width: 52%; padding: 6px; }
+            #sephirah-victory-callout { bottom: 12px; left: 8px; right: 8px; max-width: none; }
+            #toast-box { bottom: 10px; }
+
+            /* ---- 下部ドック：ルート計器 + 主要操作 ---- */
             .mobile-command-dock {
                 position: fixed; z-index: 45; inset: auto 0 0; width: 100%;
-                display: grid; grid-template-columns: 1.8fr 1fr .42fr; gap: 4px;
-                padding: 9px max(8px,env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));
-                background: linear-gradient(180deg, rgba(23,29,38,.98), rgba(7,10,15,.99));
+                display: flex; flex-direction: column; gap: 5px;
+                padding: 6px max(8px, env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+                background: linear-gradient(180deg, #171d26, #070a0f);
                 border-top: 2px solid #9a661e;
-                box-shadow: 0 -8px 24px rgba(0,0,0,.72), inset 0 1px rgba(251,191,36,.18);
+                box-shadow: 0 -8px 24px rgba(0, 0, 0, .72), inset 0 1px rgba(251, 191, 36, .18);
             }
             .mobile-command-dock::before {
                 content: ''; position: absolute; inset: 0 0 auto; height: 3px;
-                background: repeating-linear-gradient(-45deg,#b45309,#b45309 6px,#1e293b 6px,#1e293b 12px);
+                background: repeating-linear-gradient(-45deg, #b45309, #b45309 6px, #1e293b 6px, #1e293b 12px);
                 pointer-events: none;
             }
+            .mobile-dock-route {
+                display: flex; align-items: baseline; gap: 7px; min-width: 0;
+                color: #b7c5d8; font: 10px/1.15 'Share Tech Mono', monospace;
+            }
+            .mobile-dock-status-stage { flex-shrink: 0; color: var(--hud-brass-bright); font-weight: 900; }
+            .mobile-dock-status-route { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .mobile-dock-row { display: grid; grid-template-columns: 68px minmax(0, 1fr) 68px; gap: 6px; align-items: stretch; }
             .mobile-dock-button {
-                min-width: 0; min-height: 50px; display: flex; flex-direction: column;
-                justify-content: center; align-items: center; gap: 3px;
-                border: 1px solid #39485e; border-radius: 4px;
-                background: linear-gradient(180deg,#1a2432,#0c121b); color: #aab7c9;
+                min-width: 0; min-height: var(--hud-tap); display: flex; flex-direction: column;
+                justify-content: center; align-items: center; gap: 2px;
+                border: 1px solid #39485e; border-radius: var(--hud-radius);
+                background: linear-gradient(180deg, #1a2432, #0c121b); color: #aab7c9;
                 font-size: 10px; font-weight: 800; line-height: 1.1;
             }
-            .mobile-dock-button[aria-expanded="true"], .mobile-dock-button[aria-current="page"] {
+            .mobile-dock-button[aria-expanded="true"] {
                 border-color: #d99a28; color: #ffd05b;
-                background: linear-gradient(180deg,#342815,#17140f);
-                box-shadow: inset 0 2px #fbbf24, 0 0 12px rgba(245,158,11,.16);
+                background: linear-gradient(180deg, #342815, #17140f);
+                box-shadow: inset 0 2px #fbbf24;
             }
-            .mobile-dock-icon { font-size: 18px; line-height: 1; }
-            .mobile-dock-operations { align-items: stretch; justify-content: center; gap: 3px; padding: 4px 7px; }
-            .mobile-dock-operations-main { display:flex; align-items:center; gap:6px; font-size:11px; }
-            .mobile-dock-operations-main .mobile-dock-icon { font-size:16px; }
-            .mobile-dock-status { min-width:0; display:flex; align-items:center; justify-content:space-between; gap:5px; color:#b7c5d8; font:10px/1.1 'Share Tech Mono',monospace; }
-            .mobile-dock-status-stage { flex-shrink:0; color:#fbbf24; font-weight:900; }
-            .mobile-dock-status-route { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:right; }
-            .mobile-save-label { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+            .mobile-dock-icon { font-size: 15px; line-height: 1; }
+            .mobile-dock-launch {
+                min-width: 0; min-height: var(--hud-tap); display: flex; flex-direction: column;
+                align-items: center; justify-content: center; gap: 1px;
+                border: 1px solid #f2b13a; border-radius: var(--hud-radius);
+                background: linear-gradient(180deg, #b91c1c, #7f1d1d); color: #fff;
+                font-size: 14px; font-weight: 900; letter-spacing: .06em;
+                box-shadow: inset 0 1px rgba(255, 255, 255, .28), inset 0 -2px rgba(0, 0, 0, .45);
+            }
+            .mobile-dock-launch:active { background: linear-gradient(180deg, #991b1b, #641515); }
+            .mobile-dock-launch.is-marching {
+                background: linear-gradient(180deg, #1f2937, #111827);
+                border-color: #64748b; color: #cbd5e1;
+            }
+            .mobile-dock-launch-sub { font: 9px/1 'Share Tech Mono', monospace; letter-spacing: .04em; opacity: .82; }
+            .mobile-save-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+            /* ---- ボトムシート：開いた時だけ前面に出る ---- */
             .mobile-command-panel {
-                position: fixed; z-index: 44; left: max(8px,env(safe-area-inset-left)); right: max(8px,env(safe-area-inset-right));
-                bottom: calc(74px + env(safe-area-inset-bottom)); max-height: min(68dvh, 520px);
+                position: fixed; z-index: 44; inset-inline: max(8px, env(safe-area-inset-left));
+                bottom: calc(130px + env(safe-area-inset-bottom));
+                max-height: min(56dvh, 460px);
                 overflow-y: auto; overscroll-behavior: contain;
-                padding: 10px; background: linear-gradient(180deg,rgba(16,24,37,.99),rgba(6,9,15,.99));
-                border: 2px solid #79571f; border-top: 4px solid #b45309; border-radius: 5px;
-                box-shadow: 0 14px 35px rgba(0,0,0,.82), inset 0 0 20px rgba(0,0,0,.45);
+                padding: 0 10px 10px;
+                background: linear-gradient(180deg, #101827, #06090f);
+                border: 1px solid #79571f; border-top: 3px solid var(--hud-brass-dim);
+                border-radius: var(--hud-radius);
+                box-shadow: 0 14px 35px rgba(0, 0, 0, .82);
             }
             .mobile-command-panel.is-open { display: block; }
-            #mobile-header-slot #mobile-header-controls {
-                display: grid; grid-template-columns: 66px minmax(0,1fr) repeat(4,minmax(30px,34px));
-                grid-template-areas: 'stage route route route route route' 'modes modes sound save manage help';
-                align-items: stretch; gap: 5px; width: 100%; padding-bottom: 8px; border-bottom: 1px solid #334155;
+            .mobile-sheet-head {
+                position: sticky; top: 0; z-index: 2;
+                display: flex; align-items: center; justify-content: space-between; gap: 8px;
+                margin: 0 -10px 8px; padding: 7px 10px;
+                background: #0d1420; border-bottom: 1px solid var(--hud-line-soft);
             }
-            #mobile-header-controls > * { min-height: 36px; min-width: 0; }
-            #mobile-header-controls > :nth-child(1) { grid-area: stage; justify-content: center; padding-inline: 4px; }
-            #mobile-header-controls > :nth-child(2) { grid-area: route; width: 100%; padding-inline: 6px; }
-            #mobile-header-controls > :nth-child(3) { grid-area: modes; width: 100%; justify-content: space-evenly; }
-            #mobile-header-controls > :nth-child(4) { grid-area: sound; }
-            #mobile-header-controls > :nth-child(5) { grid-area: save; }
-            #mobile-header-controls > :nth-child(6) { grid-area: manage; }
-            #mobile-header-controls > :nth-child(7) { grid-area: help; }
-            #mobile-header-controls > :nth-child(n+4) { width: 100%; min-width: 0; padding-inline: 0; display: flex; justify-content: center; align-items: center; }
-            #btn-auto, #btn-loop { padding-inline: 5px; }
-            #btn-speed { min-width: 34px; }
-            #mobile-battle-controls { position: static !important; inset: auto !important; width: 100%; display: flex !important; gap: 7px; margin-top: 8px; }
-            #mobile-battle-controls > :first-child { flex: 1 1 auto; min-height: 42px; }
-            #mobile-battle-controls #ui-weather-badge { flex: 1 1 100%; min-height: 38px; }
-            #mobile-bridge-slot > #mobile-bridge-nav { display: block; }
-            #mobile-bridge-nav { margin: 0; padding: 0; }
-            #mobile-bridge-nav > div:first-child { margin-bottom: 8px; }
-            #mobile-bridge-nav .grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
-            #mobile-bridge-nav .grid button { min-height: 44px; font-size: 12px; }
-            #gacha-subtabs { grid-template-columns: repeat(3,minmax(0,1fr)); }
-            #weapon-subtabs { grid-template-columns: repeat(2,minmax(0,1fr)); }
-            #gacha-pickup-grid, #weapon-inventory-grid, #weapon-merge-grid { grid-template-columns: minmax(0,1fr) !important; }
-            #gacha-normal-draw, #gacha-rare-draw, .gacha-pickup-draw { min-height: 44px; }
-            .weapon-action-btn { min-height: 40px; }
+            .mobile-sheet-title {
+                font: 700 10px/1.2 'Share Tech Mono', monospace;
+                letter-spacing: .18em; text-transform: uppercase; color: var(--hud-brass-bright);
+            }
+            .mobile-sheet-close {
+                min-width: 34px; min-height: 34px; display: grid; place-items: center;
+                border: 1px solid var(--hud-line); border-radius: 4px;
+                background: #131c29; color: var(--hud-text); font-size: 16px; line-height: 1;
+            }
+
+            /* ---- 運行パネル：距離・速度・出撃・天候を1枚に ---- */
+            #mobile-header-slot #mobile-header-controls {
+                display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 6px; width: 100%; margin-top: 8px;
+                padding-top: 8px; border-top: 1px solid var(--hud-line-soft);
+            }
+            #mobile-header-controls > * { min-height: var(--hud-tap); min-width: 0; }
+            #mobile-header-controls > :nth-child(1),
+            #mobile-header-controls > :nth-child(2) { width: 100%; justify-content: center; }
+            #mobile-header-controls > :nth-child(3) { grid-column: 1 / -1; width: 100%; min-height: 40px; }
+            #mobile-header-controls > :nth-child(n+4) {
+                width: 100%; min-width: 0; padding-inline: 0;
+                display: flex; justify-content: center; align-items: center;
+            }
+            #btn-auto, #btn-loop { padding-inline: 6px; justify-content: center; }
+            #btn-speed { min-width: 40px; }
+            #mobile-battle-slot { display: flex; flex-direction: column; gap: 7px; }
+            /* 出撃バー：戻る / 出撃 / 進む の3分割を全幅で見せる。 */
+            #mobile-battle-slot > #mobile-battle-controls {
+                display: grid !important; grid-template-columns: minmax(0, 1fr);
+                gap: 6px; width: 100%; position: static !important; inset: auto !important;
+                margin: 0; overflow: visible;
+            }
+            #mobile-battle-controls > div:first-child {
+                display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                align-items: stretch; overflow: hidden; border-radius: var(--hud-radius);
+            }
+            /* 出撃はドックが担う。シートでは区間移動だけを扱う。 */
+            #mobile-battle-controls #btn-start-wave { display: none !important; }
+            #mobile-battle-controls #btn-prev-stage,
+            #mobile-battle-controls #btn-next-stage {
+                min-height: var(--hud-tap); justify-content: center; gap: 4px;
+                font-size: 11px; font-weight: 800; padding: 0 6px;
+            }
+            #mobile-battle-controls #btn-prev-stage::after { content: '前の区間'; }
+            #mobile-battle-controls #btn-next-stage::after { content: '次の区間'; }
+            #mobile-battle-controls #ui-weather-badge {
+                display: flex; align-items: center; gap: 6px; width: 100%;
+                min-height: 38px; padding: 4px 8px; border-radius: var(--hud-radius);
+            }
+            /* 記号だけのボタンに、その場で読めるラベルを添える。 */
+            #mobile-header-controls #btn-se-toggle::after { content: 'SE'; }
+            #mobile-header-controls #btn-se-toggle,
+            #mobile-header-controls > button > span:only-child { flex-direction: row; gap: 5px; }
+            #mobile-header-controls > button:nth-child(5)::after { content: '保存'; font-size: 10px; }
+            #mobile-header-controls > button:nth-child(6)::after { content: 'データ'; font-size: 10px; }
+            #mobile-header-controls > button:nth-child(7)::after { content: '概要'; font-size: 10px; }
+
+            /* ---- 艦橋：タブは常設の横スクロール・レールに並べる ---- */
+            #mobile-bridge-nav { display: none !important; }
+            #mobile-tab-rail-slot { display: block; }
+            .mobile-tab-rail {
+                position: fixed; z-index: 44;
+                inset-inline: 0; bottom: calc(78px + env(safe-area-inset-bottom));
+                display: flex; gap: 4px; overflow-x: auto; overflow-y: hidden;
+                padding: 5px max(8px, env(safe-area-inset-right)) 5px max(8px, env(safe-area-inset-left));
+                background: linear-gradient(180deg, #0c131d, #080c13);
+                border-top: 1px solid var(--hud-line-soft);
+                scrollbar-width: none; overscroll-behavior-x: contain;
+            }
+            .mobile-tab-rail::-webkit-scrollbar { display: none; }
+            .mobile-tab-rail-button {
+                flex: 0 0 auto; min-width: 72px; min-height: 42px;
+                display: inline-flex; align-items: center; justify-content: center;
+                padding: 4px 10px; border: 1px solid var(--hud-line); border-radius: 4px;
+                background: #101a27; color: var(--hud-text-dim);
+                font-size: 11px; font-weight: 800; line-height: 1.15; white-space: nowrap;
+                touch-action: manipulation;
+            }
+            .mobile-tab-rail-button[aria-current="page"] {
+                border-color: var(--hud-brass-bright); color: var(--hud-brass-bright);
+                background: #241d10; box-shadow: inset 0 -2px var(--hud-brass-bright);
+            }
+            .mobile-tab-rail-button:focus-visible { outline: 2px solid var(--hud-brass-bright); outline-offset: 2px; }
+            #gacha-subtabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+            #weapon-subtabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            #gacha-pickup-grid, #weapon-inventory-grid, #weapon-merge-grid { grid-template-columns: minmax(0, 1fr) !important; }
+            #gacha-normal-draw, #gacha-rare-draw, .gacha-pickup-draw { min-height: var(--hud-tap); }
+            .weapon-action-btn { min-height: 44px; }
             #train-intro-desktop, #skills-description-desktop { display: none; }
             #train-intro-mobile, #skills-description-mobile { display: block; }
-            #train-action-row { display: grid; grid-template-columns: 78px minmax(0,1fr) 100px; align-items: stretch; gap: 6px; }
-            #train-action-row > div { min-width: 0; padding: 4px 5px; font-size: 9px; gap: 3px; }
+            #train-action-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: stretch; gap: 6px; }
+            #train-action-row > div { grid-column: 1 / -1; min-width: 0; padding: 4px 6px; font-size: 10px; gap: 3px; }
             #train-action-row > div span:first-child { display: none; }
             #train-action-row > div .ui-gold-display { font-size: 13px; }
-            #train-action-row button { min-width: 0; min-height: 42px; padding: 5px 6px; font-size: 10px; line-height: 1.2; }
-            #train-slots-container { display: grid !important; grid-template-columns: minmax(0,1fr); overflow: visible; gap: 8px; padding: 0 0 8px; }
-            #train-slots-container .train-car-card { width: 100% !important; min-width: 0; min-height: 102px; display: grid !important; grid-template-columns: minmax(0,1fr) minmax(112px,.78fr); align-items: center; gap: 8px; padding: 9px !important; }
+            #train-action-row button { min-width: 0; min-height: 44px; padding: 5px 6px; font-size: 10px; line-height: 1.2; }
+            #train-slots-container { display: grid !important; grid-template-columns: minmax(0, 1fr); overflow: visible; gap: 8px; padding: 0 0 8px; }
+            /* 1両＝1行。兵装を上段、配属セフィラを下段の帯にして名前を潰さない。 */
+            #train-slots-container .train-car-card { width: 100% !important; min-width: 0; display: flex !important; flex-direction: column !important; align-items: stretch; justify-content: flex-start; gap: 7px; padding: 9px 10px !important; }
             #train-slots-container .train-car-card > div:first-child { min-width: 0; }
-            #train-slots-container .train-car-card > div:first-child > div:last-child { margin-top: 5px; }
-            #train-slots-container .train-car-card > div:last-child { min-width: 0; margin: 0; }
+            #train-slots-container .train-car-card > div:first-child > div:last-child { margin-top: 4px; }
+            /* 配属セフィラ帯は横並び（立ち絵＋テキスト）を保つ。 */
+            #train-slots-container .train-car-card > div:last-child {
+                display: flex !important; flex-direction: row !important;
+                align-items: center; gap: 8px; min-width: 0; margin: 0;
+            }
+            #train-slots-container .train-car-card > div:last-child > div:last-child { min-width: 0; flex: 1 1 auto; }
             #skills-description-mobile { color: #cbd5e1; font-size: 11px; line-height: 1.4; }
             #skills-list-grid { display: none !important; }
-            #mobile-skills-tabs { display: grid !important; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
-            .mobile-skill-tab { min-width: 0; min-height: 72px; display: flex; flex-direction: column; justify-content: space-between; text-align: left; padding: 8px; border: 1px solid #475569; border-radius: 5px; background: linear-gradient(145deg,#1e293b,#0f172a); color: #cbd5e1; }
-            .mobile-skill-tab[aria-selected="true"] { border: 2px solid #fbbf24; color: #fde68a; box-shadow: inset 0 0 14px rgba(245,158,11,.12); }
+            #mobile-skills-tabs { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+            .mobile-skill-tab { min-width: 0; min-height: 72px; display: flex; flex-direction: column; justify-content: space-between; text-align: start; padding: 8px; border: 1px solid #475569; border-radius: var(--hud-radius); background: linear-gradient(145deg, #1e293b, #0f172a); color: #cbd5e1; }
+            .mobile-skill-tab[aria-selected="true"] { border: 2px solid #fbbf24; color: #fde68a; }
             .mobile-skill-tab-title { font-size: 12px; font-weight: 900; line-height: 1.25; }
-            .mobile-skill-tab-meta { display: flex; justify-content: space-between; gap: 4px; color: #94a3b8; font: 10px 'Share Tech Mono',monospace; }
+            .mobile-skill-tab-meta { display: flex; justify-content: space-between; gap: 4px; color: #94a3b8; font: 10px 'Share Tech Mono', monospace; }
             #mobile-skill-detail { display: block; }
-            .mobile-skill-action { min-height: 44px; font-size: 12px; font-weight: 800; }
-            #world-overview-card { display: grid; grid-template-columns: 1fr; gap: 7px; padding: 8px; }
-            #world-subtab-container { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; width: 100%; }
-            #world-subtab-container button { min-height: 42px; padding: 6px 8px; font-size: 12px; }
-            #world-subtab-desc { font-size: 10px; line-height: 1.4; }
-            #faction-list-grid { grid-template-columns: minmax(0,1fr); gap: 8px; }
+            .mobile-skill-action { min-height: var(--hud-tap); font-size: 12px; font-weight: 800; }
+            #world-overview-card { display: grid; grid-template-columns: minmax(120px, .72fr) minmax(0, 1.28fr); gap: 7px; padding: 8px; align-items: stretch; }
+            #world-subtab-container { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; width: 100%; min-width: 0; }
+            #world-subtab-container button { width: 100%; min-height: 80px; padding: 6px 8px; font-size: 12px; }
+            #world-subtab-desc { display: flex; align-items: center; min-height: 80px; font-size: 10px; line-height: 1.4; }
+            #faction-list-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
             #faction-list-grid .mobile-faction-card { padding: 10px; gap: 8px; }
             #faction-list-grid .mobile-faction-title { font-size: 14px; }
             #faction-list-grid .mobile-faction-subtitle { font-size: 9px; }
@@ -376,54 +540,51 @@
             #faction-list-grid .mobile-world-lore p { margin-top: 4px; }
             #faction-list-grid .mobile-faction-status { font-size: 9px; }
             #faction-list-grid .mobile-faction-progress { font-size: 10px; flex-wrap: wrap; }
-            #faction-list-grid .mobile-faction-action { min-height: 44px; font-size: 12px; }
-            /* キャンバス内の左上にコンパクト表示。車両（下部）と重ならない */
-            #mobile-armor-hud {
-                position: absolute !important;
-                top: 44px !important;
-                left: 8px !important;
-                right: auto !important;
-                bottom: auto !important;
-                width: 150px !important;
-                min-width: 0 !important;
-                height: auto !important;
-                margin: 0 !important;
-                padding: 3px 6px !important;
-                border-radius: 4px !important;
-                border-width: 1px !important;
-                display: flex !important;
-                flex-direction: column !important;
-                justify-content: space-between !important;
-                gap: 2px !important;
-            }
-            #mobile-armor-hud > div:first-child { font-size: 7px; letter-spacing: .03em; margin: 0 !important; }
-            #mobile-armor-hud > div:nth-child(2) { height: 6px; flex: 0 0 auto; margin: 0 !important; }
-            #mobile-armor-hud > div:last-child { font-size: 10px; line-height: 1; }
-            #mobile-armor-hud > div:last-child span:nth-child(2) { font-size: 8px; }
-            #world-overview-card { grid-template-columns: minmax(120px,.72fr) minmax(0,1.28fr); align-items: stretch; }
-            #world-overview-card #world-subtab-container { min-width: 0; grid-template-columns: minmax(0,1fr); }
-            #world-overview-card #world-subtab-container button { width: 100%; min-height: 80px; }
-            #world-overview-card #world-subtab-desc { display: flex; align-items: center; min-height: 80px; }
-            #mobile-skills-tabs { align-items: stretch; }
+            #faction-list-grid .mobile-faction-action { min-height: var(--hud-tap); font-size: 12px; }
+            #mobile-skills-tabs { align-items: stretch; flex: 1; min-height: 0; grid-template-rows: repeat(2, minmax(0, 1fr)); }
             #tab-content-skills { flex: 1 0 100%; min-height: 100%; }
-            #mobile-skills-tabs { flex: 1; min-height: 0; grid-template-rows: repeat(2,minmax(0,1fr)); }
-            .mobile-skill-card { min-width: 0; min-height: clamp(156px,calc((100dvh - 550px) / 2),260px); height: 100%; display:flex; flex-direction:column; justify-content:space-between; gap:7px; padding:9px; border:1px solid #475569; border-radius:6px; background:linear-gradient(145deg,#1e293b,#0f172a); }
-            .mobile-skill-card.is-active { border:2px solid #fbbf24; box-shadow:inset 0 0 14px rgba(245,158,11,.12); }
-            .mobile-skill-card-title { font-size:12px; font-weight:900; line-height:1.25; }
-            .mobile-skill-card-desc { color:#cbd5e1; font-size:10px; line-height:1.35; }
-            .mobile-skill-card-effect { padding:5px; border:1px solid #334155; border-radius:4px; background:#0b1220; color:#fde68a; font-size:10px; font-weight:800; line-height:1.25; }
-            .mobile-skill-card-actions { display:grid; grid-template-columns:1fr; gap:4px; }
-            .mobile-skill-card-actions button { min-height:34px; padding:4px; font-size:10px; line-height:1.1; }
-            #mobile-skill-detail { display:none !important; }
+            .mobile-skill-card { min-width: 0; min-height: clamp(156px, calc((100dvh - 550px) / 2), 260px); height: 100%; display: flex; flex-direction: column; justify-content: space-between; gap: 7px; padding: 9px; border: 1px solid #475569; border-radius: var(--hud-radius); background: linear-gradient(145deg, #1e293b, #0f172a); }
+            .mobile-skill-card.is-active { border: 2px solid #fbbf24; }
+            .mobile-skill-card-title { font-size: 12px; font-weight: 900; line-height: 1.25; }
+            .mobile-skill-card-desc { color: #cbd5e1; font-size: 10px; line-height: 1.35; }
+            .mobile-skill-card-effect { padding: 5px; border: 1px solid #334155; border-radius: 4px; background: #0b1220; color: #fde68a; font-size: 10px; font-weight: 800; line-height: 1.25; }
+            .mobile-skill-card-actions { display: grid; grid-template-columns: 1fr; gap: 4px; }
+            .mobile-skill-card-actions button { min-height: 34px; padding: 4px; font-size: 10px; line-height: 1.1; }
+            #mobile-skill-detail { display: none !important; }
             #config-modal > div { max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px); }
-            #config-modal { padding: max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left)); }
-            #config-modal .config-mobile-switch { display:grid !important; }
-            #config-modal .config-modal-scroll { min-height:0; overflow:auto; }
-            #config-modal .config-mobile-switch { position:sticky; top:0; z-index:2; }
-            #config-modal .config-mobile-section { display:none; }
-            #config-modal .config-mobile-section.is-active { display:block; }
+            #config-modal { padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+            #config-modal .config-mobile-switch { display: grid !important; position: sticky; top: 0; z-index: 2; }
+            #config-modal .config-modal-scroll { min-height: 0; overflow: auto; }
+            #config-modal .config-mobile-section { display: none; }
+            #config-modal .config-mobile-section.is-active { display: block; }
+
+            /* 押下・フォーカスの状態を全ボタンで揃える。 */
+            .mobile-command-dock button:focus-visible,
+            .mobile-command-panel button:focus-visible,
+            #mobile-bridge-nav button:focus-visible {
+                outline: 2px solid #fbbf24; outline-offset: 2px;
+            }
         }
         @media (max-width: 639px) and (max-height: 760px) {
             .battle-upper { height: 31dvh; min-height: 165px; max-height: 34dvh; }
+            #mobile-bridge-content { padding-bottom: calc(130px + env(safe-area-inset-bottom)); }
+            .mobile-command-panel { bottom: calc(128px + env(safe-area-inset-bottom)); max-height: 54dvh; }
+        }
+        /* 320px 級の狭幅：HUDは縦積み、カードは1列に落とす。 */
+        @media (max-width: 359px) {
+            .battle-upper { height: calc(30dvh + 34px); max-height: 40dvh; }
+            #mobile-armor-hud { width: 132px !important; padding: 3px 5px !important; }
+            #mobile-armor-hud > div:first-child { font-size: 7px; }
+            #mobile-armor-hud > div:last-child { font-size: 10px; }
+            #enemy-preview-box { top: 58px; max-width: 50%; font-size: 10px; }
+            #train-slots-container .train-car-card { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+            #mobile-bridge-nav .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .mobile-dock-row { grid-template-columns: 58px minmax(0, 1fr) 58px; gap: 5px; }
+            .mobile-dock-launch { font-size: 13px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .train-car-card, .emergency-red-btn, .sephira-node-btn { transition: none !important; }
+            .cutin-banner-active, .cutin-content-active, .grand-boss-cutin-active,
+            .radio-pop, .warning-hazard-strip { animation: none !important; }
         }
     

@@ -458,7 +458,7 @@ function triggerGrandBossUltimate(boss, isEntranceCast = false) {
     const w = canvas.width || 800;
     const h = canvas.height || 260;
     const frontTrainX = getCarX(0);
-    const backTrainX = getCarX(9);
+    const backTrainX = getCarX(CAR_COUNT - 1);
     const trainMidX = (frontTrainX + backTrainX) * 0.5;
     const railY = h * 0.72;
 
@@ -482,7 +482,7 @@ function triggerGrandBossUltimate(boss, isEntranceCast = false) {
     // 同属性かつ護衛範囲内の鹵獲超兵器を配列の先頭から1機。いなければ列車本体。
     // 肩代わり回数に上限は設けない（ボス撃破まで何度でも護衛機が身代わりになる）。
     const aliveEscorts = allyEscorts.filter(esc => esc.hp > 0);
-    const guardLeftX = getCarX(9) - 60;
+    const guardLeftX = getCarX(CAR_COUNT - 1) - 60;
     const guardRightX = getCarX(0) + 280;
     const targetEscort = aliveEscorts.find(esc =>
         esc.attr === boss.attr && esc.x >= guardLeftX && esc.x <= guardRightX
@@ -857,17 +857,56 @@ function spawnEnemyUnit(typeId) {
 function getCarX(carIndex) {
     const w = canvas.width || 800;
     const leadX = w * 0.41;
-    const spacing = Math.min(26, Math.max(15, (w * 0.37) / 9));
+    // 4両編成。車体を大きめに見せられるよう、両数ぶんの幅で間隔を決める。
+    const spacing = Math.min(42, Math.max(26, (w * 0.3) / (CAR_COUNT - 1)));
     return leadX - carIndex * spacing;
 }
 
-function getCarEffectiveStats(car) {
-    if (!car.weaponId) return null;
-    const w = WEAPONS[car.weaponId];
+// 1スロットぶんの発射処理。装填タイマーはスロットごとに独立している。
+function fireCarSlot(car, slot) {
+    const isSide = slot === CAR_SLOT_SIDE;
+    const timerKey = isSide ? 'sideCdTimer' : 'cdTimer';
+    if (!getCarSlotWeaponId(car, slot)) return;
+    if (car[timerKey] > 0) {
+        car[timerKey]--;
+        return;
+    }
+
+    const stats = getCarEffectiveStats(car, slot);
+    if (!stats) return;
+
+    const carX = getCarX(car.index);
+    let bestTarget = null;
+    let bestScore = -Infinity;
+
+    enemies.forEach(e => {
+        if (e.hp <= 0) return;
+        const dist = e.x - carX;
+        if (dist <= stats.range && dist >= -80) {
+            const mult = stats.multipliers[e.attr] || 1.0;
+            const score = mult * 1000 - dist;
+            if (score > bestScore) {
+                bestScore = score;
+                bestTarget = e;
+            }
+        }
+    });
+
+    if (bestTarget) {
+        fireCarWeapon(car, stats, bestTarget, slot);
+        car[timerKey] = stats.cooldown;
+    }
+}
+
+function getCarEffectiveStats(car, slot = CAR_SLOT_UPPER) {
+    const weaponId = getCarSlotWeaponId(car, slot);
+    if (!weaponId) return null;
+    const w = WEAPONS[weaponId];
     if (!w) return null;
+    const isSide = slot === CAR_SLOT_SIDE;
     const sephPassive = getSephirahPassiveEffects();
 
-    let dmg = getEffectiveWeaponDamage(car.weaponId);
+    let dmg = getEffectiveWeaponDamage(weaponId);
     let reloadMult = getRelicReloadMult() * getActiveSkillSpeedMult();
     let isSynergy = false;
 
@@ -885,13 +924,22 @@ function getCarEffectiveStats(car) {
     }
 
     dmg = Math.round(dmg * getActiveSkillAtkMult() * sephPassive.atkMult * getEffectiveWeatherAllyAtkMult());
+    // 4両化でスロット総数が減るぶんの補填。埋まっているスロットの比率ぶんだけ効かせる。
+    dmg = Math.round(dmg * getCarDpsCompensation());
+    // 側面スロットは斜射。空中目標への倍率だけを落とし、射程も詰める。
+    const multipliers = isSide
+        ? { ...w.multipliers, AIR: (w.multipliers.AIR || 1) * SIDE_SLOT_AIR_MULT }
+        : w.multipliers;
+    const range = isSide ? Math.round(w.range * SIDE_SLOT_RANGE_MULT) : w.range;
     const effectiveCd = Math.max(5, Math.round(w.cooldown / reloadMult));
-    return { weapon: w, damage: dmg, cooldown: effectiveCd, isSynergy };
+    return { weapon: w, weaponId, damage: dmg, cooldown: effectiveCd, isSynergy, multipliers, range, isSide };
 }
 
-function fireCarWeapon(car, stats, target) {
+function fireCarWeapon(car, stats, target, slot = CAR_SLOT_UPPER) {
     const startX = getCarX(car.index);
-    const startY = (canvas.height || 260) * 0.65;
+    const isSide = slot === CAR_SLOT_SIDE;
+    // 上部は車体上端の砲塔、側面は車体中央の副砲から撃つ。見た目でも区別できる。
+    const startY = (canvas.height || 260) * (isSide ? 0.72 : 0.65);
     SoundEngine.playWeaponFire(stats.weapon.id);
 
     const sephPassive = getSephirahPassiveEffects();
@@ -904,7 +952,7 @@ function fireCarWeapon(car, stats, target) {
         weaponId: stats.weapon.id,
         type: stats.weapon.type,
         color: isCrit ? '#f43f5e' : stats.weapon.color,
-        multipliers: stats.weapon.multipliers,
+        multipliers: stats.multipliers,
         damage: finalShotDmg,
         isCrit,
         x: startX,
@@ -1361,35 +1409,8 @@ function updateSimulation() {
     }
 
     state.cars.forEach(car => {
-        if (!car.weaponId) return;
-        if (car.cdTimer > 0) {
-            car.cdTimer--;
-            return;
-        }
-        const stats = getCarEffectiveStats(car);
-        if (!stats) return;
-
-        const carX = getCarX(car.index);
-        let bestTarget = null;
-        let bestScore = -Infinity;
-
-        enemies.forEach(e => {
-            if (e.hp <= 0) return;
-            const dist = e.x - carX;
-            if (dist <= stats.weapon.range && dist >= -80) {
-                const mult = stats.weapon.multipliers[e.attr] || 1.0;
-                const score = mult * 1000 - dist;
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestTarget = e;
-                }
-            }
-        });
-
-        if (bestTarget) {
-            fireCarWeapon(car, stats, bestTarget);
-            car.cdTimer = stats.cooldown;
-        }
+        fireCarSlot(car, CAR_SLOT_UPPER);
+        fireCarSlot(car, CAR_SLOT_SIDE);
     });
 
     const escortFrontLineLimit = w * 0.88;
@@ -2595,6 +2616,73 @@ function drawWeatherEffects(ctx, w, h) {
     ctx.restore();
 }
 
+// 車体に載る兵装シルエット。上部・側面で共用し、側面は呼び出し側で縮小する。
+function drawCarWeaponSprite(ctx, weaponId) {
+    switch (weaponId) {
+        case 'railgun_tiphareth':
+            ctx.fillStyle = '#d97706';
+            ctx.fillRect(-8, -5.5, 14, 5.5);
+            ctx.fillStyle = '#fbbf24';
+            ctx.fillRect(4, -5, 16, 1.6);
+            ctx.fillRect(4, -2.5, 16, 1.6);
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(6, -3.7, 12, 1.2);
+            break;
+        case 'mg_vulcan':
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(-5, -4, 9, 4);
+            ctx.fillStyle = '#fde047';
+            ctx.fillRect(4, -3.6, 10, 1.2);
+            ctx.fillRect(4, -1.8, 10, 1.2);
+            break;
+        case 'aa_flak':
+            ctx.fillStyle = '#0284c7';
+            ctx.fillRect(-5, -4, 9, 4);
+            ctx.save();
+            ctx.rotate(-0.42);
+            ctx.fillStyle = '#38bdf8';
+            ctx.fillRect(1.5, -3.2, 12, 1.6);
+            ctx.fillRect(1.5, -1.2, 12, 1.6);
+            ctx.restore();
+            break;
+        case 'torpedo_launcher':
+            ctx.fillStyle = '#0f766e';
+            ctx.fillRect(-6, -5.5, 14, 5.5);
+            ctx.fillStyle = '#2dd4bf';
+            ctx.fillRect(6, -5, 5, 1.6);
+            ctx.fillRect(6, -2.6, 5, 1.6);
+            break;
+        case 'howitzer_heavy':
+            ctx.fillStyle = '#9a3412';
+            ctx.fillRect(-7, -5.5, 13, 5.5);
+            ctx.save();
+            ctx.rotate(-0.22);
+            ctx.fillStyle = '#f97316';
+            ctx.fillRect(4, -4.4, 14, 3.2);
+            ctx.fillStyle = '#fdba74';
+            ctx.fillRect(16, -5.2, 2.5, 4.8);
+            ctx.restore();
+            break;
+        case 'missile_malkuth':
+            ctx.fillStyle = '#881337';
+            ctx.fillRect(-6, -7, 12, 7);
+            ctx.fillStyle = '#f43f5e';
+            ctx.fillRect(5, -6.2, 3.5, 1.6);
+            ctx.fillRect(5, -3.8, 3.5, 1.6);
+            ctx.fillRect(5, -1.5, 3.5, 1.6);
+            break;
+        case 'laser_kether':
+            ctx.fillStyle = '#701a75';
+            ctx.fillRect(-7, -6.5, 13, 6.5);
+            ctx.strokeStyle = '#e879f9';
+            ctx.lineWidth = 1.6;
+            ctx.beginPath(); ctx.arc(5.5, -3.2, 4, -Math.PI * 0.5, Math.PI * 0.5); ctx.stroke();
+            ctx.fillStyle = '#f5d0fe';
+            ctx.beginPath(); ctx.arc(7, -3.2, 2, 0, Math.PI * 2); ctx.fill();
+            break;
+    }
+}
+
 function drawScene() {
     if (!ctx || !canvas) return;
     const w = canvas.width;
@@ -2727,72 +2815,19 @@ function drawScene() {
         ctx.lineTo(cx + 9 + rodOffset, railY - 3.5);
         ctx.stroke();
 
+        // 上部スロット：車体上端の主砲塔。
         if (car.weaponId) {
             ctx.save();
             ctx.translate(cx, carTop);
-            switch (car.weaponId) {
-                case 'railgun_tiphareth':
-                    ctx.fillStyle = '#d97706';
-                    ctx.fillRect(-8, -5.5, 14, 5.5);
-                    ctx.fillStyle = '#fbbf24';
-                    ctx.fillRect(4, -5, 16, 1.6);
-                    ctx.fillRect(4, -2.5, 16, 1.6);
-                    ctx.fillStyle = '#38bdf8';
-                    ctx.fillRect(6, -3.7, 12, 1.2);
-                    break;
-                case 'mg_vulcan':
-                    ctx.fillStyle = '#475569';
-                    ctx.fillRect(-5, -4, 9, 4);
-                    ctx.fillStyle = '#fde047';
-                    ctx.fillRect(4, -3.6, 10, 1.2);
-                    ctx.fillRect(4, -1.8, 10, 1.2);
-                    break;
-                case 'aa_flak':
-                    ctx.fillStyle = '#0284c7';
-                    ctx.fillRect(-5, -4, 9, 4);
-                    ctx.save();
-                    ctx.rotate(-0.42);
-                    ctx.fillStyle = '#38bdf8';
-                    ctx.fillRect(1.5, -3.2, 12, 1.6);
-                    ctx.fillRect(1.5, -1.2, 12, 1.6);
-                    ctx.restore();
-                    break;
-                case 'torpedo_launcher':
-                    ctx.fillStyle = '#0f766e';
-                    ctx.fillRect(-6, -5.5, 14, 5.5);
-                    ctx.fillStyle = '#2dd4bf';
-                    ctx.fillRect(6, -5, 5, 1.6);
-                    ctx.fillRect(6, -2.6, 5, 1.6);
-                    break;
-                case 'howitzer_heavy':
-                    ctx.fillStyle = '#9a3412';
-                    ctx.fillRect(-7, -5.5, 13, 5.5);
-                    ctx.save();
-                    ctx.rotate(-0.22);
-                    ctx.fillStyle = '#f97316';
-                    ctx.fillRect(4, -4.4, 14, 3.2);
-                    ctx.fillStyle = '#fdba74';
-                    ctx.fillRect(16, -5.2, 2.5, 4.8);
-                    ctx.restore();
-                    break;
-                case 'missile_malkuth':
-                    ctx.fillStyle = '#881337';
-                    ctx.fillRect(-6, -7, 12, 7);
-                    ctx.fillStyle = '#f43f5e';
-                    ctx.fillRect(5, -6.2, 3.5, 1.6);
-                    ctx.fillRect(5, -3.8, 3.5, 1.6);
-                    ctx.fillRect(5, -1.5, 3.5, 1.6);
-                    break;
-                case 'laser_kether':
-                    ctx.fillStyle = '#701a75';
-                    ctx.fillRect(-7, -6.5, 13, 6.5);
-                    ctx.strokeStyle = '#e879f9';
-                    ctx.lineWidth = 1.6;
-                    ctx.beginPath(); ctx.arc(5.5, -3.2, 4, -Math.PI * 0.5, Math.PI * 0.5); ctx.stroke();
-                    ctx.fillStyle = '#f5d0fe';
-                    ctx.beginPath(); ctx.arc(7, -3.2, 2, 0, Math.PI * 2); ctx.fill();
-                    break;
-            }
+            drawCarWeaponSprite(ctx, car.weaponId);
+            ctx.restore();
+        }
+        // 側面スロット：車体中央の副砲。小さく描いて主砲と区別する。
+        if (car.sideWeaponId && !isLead) {
+            ctx.save();
+            ctx.translate(cx, carTop + carH - 5);
+            ctx.scale(0.62, 0.62);
+            drawCarWeaponSprite(ctx, car.sideWeaponId);
             ctx.restore();
         }
     }
@@ -2808,7 +2843,7 @@ function drawScene() {
 
     if (isTacticSelected('shield')) {
         const frontTrainX = getCarX(0);
-        const backTrainX = getCarX(9);
+        const backTrainX = getCarX(CAR_COUNT - 1);
         const midX = (frontTrainX + backTrainX) * 0.5;
         const domeR = (frontTrainX - backTrainX) * 0.58;
         ctx.save();
@@ -3075,6 +3110,7 @@ function updateHeaderUI() {
         const districtText = districtEl ? districtEl.textContent : '';
         dockRouteEl.textContent = `${distanceText} · ${districtText}`;
     }
+    syncMobileDockUI();
 
     const bossBadge = document.getElementById('ui-boss-badge');
     if (bossBadge) {
@@ -3167,11 +3203,9 @@ function switchTab(tabId) {
         }
     });
     renderCurrentTab();
+    syncMobileTabRail(tabId);
     if (window.matchMedia('(max-width: 639px)').matches) {
         closeMobileCommandPanels();
-        document.querySelectorAll('[data-mobile-dock-destination]').forEach(button => {
-            button.setAttribute('aria-current', 'page');
-        });
     }
 }
 
@@ -3197,13 +3231,30 @@ function renderTrainSlots() {
     container.innerHTML = '';
 
     state.cars.forEach((car, idx) => {
-        const w = car.weaponId ? WEAPONS[car.weaponId] : null;
         const s = car.sephirahId ? SEPHIROTH.find(item => item.id === car.sephirahId) : null;
-        const stats = getCarEffectiveStats(car);
-        const isSynergy = stats && stats.isSynergy;
+        const upperStats = getCarEffectiveStats(car, CAR_SLOT_UPPER);
+        const sideStats = getCarEffectiveStats(car, CAR_SLOT_SIDE);
+        const isSynergy = !!(upperStats && upperStats.isSynergy) || !!(sideStats && sideStats.isSynergy);
+
+        const slotRow = (slot, stats, label) => {
+            const weaponId = getCarSlotWeaponId(car, slot);
+            const w = weaponId ? WEAPONS[weaponId] : null;
+            if (car.locked && slot === CAR_SLOT_SIDE) {
+                return `<div class="train-slot-row is-disabled" role="button" tabindex="-1" aria-disabled="true">
+                    <span class="train-slot-tag">${label}</span>
+                    <span class="train-slot-main">側面スロットなし（機関車）</span>
+                </div>`;
+            }
+            return `<div class="train-slot-row${w ? '' : ' is-empty'}" role="button" tabindex="0"
+                    data-car="${idx}" data-slot="${slot}"
+                    aria-label="${car.name} ${label}スロット ${w ? w.name : '未搭載。選択する'}">
+                <span class="train-slot-tag">${label}</span>
+                <span class="train-slot-main">${w ? `${w.name} <span class="train-slot-lv">Lv.${state.weaponLevels[w.id] || 1}</span>` : '未搭載'}</span>
+                <span class="train-slot-power">${stats ? stats.damage.toLocaleString() : '—'}</span>
+            </div>`;
+        };
 
         const card = document.createElement('div');
-        card.onclick = () => openConfigModal(idx);
         card.className = `train-car-card flex-shrink-0 w-44 sm:w-48 bg-slate-800 border-2 ${isSynergy ? 'synergy-active' : 'border-slate-700'} rounded-lg p-3 cursor-pointer flex flex-col justify-between gap-2`;
         card.innerHTML = `
             <div>
@@ -3211,12 +3262,9 @@ function renderTrainSlots() {
                     <span class="text-xs font-bold text-amber-400">${idx === 0 ? '👑 第1両目' : `🚃 第${idx + 1}両目`}</span>
                     ${isSynergy ? '<span class="text-[10px] font-black bg-amber-500 text-slate-950 px-1.5 py-0.2 rounded">SYN</span>' : ''}
                 </div>
-                <div class="mt-2">
-                    <div class="text-[10px] text-slate-400">搭載兵装</div>
-                    <div class="text-xs font-bold ${w ? 'text-white' : 'text-slate-500'} truncate">
-                        ${w ? `${w.name} (Lv.${state.weaponLevels[w.id] || 1})` : '未搭載（クリックで選択）'}
-                    </div>
-                    ${stats ? `<div class="text-[10px] tech-font text-amber-300 mt-0.5">威力: ${stats.damage.toLocaleString()}</div>` : ''}
+                <div class="mt-2 flex flex-col gap-1">
+                    ${slotRow(CAR_SLOT_UPPER, upperStats, '上部')}
+                    ${slotRow(CAR_SLOT_SIDE, sideStats, '側面')}
                 </div>
             </div>
             <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/80 flex items-center gap-2">
@@ -3224,7 +3272,7 @@ function renderTrainSlots() {
                 <div class="min-w-0 flex-1">
                     <div class="text-[10px] text-slate-400">配属セフィラ</div>
                     <div class="text-[11px] font-bold ${s ? 'text-purple-300' : 'text-slate-500'} truncate">
-                        ${s ? `${s.name.split(' ')[0]} Lv.${state.sephirahLevels[s.id] || 1}` : '未配属'}
+                        ${s ? `${s.name.split(' ')[0]} Lv.${state.sephirahLevels[s.id] || 1}` : (car.locked ? '艦長 固定' : '未配属')}
                     </div>
                     ${s ? `<div class="text-[9px] text-amber-300/90 truncate">⚡${s.autoSkillName}</div>` : ''}
                 </div>
@@ -3232,33 +3280,57 @@ function renderTrainSlots() {
         `;
         container.appendChild(card);
     });
+
+    container.querySelectorAll('.train-slot-row[data-car]').forEach(row => {
+        const carIdx = Number(row.dataset.car);
+        const slot = row.dataset.slot;
+        const open = () => openConfigModal(carIdx, slot);
+        row.addEventListener('click', open);
+        row.addEventListener('keydown', ev => {
+            if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); open(); }
+        });
+    });
 }
 
-function openConfigModal(carIdx) {
+function openConfigModal(carIdx, slot = CAR_SLOT_UPPER) {
     state.selectedCarIndex = carIdx;
     const car = state.cars[carIdx];
     const modal = document.getElementById('config-modal');
     if (!modal || !car) return;
+    const activeSlot = slot === CAR_SLOT_SIDE ? CAR_SLOT_SIDE : CAR_SLOT_UPPER;
 
-    document.getElementById('modal-car-title').textContent = `${car.name} 編成設定`;
+    document.getElementById('modal-car-title').textContent =
+        `${car.name} 編成設定（${activeSlot === CAR_SLOT_SIDE ? '側面' : '上部'}スロット）`;
 
-    const wList = document.getElementById('modal-weapon-list');
-    wList.innerHTML = '';
-
-    if (car.locked) {
-        wList.innerHTML = `<div class="col-span-2 bg-slate-800 border border-amber-500/60 p-3 rounded text-xs text-amber-200">
-            👑 1両目は決戦兵器「レールガン・ティファレト」および艦長「ティファレト」の固定編成です。
-        </div>`;
-    } else {
+    // 上部・側面の両リストを描画する。どちらも同じ兵装プールから選べる。
+    const renderWeaponList = (listEl, slot) => {
+        if (!listEl) return;
+        listEl.innerHTML = '';
+        if (car.locked && slot === CAR_SLOT_UPPER) {
+            listEl.innerHTML = `<div class="col-span-2 bg-slate-800 border border-amber-500/60 p-3 rounded text-xs text-amber-200">
+                👑 1両目は決戦兵器「レールガン・ティファレト」および艦長「ティファレト」の固定編成です。
+            </div>`;
+            return;
+        }
+        if (car.locked && slot === CAR_SLOT_SIDE) {
+            listEl.innerHTML = `<div class="col-span-2 bg-slate-800 border border-slate-600 p-3 rounded text-xs text-slate-400">
+                機関車に側面スロットはありません。
+            </div>`;
+            return;
+        }
+        const mounted = getCarSlotWeaponId(car, slot);
         Object.values(WEAPONS).forEach(w => {
             if (w.id === 'railgun_tiphareth') return;
             const unlocked = state.unlockedWeapons.includes(w.id);
-            const selected = car.weaponId === w.id;
+            const selected = mounted === w.id;
+            const sideMult = slot === CAR_SLOT_SIDE
+                ? ` / 空×${(w.multipliers.AIR * SIDE_SLOT_AIR_MULT).toFixed(1)}`
+                : ` / 空×${w.multipliers.AIR}`;
             const btn = document.createElement('button');
             btn.disabled = !unlocked;
             btn.onclick = () => {
-                car.weaponId = w.id;
-                openConfigModal(carIdx);
+                setCarSlotWeaponId(car, slot, selected ? null : w.id);
+                openConfigModal(carIdx, slot);
                 renderTrainSlots();
                 saveGame(true);
             };
@@ -3268,11 +3340,15 @@ function openConfigModal(carIdx) {
                     <span class="text-xs font-bold text-white">${w.name}</span>
                     <span class="text-[10px] tech-font text-amber-300">${unlocked ? `Lv.${state.weaponLevels[w.id] || 1}` : '未開発'}</span>
                 </div>
-                <div class="text-[10px] text-slate-400 mt-0.5">[${w.typeName}] 陸×${w.multipliers.LAND} / 海×${w.multipliers.SEA} / 空×${w.multipliers.AIR}</div>
+                <div class="text-[10px] text-slate-400 mt-0.5">[${w.typeName}] 陸×${w.multipliers.LAND} / 海×${w.multipliers.SEA}${sideMult}${slot === CAR_SLOT_SIDE ? ' / 射程−15%' : ''}</div>
             `;
-            wList.appendChild(btn);
+            listEl.appendChild(btn);
         });
-    }
+    };
+
+    renderWeaponList(document.getElementById('modal-weapon-list'), CAR_SLOT_UPPER);
+    renderWeaponList(document.getElementById('modal-side-weapon-list'), CAR_SLOT_SIDE);
+    setConfigSection(activeSlot === CAR_SLOT_SIDE ? 'side' : 'upper');
 
     const sList = document.getElementById('modal-sephirah-list');
     sList.innerHTML = '';
@@ -3287,7 +3363,7 @@ function openConfigModal(carIdx) {
             btn.onclick = () => {
                 state.cars.forEach(c => { if (c.sephirahId === s.id) c.sephirahId = null; });
                 car.sephirahId = selected ? null : s.id;
-                openConfigModal(carIdx);
+                openConfigModal(carIdx, activeSlot);
                 renderTrainSlots();
                 saveGame(true);
             };
@@ -3304,28 +3380,35 @@ function openConfigModal(carIdx) {
         });
     }
 
-    const stats = getCarEffectiveStats(car);
+    const upperStats = getCarEffectiveStats(car, CAR_SLOT_UPPER);
+    const sideStats = getCarEffectiveStats(car, CAR_SLOT_SIDE);
     const statusBox = document.getElementById('modal-synergy-status');
-    if (stats && stats.isSynergy) {
-        statusBox.innerHTML = `<span class="text-amber-400 font-bold">✨ セフィロト・シナジー発動中！</span> 駅員の得意兵装と一致しているため攻撃力と装填速度が大幅に強化されています。`;
-    } else {
-        statusBox.innerHTML = `<span class="text-slate-400">搭載兵装と得意分野が一致するセフィラを配属すると【セフィロト・シナジー】が発動します。</span>`;
-    }
+    const synergySlots = [];
+    if (upperStats && upperStats.isSynergy) synergySlots.push('上部');
+    if (sideStats && sideStats.isSynergy) synergySlots.push('側面');
+    statusBox.innerHTML = synergySlots.length
+        ? `<span class="text-amber-400 font-bold">✨ セフィロト・シナジー発動中（${synergySlots.join('・')}）！</span> 駅員の得意兵装と一致しているため攻撃力と装填速度が大幅に強化されています。`
+        : `<span class="text-slate-400">搭載兵装と得意分野が一致するセフィラを配属すると【セフィロト・シナジー】が発動します。</span>`;
 
-    setConfigSection(configSectionFocus);
+    setConfigSection(activeSlot);
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 }
 
 function setConfigSection(section) {
-    configSectionFocus = section === 'sephirah' ? 'sephirah' : 'weapon';
+    configSectionFocus = ['upper', 'side', 'sephirah'].includes(section) ? section : 'upper';
     document.querySelectorAll('#config-modal .config-mobile-section').forEach(panel => {
         panel.classList.toggle('is-active', panel.id === `config-section-${configSectionFocus}`);
     });
+    const accent = configSectionFocus === 'sephirah'
+        ? 'border-purple-500 bg-purple-900/50 text-purple-200'
+        : configSectionFocus === 'side'
+            ? 'border-sky-500 bg-sky-900/50 text-sky-200'
+            : 'border-amber-500 bg-amber-900/50 text-amber-200';
     document.querySelectorAll('#config-modal .config-mobile-tab').forEach(tab => {
         const selected = tab.id === `config-tab-${configSectionFocus}`;
         tab.setAttribute('aria-pressed', String(selected));
-        tab.className = `config-mobile-tab px-3 py-2 text-xs font-black rounded border ${selected ? (configSectionFocus === 'weapon' ? 'border-amber-500 bg-amber-900/50 text-amber-200' : 'border-purple-500 bg-purple-900/50 text-purple-200') : 'border-slate-700 bg-slate-800 text-slate-300'}`;
+        tab.className = `config-mobile-tab px-2 py-2 text-[11px] font-black rounded border ${selected ? accent : 'border-slate-700 bg-slate-800 text-slate-300'}`;
     });
 }
 
@@ -3342,35 +3425,43 @@ function autoEquipAllWeapons() {
     if (unlocked.length === 0) return;
 
     let synergyMatchedCount = 0;
+    let filledSlots = 0;
 
+    // 2両目以降の上部・側面を順に埋める。シナジーは上部を優先する。
     for (let i = 1; i < state.cars.length; i++) {
         const car = state.cars[i];
-        let chosenWeaponId = null;
+        const seph = car.sephirahId ? SEPHIROTH.find(s => s.id === car.sephirahId) : null;
+        const matchingWeapons = seph
+            ? unlocked
+                .map(wid => WEAPONS[wid])
+                .filter(w => w && w.type === seph.specialty)
+                .sort((a, b) => getWeaponDamage(b.id) - getWeaponDamage(a.id))
+            : [];
 
-        if (car.sephirahId) {
-            const seph = SEPHIROTH.find(s => s.id === car.sephirahId);
-            if (seph) {
-                const matchingWeapons = unlocked
-                    .map(wid => WEAPONS[wid])
-                    .filter(w => w && w.type === seph.specialty)
-                    .sort((a, b) => getWeaponDamage(b.id) - getWeaponDamage(a.id));
-
-                if (matchingWeapons.length > 0) {
-                    chosenWeaponId = matchingWeapons[0].id;
-                    synergyMatchedCount++;
-                }
+        [CAR_SLOT_UPPER, CAR_SLOT_SIDE].forEach((slot, slotIdx) => {
+            if (getCarSlotWeaponId(car, slot)) return;
+            let chosenWeaponId = null;
+            // 上部はシナジー一致を優先。側面は対地・対艦向きの兵装を優先する。
+            if (matchingWeapons.length > 0 && slotIdx === 0) {
+                chosenWeaponId = matchingWeapons[0].id;
+                synergyMatchedCount++;
             }
-        }
-
-        if (!chosenWeaponId) {
-            chosenWeaponId = unlocked[(i - 1) % unlocked.length];
-        }
-        car.weaponId = chosenWeaponId;
+            if (!chosenWeaponId) {
+                const pool = unlocked.map(wid => WEAPONS[wid]).filter(Boolean);
+                const preferred = slot === CAR_SLOT_SIDE
+                    ? pool.slice().sort((a, b) =>
+                        (b.multipliers.LAND + b.multipliers.SEA) - (a.multipliers.LAND + a.multipliers.SEA))
+                    : pool;
+                chosenWeaponId = (preferred[(filledSlots) % preferred.length] || preferred[0]).id;
+            }
+            setCarSlotWeaponId(car, slot, chosenWeaponId);
+            filledSlots++;
+        });
     }
 
     SoundEngine.playUI('upgrade');
     renderTrainSlots();
-    showToast(`⚡ シナジー優先で2〜10両目に兵装を自動搭載しました！（シナジー一致: ${synergyMatchedCount}両）`);
+    showToast(`⚡ 2〜4両目の上部・側面に兵装を自動搭載しました（シナジー一致: ${synergyMatchedCount}枠）`);
     saveGame(true);
 }
 
@@ -5136,9 +5227,7 @@ function loadGame() {
             state.dexSubTab = state.activeTab === 'relicdex' ? 'relic' : 'boss';
             state.activeTab = 'dex';
         }
-        if (!Array.isArray(state.cars) || state.cars.length !== 10) {
-            initCars();
-        }
+        migrateCarsToCurrentLayout();
         if (!Array.isArray(state.soldEscorts)) state.soldEscorts = [];
         if (!Array.isArray(state.equippedEscorts)) state.equippedEscorts = [];
         if (typeof normalizeGachaState === 'function') normalizeGachaState();
@@ -5149,6 +5238,65 @@ function loadGame() {
     } catch (e) {
         return false;
     }
+}
+
+// 旧セーブ（10両・1両1兵装）を4両×2スロットへ縮約する。
+// 兵装を捨てず、はみ出したぶんは予備兵装として保持する。
+function migrateCarsToCurrentLayout() {
+    if (!Array.isArray(state.reserveWeapons)) state.reserveWeapons = [];
+    if (!Array.isArray(state.reserveSephiroth)) state.reserveSephiroth = [];
+
+    if (!Array.isArray(state.cars) || state.cars.length === 0) {
+        initCars();
+        return;
+    }
+
+    const needsMigration = state.cars.length !== CAR_COUNT
+        || state.cars.some(car => !('sideWeaponId' in car) || !('sideCdTimer' in car));
+    if (!needsMigration) return;
+
+    const oldCars = state.cars;
+    const nextCars = [];
+    for (let i = 0; i < CAR_COUNT; i++) nextCars.push(createCar(i));
+    // 移行先は旧セーブの内容だけで埋める（初期装備の既定値は使わない）。
+    nextCars.slice(1).forEach(car => { car.weaponId = null; car.sideWeaponId = null; });
+
+    // 1両目（機関車）は固定。旧セーブの値は使わない。
+    oldCars.slice(1).forEach((old, idx) => {
+        const weaponId = old && old.weaponId ? old.weaponId : null;
+        if (!weaponId) return;
+        // 旧2,3両目 → 新2両目、旧4,5両目 → 新3両目、旧6,7両目 → 新4両目。
+        const carIndex = Math.min(CAR_COUNT - 1, 1 + Math.floor(idx / 2));
+        const slot = idx % 2 === 0 ? CAR_SLOT_UPPER : CAR_SLOT_SIDE;
+        const target = nextCars[carIndex];
+        if (!target) return;
+        if (slot === CAR_SLOT_UPPER && !target.weaponId) {
+            target.weaponId = weaponId;
+        } else if (slot === CAR_SLOT_SIDE && !target.sideWeaponId) {
+            target.sideWeaponId = weaponId;
+        } else if (!target.weaponId) {
+            target.weaponId = weaponId;
+        } else if (!target.sideWeaponId) {
+            target.sideWeaponId = weaponId;
+        } else {
+            state.reserveWeapons.push(weaponId);
+        }
+        // セフィラは兵装と同じ車両へ。埋まっていれば予備へ。
+        if (old && old.sephirahId && old.sephirahId !== 'tiphareth') {
+            if (!target.sephirahId) target.sephirahId = old.sephirahId;
+            else state.reserveSephiroth.push(old.sephirahId);
+        }
+    });
+
+    // 想定より残った兵装・セフィラも失わない。
+    oldCars.slice(1 + CAR_COUNT * 2).forEach(old => {
+        if (old && old.weaponId) state.reserveWeapons.push(old.weaponId);
+        if (old && old.sephirahId && old.sephirahId !== 'tiphareth') state.reserveSephiroth.push(old.sephirahId);
+    });
+
+    state.reserveWeapons = [...new Set(state.reserveWeapons)].filter(Boolean);
+    state.reserveSephiroth = [...new Set(state.reserveSephiroth)].filter(Boolean);
+    state.cars = nextCars;
 }
 
 function gameLoop() {
@@ -5166,9 +5314,8 @@ const mobileDockPlacements = [];
 
 function initializeMobileCommandDock() {
     const locations = [
-        ['mobile-header-controls', 'mobile-header-slot'],
         ['mobile-battle-controls', 'mobile-battle-slot'],
-        ['mobile-bridge-nav', 'mobile-bridge-slot']
+        ['mobile-header-controls', 'mobile-header-slot']
     ];
     locations.forEach(([elementId, slotId]) => {
         const element = document.getElementById(elementId);
@@ -5195,9 +5342,82 @@ function initializeMobileCommandDock() {
     mobileCommandDockMedia.addEventListener('change', moveForViewport);
 }
 
+// モバイルでは艦橋タブを常設レールへ複製する（元のDOMはデスクトップ用に残す）。
+const MOBILE_TAB_RAIL = [
+    ['train', '車両編成'],
+    ['staff', '駅員'],
+    ['rd', '研究開発'],
+    ['skills', '戦術'],
+    ['escort', '鹵獲'],
+    ['gacha', 'ガチャ'],
+    ['weapons', '武装'],
+    ['world', '世界'],
+    ['prestige', 'プレステージ'],
+    ['dex', '図鑑']
+];
+
+function buildMobileTabRail() {
+    const slot = document.getElementById('mobile-tab-rail-slot');
+    if (!slot || slot.dataset.built === '1') return;
+    slot.dataset.built = '1';
+    const rail = document.createElement('nav');
+    rail.className = 'mobile-tab-rail';
+    rail.setAttribute('aria-label', '艦橋タブ');
+    MOBILE_TAB_RAIL.forEach(([tab, label]) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'mobile-tab-rail-button';
+        button.dataset.railTab = tab;
+        button.setAttribute('aria-current', 'false');
+        button.textContent = label;
+        button.addEventListener('click', () => switchTab(tab));
+        rail.appendChild(button);
+    });
+    slot.appendChild(rail);
+}
+
+function syncMobileTabRail(activeTab) {
+    document.querySelectorAll('.mobile-tab-rail-button').forEach(button => {
+        const isActive = button.dataset.railTab === activeTab;
+        button.setAttribute('aria-current', isActive ? 'page' : 'false');
+    });
+    const active = document.querySelector(`.mobile-tab-rail-button[data-rail-tab="${activeTab}"]`);
+    if (active && typeof active.scrollIntoView === 'function') {
+        active.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+}
+
 function closeMobileCommandPanels() {
     document.querySelectorAll('.mobile-command-panel').forEach(panel => panel.classList.remove('is-open'));
     document.querySelectorAll('.mobile-dock-button[aria-expanded="true"]').forEach(button => button.setAttribute('aria-expanded', 'false'));
+}
+
+// ドック中央の主操作。戦闘中は進行状況、待機中は出撃として振る舞う。
+function handleMobileLaunch() {
+    closeMobileCommandPanels();
+    if (state.inWave) {
+        showToast(`STAGE ${state.stage} 進軍中 — ${Math.floor(getTotalMeters(getCurrentFaction(), state.stage, marchMeters)).toLocaleString()} m`);
+        return;
+    }
+    startWave();
+}
+
+function syncMobileDockUI() {
+    const labelEl = document.getElementById('mobile-launch-label');
+    const subEl = document.getElementById('mobile-launch-sub');
+    const launchBtn = document.getElementById('btn-mobile-launch');
+    if (!labelEl || !subEl || !launchBtn) return;
+    if (state.inWave) {
+        labelEl.textContent = '進軍中';
+        subEl.textContent = `${Math.floor(marchMeters).toLocaleString()} m`;
+        launchBtn.classList.add('is-marching');
+        launchBtn.setAttribute('aria-label', `STAGE ${state.stage} 進軍中。${Math.floor(marchMeters)}メートル`);
+    } else {
+        labelEl.textContent = '出撃';
+        subEl.textContent = `ST.${state.stage}`;
+        launchBtn.classList.remove('is-marching');
+        launchBtn.setAttribute('aria-label', `STAGE ${state.stage} へ出撃`);
+    }
 }
 
 function toggleMobileCommandPanel(panelId) {
@@ -5225,6 +5445,7 @@ window.addEventListener('DOMContentLoaded', () => {
     syncWeatherUI();
     showEnemyPreviewTemporarily();
     updateHeaderUI();
+    buildMobileTabRail();
     switchTab(state.activeTab || 'train');
     initializeGacha();
     initializeMobileCommandDock();

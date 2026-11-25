@@ -201,7 +201,7 @@
                 </div>
 
                 <div class="absolute bottom-2 right-3 text-[9px] sm:text-[10px] tech-font text-amber-500/70 pointer-events-none z-10">
-                    <span>[UNIT: AIN-SOPH-AUR // 10-CAR]</span>
+                    <span>[UNIT: AIN-SOPH-AUR // 4-CAR]</span>
                 </div>
 
                 <!-- 戦闘画面内：装甲列車耐久値 -->
@@ -284,9 +284,9 @@
             <div id="tab-content-train" class="p-3 sm:p-4 flex flex-col gap-3">
                 <div class="flex flex-wrap justify-between items-center gap-2">
                     <p id="train-intro-desktop" class="text-xs text-slate-400">
-                        ※各車両をクリックして「兵装」と「セフィラ（駅員）」を編成。駅員の得意兵装と一致すると<span class="text-amber-400 font-bold">【セフィロト・シナジー】</span>が発動し、さらに駅員固有の<span class="text-purple-300 font-bold">自動スキル</span>が稼働します！
+                        ※各車両の「上部」「側面」スロットをクリックして兵装を搭載し、「セフィラ（駅員）」を編成。駅員の得意兵装と一致すると<span class="text-amber-400 font-bold">【セフィロト・シナジー】</span>が発動し、さらに駅員固有の<span class="text-purple-300 font-bold">自動スキル</span>が稼働します！
                     </p>
-                    <p id="train-intro-mobile" class="hidden text-[10px] text-slate-400">車両を選んで兵装と駅員を編成。得意兵装が一致するとシナジーが発動します。</p>
+                    <p id="train-intro-mobile" class="hidden text-[10px] text-slate-400">各車両の上部・側面スロットを選んで兵装を搭載。得意兵装が一致するとシナジーが発動します。</p>
                     <div id="train-action-row" class="flex flex-wrap items-center gap-2">
                         <div class="bg-slate-950 border border-yellow-600/70 px-2.5 py-1.5 rounded text-xs tech-font shadow-inner flex items-center gap-1">
                             <span class="text-slate-400">💰 FUNDS:</span>
@@ -294,306 +294,14 @@
                             <span class="text-yellow-500 font-bold">G</span>
                         </div>
                         <button onclick="autoEquipAllWeapons()" class="bg-amber-700 hover:bg-amber-600 text-white text-xs px-3 py-1.5 rounded border border-amber-400 transition font-bold">
-                            ⚡ 2〜10両目にシナジー優先一括武装
+                            ⚡ 2〜4両目の上部・側面に一括武装
                         </button>
                         <button onclick="repairTrain()" class="bg-emerald-800 hover:bg-emerald-700 text-emerald-100 text-xs px-3 py-1.5 rounded border border-emerald-500 transition">
                             🔧 装甲修復 (100 G)
                         </button>
                     </div>
                 </div>
-                <div id="train-slots-container" class="flex overflow-x-auto gap-3 pb-3 pt-1"><div class="train-car-card flex-shrink-0 w-44 sm:w-48 bg-slate-800 border-2 synergy-active rounded-lg p-3 cursor-pointer flex flex-col justify-between gap-2">
-            <div>
-                <div class="flex justify-between items-center border-b border-slate-700 pb-1">
-                    <span class="text-xs font-bold text-amber-400">👑 第1両目</span>
-                    <span class="text-[10px] font-black bg-amber-500 text-slate-950 px-1.5 py-0.2 rounded">SYN</span>
-                </div>
-                <div class="mt-2">
-                    <div class="text-[10px] text-slate-400">搭載兵装</div>
-                    <div class="text-xs font-bold text-white truncate">
-                        レールガン・ティファレト (Lv.1)
-                    </div>
-                    <div class="text-[10px] tech-font text-amber-300 mt-0.5">威力: 138</div>
-                </div>
-            </div>
-            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/80 flex items-center gap-2">
-                
-    <div class="w-9 h-11 rounded-lg overflow-hidden border border-amber-500/60 shadow-inner flex-shrink-0 bg-slate-950 relative">
-        <svg viewBox="0 0 100 115" class="w-full h-full block">
-            <defs>
-                <linearGradient id="bg_sep_tiphareth_fawx" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="#1e293b"></stop>
-                    <stop offset="100%" stop-color="#3f3f26"></stop>
-                </linearGradient>
-                <linearGradient id="uni_sep_tiphareth_fawx" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stop-color="#1e293b"></stop>
-                    <stop offset="100%" stop-color="#0f172a"></stop>
-                </linearGradient>
-            </defs>
-            <rect width="100" height="115" fill="url(#bg_sep_tiphareth_fawx)"></rect>
-            <line x1="0" y1="25" x2="45" y2="48" stroke="rgba(255,255,255,0.08)" stroke-width="2"></line>
-            <line x1="100" y1="20" x2="60" y2="48" stroke="rgba(255,255,255,0.08)" stroke-width="2"></line>
-            <circle cx="78" cy="14" r="5" fill="#fef08a" opacity="0.65"></circle>
-            <rect x="0" y="95" width="100" height="20" fill="rgba(15,23,42,0.55)"></rect>
-            <path d="M 31 44 C 26 62 32 76 38 78 L 68 78 C 74 74 78 60 73 44 Z" fill="#2f5219"></path>
-            <path d="M 22 115 L 28 76 C 32 72 42 70 53 70 C 64 70 74 72 78 76 L 84 115 Z" fill="url(#uni_sep_tiphareth_fawx)" stroke="#334155" stroke-width="1"></path>
-            <rect x="27" y="72" width="13" height="4" rx="1.5" fill="#fbbf24" transform="rotate(-12 27 72)"></rect>
-            <rect x="66" y="70" width="13" height="4" rx="1.5" fill="#fbbf24" transform="rotate(12 66 70)"></rect>
-            <rect x="46" y="66" width="14" height="8" rx="2" fill="#0f172a" stroke="#fbbf24" stroke-width="0.9"></rect>
-            <circle cx="44" cy="83" r="2.2" fill="#fbbf24"></circle>
-            <circle cx="60" cy="83" r="2.2" fill="#fbbf24"></circle>
-            <circle cx="43" cy="94" r="2.2" fill="#fbbf24"></circle>
-            <circle cx="61" cy="94" r="2.2" fill="#fbbf24"></circle>
-            <circle cx="42" cy="105" r="2.2" fill="#fbbf24"></circle>
-            <circle cx="62" cy="105" r="2.2" fill="#fbbf24"></circle>
-            <rect x="48" y="60" width="10" height="9" fill="#f3c69f"></rect>
-            <path d="M 36 44 C 36 58 43 66 53 66 C 63 66 70 58 70 44 C 70 32 36 32 36 44 Z" fill="#fde0c3"></path>
-            <path d="M 42 52 Q 46 49 50 52" stroke="#271a12" stroke-width="1.8" fill="none" stroke-linecap="round"></path>
-           <ellipse cx="62" cy="52" rx="4.2" ry="3.2" fill="#fff"></ellipse>
-           <circle cx="62.5" cy="52" r="2.6" fill="#e11d48"></circle>
-           <circle cx="63.3" cy="51" r="0.9" fill="#fff"></circle>
-           <path d="M 57 49 Q 62 47 67 50" stroke="#1e1b18" stroke-width="1.6" fill="none"></path>
-            <path d="M 49 62 Q 52 64 54 62 Q 56 64 59 61" stroke="#5c2b1e" stroke-width="1.5" fill="none" stroke-linecap="round"></path>
-            <path d="M 33 44 C 33 28 73 28 73 44 C 73 52 69 62 65 68 C 67 56 66 46 61 42 C 56 48 48 50 42 44 C 39 50 39 58 43 64 C 36 58 33 50 33 44 Z" fill="#568c32" stroke="#2f5219" stroke-width="0.8"></path>
-            <ellipse cx="53" cy="24" rx="25" ry="11" fill="#1e293b" stroke="#0f172a" stroke-width="1.2"></ellipse>
-            <path d="M 31 27 Q 53 33 75 27 L 73 33 Q 53 39 33 33 Z" fill="#0f172a" stroke="#fbbf24" stroke-width="0.8"></path>
-            <path d="M 34 33 Q 53 40 72 33 Q 53 36 34 33 Z" fill="#020617"></path>
-            <polygon points="53,20 57,24 53,28 49,24" fill="#fbbf24" stroke="#78350f" stroke-width="0.6"></polygon>
-            <ellipse cx="74" cy="95" rx="6" ry="5" fill="#e2e8f0" stroke="#94a3b8" stroke-width="0.8"></ellipse>
-            <circle cx="77" cy="104" r="7" fill="#b45309" stroke="#fbbf24" stroke-width="1.2"></circle>
-            <circle cx="77" cy="104" r="4.5" fill="#fef9c3"></circle>
-            
-            <path d="M 54 63 L 43 74 C 40 77 35 76 35 72 L 35 68 L 41 68 L 41 72 L 52 62 Z" fill="#5c3317" stroke="#291509" stroke-width="1"></path>
-            <ellipse cx="38" cy="68" rx="3" ry="1.2" fill="#f97316" opacity="0.85"></ellipse>
-            <path d="M 36 66 C 24 58 14 48 22 36 C 28 28 16 20 8 24" stroke="rgba(241,245,249,0.45)" stroke-width="2.5" fill="none" stroke-linecap="round"></path>
-            <ellipse cx="42" cy="80" rx="5.5" ry="4.5" fill="#e2e8f0" stroke="#94a3b8" stroke-width="0.8"></ellipse>
-        
-        </svg>
-    </div>
-                <div class="min-w-0 flex-1">
-                    <div class="text-[10px] text-slate-400">配属セフィラ</div>
-                    <div class="text-[11px] font-bold text-purple-300 truncate">
-                        ティファレト Lv.1
-                    </div>
-                    <div class="text-[9px] text-amber-300/90 truncate">⚡王の裁定ビーム</div>
-                </div>
-            </div>
-        </div><div class="train-car-card flex-shrink-0 w-44 sm:w-48 bg-slate-800 border-2 border-slate-700 rounded-lg p-3 cursor-pointer flex flex-col justify-between gap-2">
-            <div>
-                <div class="flex justify-between items-center border-b border-slate-700 pb-1">
-                    <span class="text-xs font-bold text-amber-400">🚃 第2両目</span>
-                    
-                </div>
-                <div class="mt-2">
-                    <div class="text-[10px] text-slate-400">搭載兵装</div>
-                    <div class="text-xs font-bold text-white truncate">
-                        重機関銃バルカン (Lv.1)
-                    </div>
-                    <div class="text-[10px] tech-font text-amber-300 mt-0.5">威力: 18</div>
-                </div>
-            </div>
-            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/80 flex items-center gap-2">
-                <div class="w-9 h-11 rounded bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500 text-xs">＋</div>
-                <div class="min-w-0 flex-1">
-                    <div class="text-[10px] text-slate-400">配属セフィラ</div>
-                    <div class="text-[11px] font-bold text-slate-500 truncate">
-                        未配属
-                    </div>
-                    
-                </div>
-            </div>
-        </div><div class="train-car-card flex-shrink-0 w-44 sm:w-48 bg-slate-800 border-2 border-slate-700 rounded-lg p-3 cursor-pointer flex flex-col justify-between gap-2">
-            <div>
-                <div class="flex justify-between items-center border-b border-slate-700 pb-1">
-                    <span class="text-xs font-bold text-amber-400">🚃 第3両目</span>
-                    
-                </div>
-                <div class="mt-2">
-                    <div class="text-[10px] text-slate-400">搭載兵装</div>
-                    <div class="text-xs font-bold text-slate-500 truncate">
-                        未搭載（クリックで選択）
-                    </div>
-                    
-                </div>
-            </div>
-            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/80 flex items-center gap-2">
-                <div class="w-9 h-11 rounded bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500 text-xs">＋</div>
-                <div class="min-w-0 flex-1">
-                    <div class="text-[10px] text-slate-400">配属セフィラ</div>
-                    <div class="text-[11px] font-bold text-slate-500 truncate">
-                        未配属
-                    </div>
-                    
-                </div>
-            </div>
-        </div><div class="train-car-card flex-shrink-0 w-44 sm:w-48 bg-slate-800 border-2 border-slate-700 rounded-lg p-3 cursor-pointer flex flex-col justify-between gap-2">
-            <div>
-                <div class="flex justify-between items-center border-b border-slate-700 pb-1">
-                    <span class="text-xs font-bold text-amber-400">🚃 第4両目</span>
-                    
-                </div>
-                <div class="mt-2">
-                    <div class="text-[10px] text-slate-400">搭載兵装</div>
-                    <div class="text-xs font-bold text-slate-500 truncate">
-                        未搭載（クリックで選択）
-                    </div>
-                    
-                </div>
-            </div>
-            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/80 flex items-center gap-2">
-                <div class="w-9 h-11 rounded bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500 text-xs">＋</div>
-                <div class="min-w-0 flex-1">
-                    <div class="text-[10px] text-slate-400">配属セフィラ</div>
-                    <div class="text-[11px] font-bold text-slate-500 truncate">
-                        未配属
-                    </div>
-                    
-                </div>
-            </div>
-        </div><div class="train-car-card flex-shrink-0 w-44 sm:w-48 bg-slate-800 border-2 border-slate-700 rounded-lg p-3 cursor-pointer flex flex-col justify-between gap-2">
-            <div>
-                <div class="flex justify-between items-center border-b border-slate-700 pb-1">
-                    <span class="text-xs font-bold text-amber-400">🚃 第5両目</span>
-                    
-                </div>
-                <div class="mt-2">
-                    <div class="text-[10px] text-slate-400">搭載兵装</div>
-                    <div class="text-xs font-bold text-slate-500 truncate">
-                        未搭載（クリックで選択）
-                    </div>
-                    
-                </div>
-            </div>
-            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/80 flex items-center gap-2">
-                <div class="w-9 h-11 rounded bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500 text-xs">＋</div>
-                <div class="min-w-0 flex-1">
-                    <div class="text-[10px] text-slate-400">配属セフィラ</div>
-                    <div class="text-[11px] font-bold text-slate-500 truncate">
-                        未配属
-                    </div>
-                    
-                </div>
-            </div>
-        </div><div class="train-car-card flex-shrink-0 w-44 sm:w-48 bg-slate-800 border-2 border-slate-700 rounded-lg p-3 cursor-pointer flex flex-col justify-between gap-2">
-            <div>
-                <div class="flex justify-between items-center border-b border-slate-700 pb-1">
-                    <span class="text-xs font-bold text-amber-400">🚃 第6両目</span>
-                    
-                </div>
-                <div class="mt-2">
-                    <div class="text-[10px] text-slate-400">搭載兵装</div>
-                    <div class="text-xs font-bold text-slate-500 truncate">
-                        未搭載（クリックで選択）
-                    </div>
-                    
-                </div>
-            </div>
-            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/80 flex items-center gap-2">
-                <div class="w-9 h-11 rounded bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500 text-xs">＋</div>
-                <div class="min-w-0 flex-1">
-                    <div class="text-[10px] text-slate-400">配属セフィラ</div>
-                    <div class="text-[11px] font-bold text-slate-500 truncate">
-                        未配属
-                    </div>
-                    
-                </div>
-            </div>
-        </div><div class="train-car-card flex-shrink-0 w-44 sm:w-48 bg-slate-800 border-2 border-slate-700 rounded-lg p-3 cursor-pointer flex flex-col justify-between gap-2">
-            <div>
-                <div class="flex justify-between items-center border-b border-slate-700 pb-1">
-                    <span class="text-xs font-bold text-amber-400">🚃 第7両目</span>
-                    
-                </div>
-                <div class="mt-2">
-                    <div class="text-[10px] text-slate-400">搭載兵装</div>
-                    <div class="text-xs font-bold text-slate-500 truncate">
-                        未搭載（クリックで選択）
-                    </div>
-                    
-                </div>
-            </div>
-            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/80 flex items-center gap-2">
-                <div class="w-9 h-11 rounded bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500 text-xs">＋</div>
-                <div class="min-w-0 flex-1">
-                    <div class="text-[10px] text-slate-400">配属セフィラ</div>
-                    <div class="text-[11px] font-bold text-slate-500 truncate">
-                        未配属
-                    </div>
-                    
-                </div>
-            </div>
-        </div><div class="train-car-card flex-shrink-0 w-44 sm:w-48 bg-slate-800 border-2 border-slate-700 rounded-lg p-3 cursor-pointer flex flex-col justify-between gap-2">
-            <div>
-                <div class="flex justify-between items-center border-b border-slate-700 pb-1">
-                    <span class="text-xs font-bold text-amber-400">🚃 第8両目</span>
-                    
-                </div>
-                <div class="mt-2">
-                    <div class="text-[10px] text-slate-400">搭載兵装</div>
-                    <div class="text-xs font-bold text-slate-500 truncate">
-                        未搭載（クリックで選択）
-                    </div>
-                    
-                </div>
-            </div>
-            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/80 flex items-center gap-2">
-                <div class="w-9 h-11 rounded bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500 text-xs">＋</div>
-                <div class="min-w-0 flex-1">
-                    <div class="text-[10px] text-slate-400">配属セフィラ</div>
-                    <div class="text-[11px] font-bold text-slate-500 truncate">
-                        未配属
-                    </div>
-                    
-                </div>
-            </div>
-        </div><div class="train-car-card flex-shrink-0 w-44 sm:w-48 bg-slate-800 border-2 border-slate-700 rounded-lg p-3 cursor-pointer flex flex-col justify-between gap-2">
-            <div>
-                <div class="flex justify-between items-center border-b border-slate-700 pb-1">
-                    <span class="text-xs font-bold text-amber-400">🚃 第9両目</span>
-                    
-                </div>
-                <div class="mt-2">
-                    <div class="text-[10px] text-slate-400">搭載兵装</div>
-                    <div class="text-xs font-bold text-slate-500 truncate">
-                        未搭載（クリックで選択）
-                    </div>
-                    
-                </div>
-            </div>
-            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/80 flex items-center gap-2">
-                <div class="w-9 h-11 rounded bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500 text-xs">＋</div>
-                <div class="min-w-0 flex-1">
-                    <div class="text-[10px] text-slate-400">配属セフィラ</div>
-                    <div class="text-[11px] font-bold text-slate-500 truncate">
-                        未配属
-                    </div>
-                    
-                </div>
-            </div>
-        </div><div class="train-car-card flex-shrink-0 w-44 sm:w-48 bg-slate-800 border-2 border-slate-700 rounded-lg p-3 cursor-pointer flex flex-col justify-between gap-2">
-            <div>
-                <div class="flex justify-between items-center border-b border-slate-700 pb-1">
-                    <span class="text-xs font-bold text-amber-400">🚃 第10両目</span>
-                    
-                </div>
-                <div class="mt-2">
-                    <div class="text-[10px] text-slate-400">搭載兵装</div>
-                    <div class="text-xs font-bold text-slate-500 truncate">
-                        未搭載（クリックで選択）
-                    </div>
-                    
-                </div>
-            </div>
-            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/80 flex items-center gap-2">
-                <div class="w-9 h-11 rounded bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500 text-xs">＋</div>
-                <div class="min-w-0 flex-1">
-                    <div class="text-[10px] text-slate-400">配属セフィラ</div>
-                    <div class="text-[11px] font-bold text-slate-500 truncate">
-                        未配属
-                    </div>
-                    
-                </div>
-            </div>
-        </div></div>
+                <div id="train-slots-container" class="flex overflow-x-auto gap-3 pb-3 pt-1"></div>
             </div>
 
             <!-- タブ: 駅員管理 -->
@@ -930,18 +638,24 @@
                 <button onclick="closeConfigModal()" class="text-slate-400 hover:text-white text-xl font-bold px-2">×</button>
             </div>
             
-            <div class="config-mobile-switch hidden p-2 border-b border-slate-700 bg-slate-950 grid grid-cols-2 gap-1">
-                <button type="button" id="config-tab-weapon" class="config-mobile-tab px-3 py-2 text-xs font-black rounded border border-amber-500 bg-amber-900/50 text-amber-200" onclick="setConfigSection('weapon')">⚔️ 兵装</button>
-                <button type="button" id="config-tab-sephirah" class="config-mobile-tab px-3 py-2 text-xs font-black rounded border border-slate-700 bg-slate-800 text-slate-300" onclick="setConfigSection('sephirah')">👤 セフィラ</button>
+            <div class="config-mobile-switch hidden p-2 border-b border-slate-700 bg-slate-950 grid grid-cols-3 gap-1">
+                <button type="button" id="config-tab-upper" class="config-mobile-tab px-2 py-2 text-[11px] font-black rounded border border-amber-500 bg-amber-900/50 text-amber-200" onclick="setConfigSection('upper')">上部兵装</button>
+                <button type="button" id="config-tab-side" class="config-mobile-tab px-2 py-2 text-[11px] font-black rounded border border-slate-700 bg-slate-800 text-slate-300" onclick="setConfigSection('side')">側面兵装</button>
+                <button type="button" id="config-tab-sephirah" class="config-mobile-tab px-2 py-2 text-[11px] font-black rounded border border-slate-700 bg-slate-800 text-slate-300" onclick="setConfigSection('sephirah')">セフィラ</button>
             </div>
             <div class="config-modal-scroll p-4 overflow-y-auto space-y-6 flex-1">
                 <div id="modal-synergy-status" class="p-3 rounded bg-slate-800 border border-slate-700 text-sm"></div>
-                <div id="config-section-weapon" class="config-mobile-section is-active">
-                    <h4 class="text-sm font-bold text-slate-300 mb-2 border-l-4 border-amber-500 pl-2">1. 搭載兵装の選択</h4>
+                <div id="config-section-upper" class="config-mobile-section is-active">
+                    <h4 class="text-sm font-bold text-slate-300 mb-2 border-l-4 border-amber-500 pl-2">1. 上部スロットの兵装</h4>
                     <div id="modal-weapon-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
                 </div>
+                <div id="config-section-side" class="config-mobile-section">
+                    <h4 class="text-sm font-bold text-slate-300 mb-2 border-l-4 border-sky-500 pl-2">2. 側面スロットの兵装</h4>
+                    <p class="text-xs text-slate-400 mb-2">※側面は斜射のため射程 −15% / 空中への倍率 −20%。対地・対艦の補助に適します。</p>
+                    <div id="modal-side-weapon-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+                </div>
                 <div id="config-section-sephirah" class="config-mobile-section">
-                    <h4 class="text-sm font-bold text-slate-300 mb-2 border-l-4 border-purple-500 pl-2">2. 配属セフィラ（駅員）の選択</h4>
+                    <h4 class="text-sm font-bold text-slate-300 mb-2 border-l-4 border-purple-500 pl-2">3. 配属セフィラ（駅員）の選択</h4>
                     <p class="text-xs text-slate-400 mb-2">※同じセフィラは列車内に1人しか配置できません（他車両から異動可能）</p>
                     <div id="modal-sephirah-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
                 </div>
@@ -1104,28 +818,32 @@
 <script src="js/gacha.js"></script>
 <script src="js/game.js"></script>
 
-    <!-- Edge-to-edge mobile command dock: HUD and bridge navigation live here. -->
-    <section id="mobile-operations-panel" class="mobile-command-panel" aria-label="戦況と運行操作">
-        <div class="flex items-center justify-between mb-2">
-            <div class="text-[10px] tech-font tracking-[.18em] text-amber-400 font-bold">OPERATIONS // 運行・戦闘管制</div>
-            <button type="button" onclick="closeMobileCommandPanels()" class="text-slate-400 px-2 py-1" aria-label="閉じる">×</button>
+    <!-- モバイル：下部管制ドック。出撃を親指の届く位置に常設する。 -->
+    <section id="mobile-operations-panel" class="mobile-command-panel" aria-label="運行・戦闘管制">
+        <div class="mobile-sheet-head">
+            <div class="mobile-sheet-title">運行・戦闘管制</div>
+            <button type="button" onclick="closeMobileCommandPanels()" class="mobile-sheet-close" aria-label="閉じる">×</button>
         </div>
-        <div id="mobile-header-slot"></div>
         <div id="mobile-battle-slot"></div>
+        <div id="mobile-header-slot"></div>
     </section>
-    <section id="mobile-bridge-panel" class="mobile-command-panel" aria-label="艦橋統制タブ">
-        <div id="mobile-bridge-slot"></div>
-    </section>
+    <div id="mobile-tab-rail-slot"></div>
     <nav class="mobile-command-dock" aria-label="艦橋コマンド">
-        <button type="button" class="mobile-dock-button mobile-dock-operations" onclick="toggleMobileCommandPanel('mobile-operations-panel')" aria-controls="mobile-operations-panel" aria-expanded="false">
-            <span class="mobile-dock-operations-main"><span class="mobile-dock-icon">◉</span><span>戦況・操作</span></span>
-            <span class="mobile-dock-status"><span id="mobile-dock-stage" class="mobile-dock-status-stage">ST.1</span><span id="mobile-dock-route" class="mobile-dock-status-route">0 m · 東京環状線・起点</span></span>
-        </button>
-        <button type="button" class="mobile-dock-button" data-mobile-dock-destination="bridge" aria-current="page" onclick="toggleMobileCommandPanel('mobile-bridge-panel')" aria-controls="mobile-bridge-panel" aria-expanded="false">
-            <span class="mobile-dock-icon">⚙</span><span>艦橋統制</span><span class="text-[8px] tech-font text-slate-400">10系統</span>
-        </button>
-        <button type="button" class="mobile-dock-button" onclick="manualSaveGame()" title="現在の進行状況をセーブ" aria-label="セーブ">
-            <span class="mobile-dock-icon">💾</span><span class="mobile-save-label">セーブ</span>
-        </button>
+        <div class="mobile-dock-route">
+            <span id="mobile-dock-stage" class="mobile-dock-status-stage">ST.1</span>
+            <span id="mobile-dock-route" class="mobile-dock-status-route">0 m · 東京環状線・起点</span>
+        </div>
+        <div class="mobile-dock-row">
+            <button type="button" class="mobile-dock-button" onclick="toggleMobileCommandPanel('mobile-operations-panel')" aria-controls="mobile-operations-panel" aria-expanded="false">
+                <span class="mobile-dock-icon" aria-hidden="true">◉</span><span>運転</span>
+            </button>
+            <button type="button" id="btn-mobile-launch" class="mobile-dock-launch" onclick="handleMobileLaunch()">
+                <span id="mobile-launch-label">出撃</span>
+                <span id="mobile-launch-sub" class="mobile-dock-launch-sub">ST.1</span>
+            </button>
+            <button type="button" class="mobile-dock-button" onclick="manualSaveGame()" aria-label="セーブ">
+                <span class="mobile-dock-icon" aria-hidden="true">▣</span><span>セーブ</span>
+            </button>
+        </div>
     </nav>
 </body></html>
