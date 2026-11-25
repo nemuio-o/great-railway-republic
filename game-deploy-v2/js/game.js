@@ -1118,6 +1118,9 @@ function handleStageVictory() {
     if (state.stage >= currentMax) {
         state.maxReachedStages[faction.id] = faction.isEndless ? state.stage + 1 : Math.min(faction.stageCount, state.stage + 1);
     }
+    // 到達した戦線に応じてセフィラ・機能タブを解放する（条件は progression.js に集約）。
+    autoUnlockSephiroth(true);
+    syncProgressionUI();
 
     const isFactionFinalClear = !faction.isEndless && state.stage >= faction.stageCount;
     if (isFactionFinalClear) {
@@ -3162,6 +3165,7 @@ function updateHeaderUI() {
         const tickets = state.gachaTickets || {};
         ticketCountEl.textContent = (toNonNegativeInt(tickets.normal) + toNonNegativeInt(tickets.rare)).toLocaleString();
     }
+    if (state.activeTab === 'train') renderLoadoutSummary();
 }
 
 function changeStage(delta) {
@@ -3179,11 +3183,48 @@ function changeStage(delta) {
     }
 }
 
+// 進行度によるロック状態をタブUIへ反映する。ロック中は鍵アイコンと条件を出す。
+function syncProgressionUI() {
+    if (typeof isTabUnlocked !== 'function') return;
+    document.querySelectorAll('[data-progression-tab]').forEach(btn => {
+        const tabId = btn.dataset.progressionTab;
+        const unlocked = isTabUnlocked(tabId);
+        btn.classList.toggle('is-locked', !unlocked);
+        btn.setAttribute('aria-disabled', unlocked ? 'false' : 'true');
+        if (!unlocked) {
+            btn.setAttribute('title', `未解放: ${getTabLockText(tabId)}`);
+            btn.setAttribute('aria-label', `${btn.textContent.trim()}（未解放。${getTabLockText(tabId)}で解放）`);
+        } else {
+            btn.removeAttribute('title');
+            btn.removeAttribute('aria-label');
+        }
+        let hint = btn.querySelector('.tab-lock-hint');
+        if (!unlocked) {
+            if (!hint) {
+                hint = document.createElement('span');
+                hint.className = 'tab-lock-hint';
+                hint.setAttribute('aria-hidden', 'true');
+                btn.appendChild(hint);
+            }
+            // タブ列は高さを揃えたいので、条件文は title に置き、ここは鍵だけ。
+            hint.textContent = '🔒';
+        } else if (hint) {
+            hint.remove();
+        }
+    });
+}
+
 function switchTab(tabId) {
     if (tabId === 'faction') tabId = 'world';
     if (tabId === 'bossdex' || tabId === 'relicdex') {
         state.dexSubTab = tabId === 'relicdex' ? 'relic' : 'boss';
         tabId = 'dex';
+    }
+    // 進行度で未解放の機能は開かせない（理由をトーストで示す）。
+    if (typeof isTabUnlocked === 'function' && !isTabUnlocked(tabId)) {
+        handleLockedTabAttempt(tabId);
+        syncProgressionUI();
+        return;
     }
     state.activeTab = tabId;
     const tabs = ['train', 'staff', 'rd', 'skills', 'escort', 'gacha', 'weapons', 'world', 'prestige', 'dex'];
@@ -3225,6 +3266,108 @@ function renderCurrentTab() {
 }
 
 // --- タブ1: 車両編成 ---
+// 編成の総合力を1枚にまとめる。総DPSは「1秒あたりの理論値」で、
+// 装填短縮・シナジー・転生補正を含めた実戦値。
+function getLoadoutSummary() {
+    let totalDps = 0;
+    let slotCount = 0;
+    let synergyCount = 0;
+    const perCar = [];
+    state.cars.forEach((car, idx) => {
+        const slots = [];
+        [CAR_SLOT_UPPER, CAR_SLOT_SIDE].forEach(slot => {
+            const stats = getCarEffectiveStats(car, slot);
+            if (!stats) return;
+            slotCount++;
+            if (stats.isSynergy) synergyCount++;
+            const dps = stats.damage * 60 / Math.max(1, stats.cooldown);
+            totalDps += dps;
+            slots.push({ slot, stats, dps });
+        });
+        perCar.push({ idx, car, slots });
+    });
+    return { totalDps, slotCount, synergyCount, perCar, maxHp: state.maxHp, hp: state.hp };
+}
+
+function renderLoadoutSummary() {
+    const host = document.getElementById('train-loadout-summary');
+    if (!host) return;
+    const s = getLoadoutSummary();
+    const filled = s.slotCount;
+    const capacity = CAR_TOTAL_SLOTS;
+    const hpPct = Math.max(0, Math.min(100, Math.round((state.hp / state.maxHp) * 100)));
+    host.innerHTML = `
+        <div class="loadout-head">
+            <span class="loadout-title">編成ステータス</span>
+            <span class="loadout-cap ${filled >= capacity ? 'is-full' : ''}">スロット ${filled}/${capacity}</span>
+        </div>
+        <div class="loadout-grid">
+            <div class="loadout-stat">
+                <span class="loadout-label">総火力 / 秒</span>
+                <span class="loadout-value">${Math.round(s.totalDps).toLocaleString()}</span>
+            </div>
+            <div class="loadout-stat">
+                <span class="loadout-label">装甲耐久</span>
+                <span class="loadout-value">${Math.ceil(state.hp).toLocaleString()}<em>/${state.maxHp.toLocaleString()}</em></span>
+            </div>
+            <div class="loadout-stat">
+                <span class="loadout-label">シナジー</span>
+                <span class="loadout-value ${s.synergyCount > 0 ? 'is-amber' : ''}">${s.synergyCount}<em>/${filled}</em></span>
+            </div>
+            <div class="loadout-stat">
+                <span class="loadout-label">火力補正</span>
+                <span class="loadout-value is-amber">×${getCarDpsCompensation().toFixed(2)}</span>
+            </div>
+        </div>
+        <div class="loadout-hp"><i style="width:${hpPct}%"></i></div>
+        <div class="loadout-actions">
+            <button type="button" onclick="autoEquipAllWeapons()">補助席をまとめて武装</button>
+            <button type="button" class="secondary" onclick="repairTrain()">装甲修復</button>
+        </div>
+    `;
+}
+
+// 編成画面から直接強化する。画面遷移せず、その場で結果が分かるようにする。
+function upgradeWeaponFromTrain(weaponId) {
+    if (!state.unlockedWeapons.includes(weaponId)) return;
+    if (state.weaponLevels[weaponId] >= WEAPON_MAX_LEVEL) {
+        showToast('この兵装は上限まで強化済みです');
+        return;
+    }
+    const cost = getWeaponUpgradeCost(weaponId);
+    if (!Number.isFinite(cost) || state.gold < cost) {
+        showToast(`資金が不足しています（${Number.isFinite(cost) ? cost.toLocaleString() : '—'} G必要）`);
+        return;
+    }
+    state.gold -= cost;
+    state.weaponLevels[weaponId] = (state.weaponLevels[weaponId] || 1) + 1;
+    SoundEngine.playUI('upgrade');
+    updateHeaderUI();
+    renderTrainSlots();
+    showToast(`🔧 ${WEAPONS[weaponId].name} を Lv.${state.weaponLevels[weaponId]} に強化しました`);
+    saveGame(true);
+}
+
+function upgradeSephirahFromTrain(sephId) {
+    if (!state.hiredSephiroth.includes(sephId)) return;
+    if (state.sephirahLevels[sephId] >= SEPHIRAH_MAX_LEVEL) {
+        showToast('このセフィラは上限まで強化済みです');
+        return;
+    }
+    const cost = getSephirahUpgradeCost(sephId);
+    if (!Number.isFinite(cost) || state.gold < cost) {
+        showToast(`資金が不足しています（${Number.isFinite(cost) ? cost.toLocaleString() : '—'} G必要）`);
+        return;
+    }
+    state.gold -= cost;
+    state.sephirahLevels[sephId] = (state.sephirahLevels[sephId] || 1) + 1;
+    SoundEngine.playUI('upgrade');
+    updateHeaderUI();
+    renderTrainSlots();
+    showToast(`👤 ${SEPHIROTH.find(s => s.id === sephId).name.split(' ')[0]} を Lv.${state.sephirahLevels[sephId]} に強化しました`);
+    saveGame(true);
+}
+
 function renderTrainSlots() {
     const container = document.getElementById('train-slots-container');
     if (!container) return;
@@ -3240,17 +3383,29 @@ function renderTrainSlots() {
             const weaponId = getCarSlotWeaponId(car, slot);
             const w = weaponId ? WEAPONS[weaponId] : null;
             if (car.locked && slot === CAR_SLOT_SIDE) {
-                return `<div class="train-slot-row is-disabled" role="button" tabindex="-1" aria-disabled="true">
+                return `<div class="train-slot-row is-disabled" role="button" tabindex="-1" aria-disabled="true"
+                    aria-label="${car.name} は側面スロットを持ちません">
                     <span class="train-slot-tag">${label}</span>
                     <span class="train-slot-main">側面スロットなし（機関車）</span>
                 </div>`;
             }
+            const wLv = weaponId ? (state.weaponLevels[weaponId] || 1) : 1;
+            const wMax = wLv >= WEAPON_MAX_LEVEL;
+            const wCost = weaponId && !wMax ? getWeaponUpgradeCost(weaponId) : Infinity;
+            const canAfford = Number.isFinite(wCost) && state.gold >= wCost;
+            const upgradeBtn = w
+                ? `<button type="button" class="train-slot-upgrade${canAfford ? '' : ' is-short'}"
+                        data-upgrade-weapon="${weaponId}"
+                        aria-label="${w.name}をLv.${wLv + 1}へ強化。${Number.isFinite(wCost) ? wCost.toLocaleString() + 'ゴールド必要' : '上限'}"
+                        ${wMax ? 'disabled' : ''}>${wMax ? 'MAX' : `+${wCost.toLocaleString()}G`}</button>`
+                : '';
             return `<div class="train-slot-row${w ? '' : ' is-empty'}" role="button" tabindex="0"
                     data-car="${idx}" data-slot="${slot}"
-                    aria-label="${car.name} ${label}スロット ${w ? w.name : '未搭載。選択する'}">
+                    aria-label="${car.name} ${label}スロット ${w ? `${w.name} レベル${wLv}` : '未搭載。選択する'}">
                 <span class="train-slot-tag">${label}</span>
-                <span class="train-slot-main">${w ? `${w.name} <span class="train-slot-lv">Lv.${state.weaponLevels[w.id] || 1}</span>` : '未搭載'}</span>
+                <span class="train-slot-main">${w ? `${w.name} <span class="train-slot-lv">Lv.${wLv}</span>` : '未搭載'}</span>
                 <span class="train-slot-power">${stats ? stats.damage.toLocaleString() : '—'}</span>
+                ${upgradeBtn}
             </div>`;
         };
 
@@ -3276,6 +3431,16 @@ function renderTrainSlots() {
                     </div>
                     ${s ? `<div class="text-[9px] text-amber-300/90 truncate">⚡${s.autoSkillName}</div>` : ''}
                 </div>
+                ${s && s.id !== 'tiphareth' ? (() => {
+                    const sLv = state.sephirahLevels[s.id] || 1;
+                    const sMax = sLv >= SEPHIRAH_MAX_LEVEL;
+                    const sCost = sMax ? Infinity : getSephirahUpgradeCost(s.id);
+                    const sCan = Number.isFinite(sCost) && state.gold >= sCost;
+                    return `<button type="button" class="train-seph-upgrade${sCan ? '' : ' is-short'}"
+                        data-upgrade-sephirah="${s.id}"
+                        aria-label="${s.name}をLv.${sLv + 1}へ強化。${Number.isFinite(sCost) ? sCost.toLocaleString() + 'ゴールド必要' : '上限'}"
+                        ${sMax ? 'disabled' : ''}>${sMax ? 'MAX' : `+${sCost.toLocaleString()}G`}</button>`;
+                })() : ''}
             </div>
         `;
         container.appendChild(card);
@@ -3285,11 +3450,28 @@ function renderTrainSlots() {
         const carIdx = Number(row.dataset.car);
         const slot = row.dataset.slot;
         const open = () => openConfigModal(carIdx, slot);
-        row.addEventListener('click', open);
+        row.addEventListener('click', ev => {
+            // 強化ボタンのクリックはスロット選択に吸われないようにする。
+            if (ev.target.closest('.train-slot-upgrade')) return;
+            open();
+        });
         row.addEventListener('keydown', ev => {
             if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); open(); }
         });
     });
+    container.querySelectorAll('[data-upgrade-weapon]').forEach(btn => {
+        btn.addEventListener('click', ev => {
+            ev.stopPropagation();
+            upgradeWeaponFromTrain(btn.dataset.upgradeWeapon);
+        });
+    });
+    container.querySelectorAll('[data-upgrade-sephirah]').forEach(btn => {
+        btn.addEventListener('click', ev => {
+            ev.stopPropagation();
+            upgradeSephirahFromTrain(btn.dataset.upgradeSephirah);
+        });
+    });
+    renderLoadoutSummary();
 }
 
 function openConfigModal(carIdx, slot = CAR_SLOT_UPPER) {
@@ -3529,7 +3711,9 @@ function renderStaffTab() {
             </div>
             <div>
                 ${!hired
-                    ? `<button onclick="hireSephirah('${s.id}')" class="w-full bg-amber-600 hover:bg-amber-500 text-slate-950 font-black py-1.5 rounded text-xs tech-font transition">雇用する (${s.cost} G)</button>`
+                    ? `<div class="w-full bg-slate-900 border border-slate-700 text-slate-400 font-bold py-1.5 rounded text-[11px] tech-font text-center leading-tight">
+                        🔒 ${getSephiraUnlockText(s.id)}で解放
+                    </div>`
                     : isMax
                         ? `<button disabled class="w-full bg-slate-900 text-slate-500 font-bold py-1.5 rounded text-xs tech-font cursor-not-allowed">MAX Lv.${SEPHIRAH_MAX_LEVEL}</button>`
                         : Number.isFinite(upgCost)
@@ -4081,8 +4265,19 @@ function renderEscortTab() {
                         <div>耐久(HP): ${isMax ? stats.maxHp.toLocaleString() : deltaStatHTML(stats.maxHp.toLocaleString(), nextStats.maxHp.toLocaleString(), `+${(nextStats.maxHp - stats.maxHp).toLocaleString()}`, '#34d399')}</div>
                         <div>火力: ${isMax ? stats.damage.toLocaleString() : deltaStatHTML(stats.damage.toLocaleString(), nextStats.damage.toLocaleString(), `+${(nextStats.damage - stats.damage).toLocaleString()}`, '#fbbf24')}</div>
                     </div>
-                    <div class="text-[10px] tech-font text-cyan-300 mt-0.5">
-                        重複: ${dupCount}/10 体（${isMax ? 'Lv.MAX' : `あと${10 - dupCount}体で1凸`}）
+                    <div class="escort-break mt-1">
+                        <div class="escort-break-head">
+                            <span class="escort-break-label">凸まで</span>
+                            <span class="escort-break-count">${isMax ? '上限' : `${dupCount}/10`}</span>
+                        </div>
+                        <div class="escort-pips" role="img"
+                             aria-label="${isMax ? '限界突破は上限です' : `同型${dupCount}体。あと${10 - dupCount}体で1凸`}">
+                            ${Array.from({ length: 10 }, (_, i) =>
+                                `<span class="escort-pip${i < dupCount ? ' is-filled' : ''}"></span>`).join('')}
+                        </div>
+                        <div class="escort-break-note">${isMax
+                            ? `Lv.${ESCORT_MAX_LEVEL} に到達済み`
+                            : `あと<b>${10 - dupCount}</b>体で Lv.${stats.lv + 1} へ 1凸`}</div>
                     </div>
                 </div>
                 <div class="rounded border border-purple-500/40 bg-purple-950/25 px-2 py-1.5 flex items-center justify-between gap-2">
@@ -5368,6 +5563,7 @@ function buildMobileTabRail() {
         button.type = 'button';
         button.className = 'mobile-tab-rail-button';
         button.dataset.railTab = tab;
+        button.dataset.progressionTab = tab;
         button.setAttribute('aria-current', 'false');
         button.textContent = label;
         button.addEventListener('click', () => switchTab(tab));
@@ -5446,6 +5642,8 @@ window.addEventListener('DOMContentLoaded', () => {
     showEnemyPreviewTemporarily();
     updateHeaderUI();
     buildMobileTabRail();
+    autoUnlockSephiroth(false);
+    syncProgressionUI();
     switchTab(state.activeTab || 'train');
     initializeGacha();
     initializeMobileCommandDock();

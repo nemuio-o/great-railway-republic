@@ -630,7 +630,7 @@ function createCar(index) {
         index,
         name: `第${index + 1}両目`,
         weaponId: index === 1 ? 'mg_vulcan' : null,
-        sideWeaponId: null,
+        sideWeaponId: index === 1 ? 'aa_flak' : null,
         sephirahId: null,
         cdTimer: 0,
         sideCdTimer: 0,

@@ -245,34 +245,34 @@
                 </div>
             </div>
             <div class="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-10 gap-1">
-                <button onclick="switchTab('train')" id="tab-btn-train" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border-2 border-amber-400 bg-slate-800 text-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.25)] transition text-center truncate">
+                <button onclick="switchTab('train')" id="tab-btn-train" data-progression-tab="train" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border-2 border-amber-400 bg-slate-800 text-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.25)] transition text-center truncate">
                     🚃 車両編成
                 </button>
-                <button onclick="switchTab('staff')" id="tab-btn-staff" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-slate-300 hover:text-white hover:border-slate-500 transition text-center truncate">
+                <button onclick="switchTab('staff')" id="tab-btn-staff" data-progression-tab="staff" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-slate-300 hover:text-white hover:border-slate-500 transition text-center truncate">
                     👤 駅員管理
                 </button>
-                <button onclick="switchTab('rd')" id="tab-btn-rd" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-slate-300 hover:text-white hover:border-slate-500 transition text-center truncate">
+                <button onclick="switchTab('rd')" id="tab-btn-rd" data-progression-tab="rd" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-slate-300 hover:text-white hover:border-slate-500 transition text-center truncate">
                     🔬 研究開発
                 </button>
-                <button onclick="switchTab('skills')" id="tab-btn-skills" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-amber-300 hover:text-white hover:border-slate-500 transition text-center truncate">
+                <button onclick="switchTab('skills')" id="tab-btn-skills" data-progression-tab="skills" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-amber-300 hover:text-white hover:border-slate-500 transition text-center truncate">
                     ⚡ 戦術
                 </button>
-                <button onclick="switchTab('escort')" id="tab-btn-escort" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-cyan-400 hover:text-white hover:border-slate-500 transition text-center truncate">
+                <button onclick="switchTab('escort')" id="tab-btn-escort" data-progression-tab="escort" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-cyan-400 hover:text-white hover:border-slate-500 transition text-center truncate">
                     🤖 鹵獲 (<span id="tab-escort-count">0/1</span>)
                 </button>
-                <button onclick="switchTab('gacha')" id="tab-btn-gacha" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-purple-300 hover:text-white hover:border-slate-500 transition text-center truncate">
+                <button onclick="switchTab('gacha')" id="tab-btn-gacha" data-progression-tab="gacha" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-purple-300 hover:text-white hover:border-slate-500 transition text-center truncate">
                     🎟 ガチャ (<span id="tab-gacha-ticket-count">0</span>)
                 </button>
-                <button onclick="switchTab('weapons')" id="tab-btn-weapons" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-emerald-300 hover:text-white hover:border-slate-500 transition text-center truncate">
+                <button onclick="switchTab('weapons')" id="tab-btn-weapons" data-progression-tab="weapons" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-emerald-300 hover:text-white hover:border-slate-500 transition text-center truncate">
                     🔧 武装
                 </button>
-                <button onclick="switchTab('world')" id="tab-btn-world" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-sky-300 hover:text-white hover:border-slate-500 transition text-center truncate">
+                <button onclick="switchTab('world')" id="tab-btn-world" data-progression-tab="world" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-sky-300 hover:text-white hover:border-slate-500 transition text-center truncate">
                     🌐 世界
                 </button>
-                <button onclick="switchTab('prestige')" id="tab-btn-prestige" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-emerald-400 hover:text-white hover:border-slate-500 transition text-center truncate">
+                <button onclick="switchTab('prestige')" id="tab-btn-prestige" data-progression-tab="prestige" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-emerald-400 hover:text-white hover:border-slate-500 transition text-center truncate">
                     🌳 プレステージ
                 </button>
-                <button onclick="switchTab('dex')" id="tab-btn-dex" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-amber-300 hover:text-white hover:border-slate-500 transition text-center truncate">
+                <button onclick="switchTab('dex')" id="tab-btn-dex" data-progression-tab="dex" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-amber-300 hover:text-white hover:border-slate-500 transition text-center truncate">
                     📖 図鑑
                 </button>
             </div>
@@ -282,26 +282,12 @@
         <div id="mobile-bridge-content" class="flex-1 min-h-0 overflow-y-auto">
             <!-- タブ1: 車両編成 -->
             <div id="tab-content-train" class="p-3 sm:p-4 flex flex-col gap-3">
-                <div class="flex flex-wrap justify-between items-center gap-2">
-                    <p id="train-intro-desktop" class="text-xs text-slate-400">
-                        ※各車両の「上部」「側面」スロットをクリックして兵装を搭載し、「セフィラ（駅員）」を編成。駅員の得意兵装と一致すると<span class="text-amber-400 font-bold">【セフィロト・シナジー】</span>が発動し、さらに駅員固有の<span class="text-purple-300 font-bold">自動スキル</span>が稼働します！
-                    </p>
-                    <p id="train-intro-mobile" class="hidden text-[10px] text-slate-400">各車両の上部・側面スロットを選んで兵装を搭載。得意兵装が一致するとシナジーが発動します。</p>
-                    <div id="train-action-row" class="flex flex-wrap items-center gap-2">
-                        <div class="bg-slate-950 border border-yellow-600/70 px-2.5 py-1.5 rounded text-xs tech-font shadow-inner flex items-center gap-1">
-                            <span class="text-slate-400">💰 FUNDS:</span>
-                            <span class="ui-gold-display text-yellow-400 font-bold text-sm">300</span>
-                            <span class="text-yellow-500 font-bold">G</span>
-                        </div>
-                        <button onclick="autoEquipAllWeapons()" class="bg-amber-700 hover:bg-amber-600 text-white text-xs px-3 py-1.5 rounded border border-amber-400 transition font-bold">
-                            ⚡ 2〜4両目の上部・側面に一括武装
-                        </button>
-                        <button onclick="repairTrain()" class="bg-emerald-800 hover:bg-emerald-700 text-emerald-100 text-xs px-3 py-1.5 rounded border border-emerald-500 transition">
-                            🔧 装甲修復 (100 G)
-                        </button>
-                    </div>
-                </div>
-                <div id="train-slots-container" class="flex overflow-x-auto gap-3 pb-3 pt-1"></div>
+                <p id="train-intro-desktop" class="text-xs text-slate-400">
+                    ※各車両の<span class="text-amber-300 font-bold">上部</span>・<span class="text-sky-300 font-bold">側面</span>スロットを選んで兵装を搭載。駅員の得意兵装と一致すると<span class="text-amber-400 font-bold">【セフィロト・シナジー】</span>が発動します。
+                </p>
+                <p id="train-intro-mobile" class="hidden text-[11px] text-slate-400">各車両の上部・側面スロットを選んで兵装を搭載。得意兵装が一致するとシナジーが発動します。</p>
+                <div id="train-loadout-summary" class="loadout-panel"></div>
+                <div id="train-slots-container" class="train-fleet-grid"></div>
             </div>
 
             <!-- タブ: 駅員管理 -->
@@ -815,6 +801,7 @@
 
 <script src="js/data.js"></script>
 <script src="js/state.js"></script>
+<script src="js/progression.js"></script>
 <script src="js/gacha.js"></script>
 <script src="js/game.js"></script>
 

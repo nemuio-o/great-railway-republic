@@ -42,7 +42,7 @@
             cursor: pointer;
         }
         .train-slot-row.is-empty { border-style: dashed; }
-        .train-slot-row.is-empty .train-slot-main { color: #64748b; }
+        .train-slot-row.is-empty .train-slot-main { color: #94a3b8; }
         .train-slot-row.is-disabled { cursor: default; opacity: .55; }
         .train-slot-row:focus-visible { outline: 2px solid var(--hud-brass-bright); outline-offset: 2px; }
         .train-slot-tag {
@@ -56,6 +56,122 @@
         }
         .train-slot-lv { font: 10px 'Share Tech Mono', monospace; color: var(--hud-brass-bright); }
         .train-slot-power { font: 700 10px 'Share Tech Mono', monospace; color: #fbbf24; }
+        /* 鹵獲機の凸進捗。10分割のピップで「あと何体か」を色と数で二重に示す。 */
+        .escort-break { display: flex; flex-direction: column; gap: 3px; }
+        .escort-break-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+        .escort-break-label { font-size: 10px; font-weight: 700; color: var(--hud-text-dim); }
+        .escort-break-count { font: 700 11px 'Share Tech Mono', monospace; color: var(--hud-brass-bright); }
+        .escort-pips { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; }
+        .escort-pip {
+            height: 7px; border-radius: 1px;
+            background: #16202e; border: 1px solid #2c3a4d;
+        }
+        .escort-pip.is-filled { background: #22d3ee; border-color: #67e8f9; }
+        .escort-break-note { font-size: 10px; color: var(--hud-text-dim); line-height: 1.35; }
+        .escort-break-note b { color: #67e8f9; font-size: 11px; }
+        .tab-lock-hint {
+            display: inline-block; margin-inline-start: 3px;
+            font-size: 9px; line-height: 1; vertical-align: middle;
+        }
+        /* 兵装名はカード幅に合わせて2行まで許す（「重機関銃バルカン」が切れない）。 */
+        #train-slots-container .train-slot-main {
+            white-space: normal; overflow: visible; text-overflow: clip;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.25;
+        }
+        /* スロット行を2段組みにする: 上段=ラベル+兵装名、下段=威力+強化。
+           狭いカードでも兵装名が省略されない。 */
+        .train-slot-row {
+            grid-template-columns: 34px minmax(0, 1fr) auto !important;
+            grid-template-areas: "tag main main" "tag power upgrade";
+            row-gap: 3px !important; align-items: center;
+        }
+        .train-slot-tag { grid-area: tag; align-self: stretch; display: flex; align-items: center; }
+        .train-slot-main { grid-area: main; }
+        .train-slot-power { grid-area: power; justify-self: start; }
+        .train-slot-upgrade { grid-area: upgrade; justify-self: end; }
+        .train-slot-row.is-empty { grid-template-areas: "tag main main" "tag power power" !important; }
+        #tab-btn-train, #tab-btn-staff, #tab-btn-rd, #tab-btn-skills, #tab-btn-escort,
+        #tab-btn-gacha, #tab-btn-weapons, #tab-btn-world, #tab-btn-prestige, #tab-btn-dex {
+            height: auto;
+        }
+        [data-progression-tab].is-locked {
+            opacity: .7;
+            border-style: dashed !important;
+            color: #94a3b8 !important;
+            background: #0f1621 !important;
+        }
+        .mobile-tab-rail-button.is-locked {
+            opacity: .5; border-style: dashed;
+        }
+        /* 編成ステータス：この画面の焦点。装甲の計器と同じ語彙でまとめる。 */
+        .loadout-panel {
+            display: flex; flex-direction: column; gap: 7px;
+            padding: 9px 11px; border-radius: var(--hud-radius);
+            background: linear-gradient(180deg, #101827, #0a1018);
+            border: 1px solid var(--hud-line);
+        }
+        .loadout-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .loadout-title {
+            font: 700 10px/1.2 'Share Tech Mono', monospace;
+            letter-spacing: .16em; text-transform: uppercase; color: var(--hud-brass-bright);
+        }
+        .loadout-cap {
+            font: 700 10px 'Share Tech Mono', monospace; color: var(--hud-text-dim);
+            border: 1px solid var(--hud-line); border-radius: 3px; padding: 1px 6px;
+        }
+        .loadout-cap.is-full { color: var(--hud-brass-bright); border-color: var(--hud-brass-dim); }
+        .loadout-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+        .loadout-stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .loadout-label { font-size: 9px; color: var(--hud-text-dim); line-height: 1.2; }
+        .loadout-value {
+            font: 700 16px/1.1 'Share Tech Mono', monospace; color: var(--hud-text);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .loadout-value em { font-style: normal; font-size: 10px; color: var(--hud-text-dim); }
+        .loadout-value.is-amber { color: var(--hud-brass-bright); }
+        .loadout-hp { height: 4px; border-radius: 2px; background: #0b1220; border: 1px solid var(--hud-line-soft); overflow: hidden; }
+        .loadout-hp i { display: block; height: 100%; background: #10b981; }
+        /* ステータス直下に主要操作を置き、画面内で完結させる。 */
+        .loadout-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(88px, auto); gap: 6px; }
+        .loadout-actions button {
+            min-height: 38px; border-radius: 4px; font-size: 11px; font-weight: 800;
+            border: 1px solid var(--hud-brass-dim); background: #241d10; color: var(--hud-brass-bright);
+            padding: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .loadout-actions button.secondary { border-color: var(--hud-line); background: #131c29; color: var(--hud-text); }
+        .loadout-actions button:focus-visible { outline: 2px solid var(--hud-brass-bright); outline-offset: 2px; }
+        @media (max-width: 400px) {
+            .loadout-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+            .loadout-value { font-size: 14px; }
+        }
+        /* 車両は横スクロールではなくグリッドで一覧する（4両すべてを同時に見せる）。 */
+        .train-fleet-grid {
+            display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px;
+        }
+        @media (min-width: 640px) {
+            .train-fleet-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+        }
+        @media (min-width: 1100px) {
+            .train-fleet-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        }
+        /* スロット行の強化ボタン。棚の「+○○G」を押すだけで強化できる。 */
+        .train-slot-row { grid-template-columns: 34px minmax(0, 1fr) auto auto; }
+        .train-slot-upgrade, .train-seph-upgrade {
+            font: 700 9px/1 'Share Tech Mono', monospace;
+            padding: 4px 6px; border-radius: 3px;
+            border: 1px solid #4b3a12; background: #241d10; color: var(--hud-brass-bright);
+            white-space: nowrap; cursor: pointer; min-height: 22px;
+        }
+        .train-slot-upgrade.is-short, .train-seph-upgrade.is-short {
+            border-color: var(--hud-line); background: #131c29; color: #94a3b8;
+        }
+        .train-slot-upgrade:disabled, .train-seph-upgrade:disabled {
+            border-color: var(--hud-line-soft); background: #0b1220; color: #475569; cursor: default;
+        }
+        .train-slot-upgrade:focus-visible, .train-seph-upgrade:focus-visible {
+            outline: 2px solid var(--hud-brass-bright); outline-offset: 2px;
+        }
+        .train-slot-row.is-empty { grid-template-columns: 34px minmax(0, 1fr) auto; }
         .train-car-card {
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
@@ -489,6 +605,11 @@
                 font-size: 11px; font-weight: 800; line-height: 1.15; white-space: nowrap;
                 touch-action: manipulation;
             }
+            /* レールは幅が限られるので、ロック理由の文章は出さず鍵だけ添える。 */
+            .mobile-tab-rail-button .tab-lock-hint { display: none; }
+            .mobile-tab-rail-button.is-locked::after {
+                content: '🔒'; font-size: 9px; margin-inline-start: 3px; opacity: .9;
+            }
             .mobile-tab-rail-button[aria-current="page"] {
                 border-color: var(--hud-brass-bright); color: var(--hud-brass-bright);
                 background: #241d10; box-shadow: inset 0 -2px var(--hud-brass-bright);
@@ -501,11 +622,8 @@
             .weapon-action-btn { min-height: 44px; }
             #train-intro-desktop, #skills-description-desktop { display: none; }
             #train-intro-mobile, #skills-description-mobile { display: block; }
-            #train-action-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: stretch; gap: 6px; }
-            #train-action-row > div { grid-column: 1 / -1; min-width: 0; padding: 4px 6px; font-size: 10px; gap: 3px; }
-            #train-action-row > div span:first-child { display: none; }
-            #train-action-row > div .ui-gold-display { font-size: 13px; }
-            #train-action-row button { min-width: 0; min-height: 44px; padding: 5px 6px; font-size: 10px; line-height: 1.2; }
+            /* 旧2カラムの操作行は廃止（ステータス直下の操作に統合）。 */
+            #train-action-row { display: none !important; }
             #train-slots-container { display: grid !important; grid-template-columns: minmax(0, 1fr); overflow: visible; gap: 8px; padding: 0 0 8px; }
             /* 1両＝1行。兵装を上段、配属セフィラを下段の帯にして名前を潰さない。 */
             #train-slots-container .train-car-card { width: 100% !important; min-width: 0; display: flex !important; flex-direction: column !important; align-items: stretch; justify-content: flex-start; gap: 7px; padding: 9px 10px !important; }
