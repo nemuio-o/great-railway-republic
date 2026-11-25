@@ -368,15 +368,26 @@
             text-align: center; letter-spacing: .04em;
         }
         .gacha-bulk-note { font-size: 10px; color: var(--hud-text-dim); line-height: 1.4; }
-        /* 戦術も研究開発と同じく縦に読み進める。末尾は固定ドックの分だけ空ける。 */
+        /* 戦術タブはタブ自身が縦スクロールの受け皿になる。
+           親（#mobile-bridge-content）と二重スクロールになると、
+           指の移動距離がどちらに効くか曖昧になり誤操作につながる。 */
         #tab-content-skills {
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            min-height: 0;
             padding-bottom: calc(var(--chrome-inset, 0px) + 16px);
+            -webkit-overflow-scrolling: touch;
+        }
+        @media (max-width: 639px) {
+            /* モバイルではタブ内を唯一のスクロール面にする。 */
+            #mobile-bridge-content:has(#tab-content-skills:not(.hidden)) { overflow: hidden; }
+            #tab-content-skills { flex: 1 1 auto; }
         }
         /* ---- 戦術：1本の縦リスト（研究開発と同じ読み進め方） ---- */
-        .tactic-list { display: flex; flex-direction: column; gap: 8px; }
+        .tactic-list { display: flex; flex-direction: column; gap: 10px; }
         .tactic-card {
-            display: flex; flex-direction: column; gap: 7px;
-            padding: 10px 12px; border-radius: var(--hud-radius);
+            display: flex; flex-direction: column; gap: 8px;
+            padding: 12px; border-radius: var(--hud-radius);
             background: linear-gradient(180deg, #101827, #0a1018);
             border: 1px solid var(--hud-line);
             border-inline-start: 3px solid var(--tactic-accent, var(--hud-line));
@@ -386,39 +397,45 @@
             border-inline-start-color: var(--hud-brass-bright);
             box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--hud-brass-bright) 22%, transparent);
         }
-        .tactic-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+        .tactic-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
         .tactic-title {
             display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-            font-size: 13px; font-weight: 800; color: #e2e8f0; line-height: 1.3;
+            font-size: 14px; font-weight: 800; color: #e2e8f0; line-height: 1.35;
         }
         .tactic-active-tag {
             font: 700 9px/1 'Share Tech Mono', monospace; letter-spacing: .06em;
             color: #0f1115; background: var(--hud-brass-bright);
             border-radius: 2px; padding: 2px 5px;
         }
-        .tactic-desc { margin: 3px 0 0; font-size: 11px; line-height: 1.5; color: var(--hud-text-dim); }
+        /* 説明は省略しない（行数制限をかけない）。 */
+        .tactic-desc {
+            margin: 4px 0 0; font-size: 11.5px; line-height: 1.65; color: var(--hud-text-dim);
+            white-space: normal; overflow-wrap: anywhere;
+        }
         .tactic-lv {
-            flex-shrink: 0; font: 700 10px 'Share Tech Mono', monospace;
+            flex-shrink: 0; font: 700 11px 'Share Tech Mono', monospace;
             color: var(--hud-brass-bright); border: 1px solid var(--hud-line);
-            border-radius: 3px; padding: 1px 6px;
+            border-radius: 3px; padding: 2px 7px; white-space: nowrap;
         }
         .tactic-effect {
-            font-size: 11.5px; font-weight: 800; color: #fde68a; line-height: 1.35;
-            padding: 5px 7px; border-radius: 3px;
+            font-size: 12px; font-weight: 800; color: #fde68a; line-height: 1.45;
+            padding: 6px 8px; border-radius: 3px;
             background: #0b1220; border: 1px solid var(--hud-line-soft);
         }
         .tactic-delta {
-            display: flex; flex-direction: column; gap: 2px;
-            padding: 5px 7px; border-radius: 3px;
+            display: flex; flex-direction: column; gap: 3px;
+            padding: 6px 8px; border-radius: 3px;
             background: rgba(11, 18, 32, .7); border: 1px dashed var(--hud-line-soft);
         }
+        .tactic-delta[hidden] { display: none; }
         .tactic-delta-label { font: 700 9px 'Share Tech Mono', monospace; color: var(--hud-text-dim); }
-        .tactic-delta-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 10px; }
+        .tactic-delta-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 10.5px; }
         .tactic-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 6px; }
         .tactic-select, .tactic-upgrade {
-            min-height: 40px; border-radius: 4px; cursor: pointer;
-            font-size: 11px; font-weight: 800; font-family: inherit;
-            padding: 4px 8px; line-height: 1.25;
+            min-height: 46px; border-radius: 4px; cursor: pointer;
+            font-size: 12px; font-weight: 800; font-family: inherit;
+            padding: 6px 8px; line-height: 1.3;
+            touch-action: manipulation;
         }
         .tactic-select {
             border: 1px solid var(--hud-line); background: #131c29; color: var(--hud-text);
@@ -430,6 +447,9 @@
         .tactic-upgrade {
             border: 1px solid #4b3a12; background: #241d10; color: var(--hud-brass-bright);
         }
+        .tactic-upgrade.is-short {
+            border-color: var(--hud-line); background: #131c29; color: #b8c4d4;
+        }
         .tactic-upgrade:disabled, .tactic-select:disabled {
             border-color: var(--hud-line-soft); background: #0b1220; color: #7c8ba1; cursor: default;
         }
@@ -438,6 +458,8 @@
         }
         @media (max-width: 400px) {
             .tactic-actions { grid-template-columns: minmax(0, 1fr); }
+            .tactic-card { padding: 10px; gap: 7px; }
+            .tactic-title { font-size: 13px; }
         }
         .train-car-card {
             transition: transform 0.2s ease, box-shadow 0.2s ease;

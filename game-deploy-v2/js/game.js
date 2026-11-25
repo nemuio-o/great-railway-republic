@@ -498,6 +498,42 @@ window.addEventListener('keydown', event => {
     }
 });
 
+// 指スクロールの途中で指が離れたときにボタンが反応してしまうのを防ぐ。
+// スクロール面で一定量動いたら、その直後のクリックを1回だけ捨てる。
+function installScrollTapGuard() {
+    let startY = null;
+    let moved = false;
+
+    const surfaceOf = node => node && node.closest
+        ? node.closest('#tab-content-skills, #mobile-bridge-content')
+        : null;
+
+    document.addEventListener('touchstart', event => {
+        if (!surfaceOf(event.target)) return;
+        startY = event.touches[0] ? event.touches[0].clientY : null;
+        moved = false;
+    }, { passive: true });
+
+    document.addEventListener('touchmove', event => {
+        if (startY === null || !event.touches[0]) return;
+        if (Math.abs(event.touches[0].clientY - startY) > 8) moved = true;
+    }, { passive: true });
+
+    document.addEventListener('touchend', () => {
+        if (!moved) { startY = null; return; }
+        // 直後の click を飲み込む（1回だけ）。
+        const swallow = ev => {
+            ev.stopPropagation();
+            ev.preventDefault();
+            document.removeEventListener('click', swallow, true);
+        };
+        document.addEventListener('click', swallow, true);
+        setTimeout(() => document.removeEventListener('click', swallow, true), 350);
+        startY = null;
+        moved = false;
+    }, { passive: true });
+}
+
 function closeStoryModal() {
     const modal = document.getElementById('story-modal');
     if (modal) {
@@ -4540,58 +4576,102 @@ function bulkUpgradeWeapons() {
 let configSectionFocus = 'weapon';
 
 // 戦術は1つの縦リストだけを描画する。
-// 以前はデスクトップ用グリッドとモバイル用カードの両方を出しており、
-// 隠した側が領域を占有してクリックを奪っていた（ボタンが押せない原因）。
+// カードは初回だけ作り、以後は中身の数値だけ書き換える。
+// 毎回作り直すと (1) スクロール位置が先頭へ戻り、(2) 押した瞬間に
+// ボタンが差し替わって強化が成立しない、という2つの不具合が出る。
 function renderSkillsTab() {
     const grid = document.getElementById('skills-list-grid');
     if (!grid) return;
-    grid.innerHTML = '';
 
-    TACTICAL_SKILLS.forEach(sk => {
+    const scrollHost = document.getElementById('mobile-bridge-content');
+    const keepScroll = scrollHost ? scrollHost.scrollTop : 0;
+
+    const needsRebuild = grid.children.length !== TACTICAL_SKILLS.length;
+    if (needsRebuild) grid.innerHTML = '';
+
+    TACTICAL_SKILLS.forEach((sk, index) => {
+        let card = grid.children[index];
+        if (!card || needsRebuild) {
+            card = document.createElement('div');
+            card.id = `skill-card-${sk.id}`;
+            card.className = 'tactic-card';
+            card.style.setProperty('--tactic-accent', sk.color);
+            card.innerHTML = `
+                <div class="tactic-head">
+                    <div class="min-w-0">
+                        <div class="tactic-title">
+                            <span data-tactic="name"></span>
+                            <span class="tactic-active-tag" data-tactic="tag" hidden>稼働中</span>
+                        </div>
+                        <p class="tactic-desc" data-tactic="desc"></p>
+                    </div>
+                    <span class="tactic-lv" data-tactic="lv"></span>
+                </div>
+                <div class="tactic-effect" data-tactic="effect"></div>
+                <div class="tactic-delta" data-tactic="delta"></div>
+                <div class="tactic-actions">
+                    <button type="button" class="tactic-select" data-tactic="select"></button>
+                    <button type="button" class="tactic-upgrade" data-tactic="upgrade"></button>
+                </div>
+            `;
+            const q = key => card.querySelector(`[data-tactic="${key}"]`);
+            q('desc').textContent = sk.desc;
+            q('select').addEventListener('click', () => selectTacticalSkill(sk.id));
+            q('upgrade').addEventListener('click', () => upgradeTacticalSkill(sk.id));
+            grid.appendChild(card);
+        }
+
+        // 値の反映（カードは使い回す）。
         const lv = getSkillLevel(sk.id);
-        const upgCost = getSkillUpgradeCost(sk.id);
         const maxed = isSkillMaxed(sk.id);
         const selected = isTacticSelected(sk.id);
+        const upgCost = maxed ? Infinity : getSkillUpgradeCost(sk.id);
+        const canAfford = Number.isFinite(upgCost) && state.gold >= upgCost;
+        const q = key => card.querySelector(`[data-tactic="${key}"]`);
 
-        const card = document.createElement('div');
-        card.id = `skill-card-${sk.id}`;
-        card.className = `tactic-card${selected ? ' is-active' : ''}`;
-        card.style.setProperty('--tactic-accent', sk.color);
-        card.innerHTML = `
-            <div class="tactic-head">
-                <div class="min-w-0">
-                    <div class="tactic-title">
-                        <span>${sk.icon} ${sk.name}</span>
-                        ${selected ? '<span class="tactic-active-tag">稼働中</span>' : ''}
-                    </div>
-                    <p class="tactic-desc">${sk.desc}</p>
+        card.classList.toggle('is-active', selected);
+        q('name').textContent = `${sk.icon} ${sk.name}`;
+        q('tag').hidden = !selected;
+        q('lv').textContent = `Lv.${lv}/${TACTICAL_MAX_LEVEL}`;
+        q('effect').textContent = sk.getEffectSummary(lv);
+
+        // 次のLv差分。最大Lvでは「これ以上ない」ことを示す。
+        const deltaEl = q('delta');
+        if (maxed || !sk.getEffectParts) {
+            deltaEl.hidden = true;
+        } else {
+            deltaEl.hidden = false;
+            const rows = sk.getEffectParts(lv).map(part => `
+                <div class="tactic-delta-row">
+                    <span class="text-slate-400">${part.label}</span>
+                    ${deltaStatHTML(part.now, part.next, '', sk.color)}
                 </div>
-                <span class="tactic-lv">Lv.${lv}/${TACTICAL_MAX_LEVEL}</span>
-            </div>
-            <div class="tactic-effect">${sk.getEffectSummary(lv)}</div>
-            ${sk.getEffectParts && !maxed ? `
-            <div class="tactic-delta">
-                <span class="tactic-delta-label">Lv.${lv} → Lv.${lv + 1}</span>
-                ${sk.getEffectParts(lv).map(part => `
-                    <div class="tactic-delta-row">
-                        <span class="text-slate-400">${part.label}</span>
-                        ${deltaStatHTML(part.now, part.next, '', sk.color)}
-                    </div>
-                `).join('')}
-            </div>` : ''}
-            <div class="tactic-actions">
-                <button type="button" id="skill-select-btn-${sk.id}" onclick="selectTacticalSkill('${sk.id}')"
-                    class="tactic-select${selected ? ' is-current' : ''}" ${selected ? 'disabled' : ''}>
-                    ${selected ? '選択中' : 'この戦術を選択'}
-                </button>
-                <button type="button" id="skill-upg-btn-${sk.id}" onclick="upgradeTacticalSkill('${sk.id}')"
-                    class="tactic-upgrade" ${maxed ? 'disabled' : ''}>
-                    ${maxed ? `MAX Lv.${TACTICAL_MAX_LEVEL}` : `強化 Lv.${lv + 1}（${upgCost.toLocaleString()} G）`}
-                </button>
-            </div>
-        `;
-        grid.appendChild(card);
+            `).join('');
+            // deltaStatHTML は整形済みHTMLのみを含む（ユーザー入力は無い）。
+            deltaEl.innerHTML = `<span class="tactic-delta-label">Lv.${lv} → Lv.${lv + 1}</span>${rows}`;
+        }
+
+        const selectBtn = q('select');
+        selectBtn.textContent = selected ? '選択中' : 'この戦術を選択';
+        selectBtn.classList.toggle('is-current', selected);
+        selectBtn.disabled = selected;
+        selectBtn.setAttribute('aria-pressed', selected ? 'true' : 'false');
+
+        const upBtn = q('upgrade');
+        upBtn.disabled = maxed || !canAfford;
+        upBtn.classList.toggle('is-short', !maxed && !canAfford);
+        upBtn.textContent = maxed
+            ? `MAX Lv.${TACTICAL_MAX_LEVEL}`
+            : `強化 Lv.${lv + 1}（${upgCost.toLocaleString()} G）`;
+        upBtn.title = maxed
+            ? '最大レベルです'
+            : canAfford
+                ? `${sk.name}をLv.${lv + 1}へ強化（${upgCost.toLocaleString()} G）`
+                : `資金が足りません（必要 ${upgCost.toLocaleString()} G / 所持 ${state.gold.toLocaleString()} G）`;
     });
+
+    // 再描画しても読んでいた位置を保つ。
+    if (scrollHost) scrollHost.scrollTop = keepScroll;
 }
 
 function selectTacticalSkill(skillId) {
@@ -6233,6 +6313,7 @@ window.addEventListener('DOMContentLoaded', () => {
     switchTab(state.activeTab || 'train');
     initializeGacha();
     initializeMobileCommandDock();
+    installScrollTapGuard();
 
     if (hasSave) {
         closeStoryModal();
