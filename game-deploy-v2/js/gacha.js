@@ -220,7 +220,16 @@ function getRarityData(weaponId, rarity) {
     return Object.assign({}, base, override);
 }
 
-function getWeaponName(weaponId) {
+// 武装の表示名。rarity を渡すとレアリティ固有の名称を返す。
+// ＋値（マージ）では名称を変えないため、plus は引数に取らない。
+// レールガンはレアリティ育成の対象外なので常に同一名称。
+function getWeaponName(weaponId, rarity) {
+    if (!weaponId) return '';
+    const isRailgun = typeof isRailgunWeapon === 'function' && isRailgunWeapon(weaponId);
+    if (!isRailgun && typeof getWeaponRarityName === 'function') {
+        const named = getWeaponRarityName(weaponId, rarity);
+        if (named) return named;
+    }
     return WEAPONS[weaponId] ? WEAPONS[weaponId].name : weaponId;
 }
 
@@ -576,7 +585,7 @@ function formatGachaReward(reward) {
     if (!reward) return '';
     if (reward.type === 'weapon') {
         const meta = getRarityMeta(reward.rarity);
-        return `${getWeaponName(reward.weaponId)} [${meta.label}] +${reward.plus || 0}`;
+        return `${getWeaponName(reward.weaponId, reward.rarity)} [${meta.label}] +${reward.plus || 0}`;
     }
     if (reward.type === 'material') return `強化素材 ×${reward.quantity}`;
     if (reward.type === 'escort_module') return `鹵獲機強化モジュール ×${reward.quantity}`;
@@ -693,7 +702,8 @@ function renderGachaResultCard(result) {
                     <div class="text-[10px] tech-font text-slate-400">LAST SUPPLY // ${timeText}</div>
                     <span class="text-[10px] font-black px-2 py-0.5 rounded" style="background:${meta.color}22;color:${meta.color};border:1px solid ${meta.color}66">${meta.label}</span>
                 </div>
-                <div class="mt-2 text-base sm:text-lg font-black text-white">${weapon ? weapon.name : result.weaponId}</div>
+                <div class="mt-2 text-base sm:text-lg font-black text-white">${getWeaponName(result.weaponId, result.rarity)}</div>
+                <div class="mt-0.5 text-[10px] text-slate-400">${weapon ? weapon.name : ''}の上位設計</div>
                 <div class="mt-1 text-xs tech-font text-slate-300">
                     +${result.plus || 0} / Lv.${result.level || 1}
                     <span class="text-slate-500">|</span>
@@ -748,7 +758,7 @@ function renderManufacturerPickupCards() {
                     </span>
                 </div>
                 <div class="text-[10px] text-slate-300">
-                    <span class="text-rose-300 font-bold">Mythic:</span> ${target ? target.name : '—'}
+                    <span class="text-rose-300 font-bold">Mythic:</span> ${target ? getWeaponName(target.id, 'Mythic') : '—'}
                 </div>
                 <div class="text-[10px] text-slate-400">対象: ${weaponNames}</div>
                 <button type="button" onclick="drawGachaFromPool('pickup','${man.id}')"
@@ -884,7 +894,7 @@ function renderWeaponInventoryGrid() {
             <div class="bg-slate-800 border-2 rounded-lg p-3 flex flex-col gap-2" style="border-color:${meta.color}77">
                 <div class="flex justify-between items-start gap-2">
                     <div class="min-w-0">
-                        <div class="text-sm font-bold text-white truncate">${getWeaponName(group.weaponId)}</div>
+                        <div class="text-sm font-bold text-white truncate">${getWeaponName(group.weaponId, group.rarity)}</div>
                         <div class="flex flex-wrap items-center gap-1.5 mt-1">
                             <span class="text-[10px] font-black px-1.5 py-0.5 rounded" style="background:${meta.color}22;color:${meta.color};border:1px solid ${meta.color}66">${meta.label}</span>
                             <span class="text-xs tech-font text-amber-300 font-bold">+${group.plus}</span>
@@ -956,7 +966,7 @@ function renderWeaponMergeGrid() {
             <div class="bg-slate-800 border-2 rounded-lg p-3 flex flex-col gap-2" style="border-color:${meta.color}77">
                 <div class="flex justify-between items-center gap-2">
                     <div class="min-w-0">
-                        <div class="text-sm font-bold text-white truncate">${getWeaponName(group.weaponId)}</div>
+                        <div class="text-sm font-bold text-white truncate">${getWeaponName(group.weaponId, group.rarity)}</div>
                         <div class="flex items-center gap-1.5 mt-1">
                             <span class="text-[10px] font-black px-1.5 py-0.5 rounded" style="background:${meta.color}22;color:${meta.color};border:1px solid ${meta.color}66">${meta.label}</span>
                             <span class="text-xs tech-font text-amber-300 font-bold">+${group.plus} → +${group.plus + 1}</span>
@@ -1100,7 +1110,7 @@ function openWeaponMergeConfirm(weaponId, rarity, plus) {
     }
     body.innerHTML = `
         <div class="rounded-lg border p-3" style="border-color:${meta.color}77;background:${meta.color}12">
-            <div class="text-sm font-bold text-white">${getWeaponName(weaponId)}</div>
+            <div class="text-sm font-bold text-white">${getWeaponName(weaponId, rarity)}</div>
             <div class="mt-1 flex flex-wrap items-center gap-2">
                 <span class="text-[10px] font-black px-1.5 py-0.5 rounded" style="background:${meta.color}22;color:${meta.color};border:1px solid ${meta.color}66">${meta.label}</span>
                 <span class="text-xs tech-font text-amber-300 font-bold">+${group.plus} → +${preview.plus}</span>
@@ -1162,7 +1172,7 @@ function executeWeaponMerge() {
     state.weaponInstances = (state.weaponInstances || []).filter(inst => !uidSet.has(inst.uid));
     state.weaponInstances.push(result);
     SoundEngine.playUI('upgrade');
-    showToast(`🔧 マージ完了！ ${getWeaponName(result.weaponId)} +${result.plus} (Lv.${result.level})`);
+    showToast(`🔧 マージ完了！ ${getWeaponName(result.weaponId, result.rarity)} +${result.plus} (Lv.${result.level})`);
     updateHeaderUI();
     renderWeaponsTab();
     saveGame(true);
