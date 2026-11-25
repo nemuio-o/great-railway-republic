@@ -3247,6 +3247,7 @@ function switchTab(tabId) {
     syncMobileTabRail(tabId);
     if (window.matchMedia('(max-width: 639px)').matches) {
         closeMobileCommandPanels();
+        syncChromeInset();
     }
 }
 
@@ -3289,42 +3290,63 @@ function getLoadoutSummary() {
     return { totalDps, slotCount, synergyCount, perCar, maxHp: state.maxHp, hp: state.hp };
 }
 
+// 骨組みは1度だけ作り、以後は数値だけ書き換える。
+// innerHTML を毎フレーム差し替えると、押した瞬間にボタンが破棄されて
+// クリックが成立しない（実際にその不具合が出たため）。
 function renderLoadoutSummary() {
     const host = document.getElementById('train-loadout-summary');
     if (!host) return;
+
+    if (!host.dataset.built) {
+        host.innerHTML = `
+            <div class="loadout-head">
+                <span class="loadout-title">編成ステータス</span>
+                <span class="loadout-cap" data-loadout="cap"></span>
+            </div>
+            <div class="loadout-grid">
+                <div class="loadout-stat">
+                    <span class="loadout-label">総火力 / 秒</span>
+                    <span class="loadout-value" data-loadout="dps"></span>
+                </div>
+                <div class="loadout-stat">
+                    <span class="loadout-label">装甲耐久</span>
+                    <span class="loadout-value" data-loadout="hp"></span>
+                </div>
+                <div class="loadout-stat">
+                    <span class="loadout-label">シナジー</span>
+                    <span class="loadout-value" data-loadout="synergy"></span>
+                </div>
+                <div class="loadout-stat">
+                    <span class="loadout-label">火力補正</span>
+                    <span class="loadout-value is-amber" data-loadout="comp"></span>
+                </div>
+            </div>
+            <div class="loadout-hp"><i data-loadout="hpbar"></i></div>
+            <div class="loadout-actions">
+                <button type="button" data-loadout-action="autoEquip">補助席をまとめて武装</button>
+                <button type="button" class="secondary" data-loadout-action="repair">装甲修復</button>
+            </div>
+        `;
+        host.querySelector('[data-loadout-action="autoEquip"]').addEventListener('click', autoEquipAllWeapons);
+        host.querySelector('[data-loadout-action="repair"]').addEventListener('click', repairTrain);
+        host.dataset.built = '1';
+    }
+
     const s = getLoadoutSummary();
     const filled = s.slotCount;
     const capacity = CAR_TOTAL_SLOTS;
     const hpPct = Math.max(0, Math.min(100, Math.round((state.hp / state.maxHp) * 100)));
-    host.innerHTML = `
-        <div class="loadout-head">
-            <span class="loadout-title">編成ステータス</span>
-            <span class="loadout-cap ${filled >= capacity ? 'is-full' : ''}">スロット ${filled}/${capacity}</span>
-        </div>
-        <div class="loadout-grid">
-            <div class="loadout-stat">
-                <span class="loadout-label">総火力 / 秒</span>
-                <span class="loadout-value">${Math.round(s.totalDps).toLocaleString()}</span>
-            </div>
-            <div class="loadout-stat">
-                <span class="loadout-label">装甲耐久</span>
-                <span class="loadout-value">${Math.ceil(state.hp).toLocaleString()}<em>/${state.maxHp.toLocaleString()}</em></span>
-            </div>
-            <div class="loadout-stat">
-                <span class="loadout-label">シナジー</span>
-                <span class="loadout-value ${s.synergyCount > 0 ? 'is-amber' : ''}">${s.synergyCount}<em>/${filled}</em></span>
-            </div>
-            <div class="loadout-stat">
-                <span class="loadout-label">火力補正</span>
-                <span class="loadout-value is-amber">×${getCarDpsCompensation().toFixed(2)}</span>
-            </div>
-        </div>
-        <div class="loadout-hp"><i style="width:${hpPct}%"></i></div>
-        <div class="loadout-actions">
-            <button type="button" onclick="autoEquipAllWeapons()">補助席をまとめて武装</button>
-            <button type="button" class="secondary" onclick="repairTrain()">装甲修復</button>
-        </div>
-    `;
+    const $ = key => host.querySelector(`[data-loadout="${key}"]`);
+
+    const capEl = $('cap');
+    capEl.textContent = `スロット ${filled}/${capacity}`;
+    capEl.classList.toggle('is-full', filled >= capacity);
+    $('dps').textContent = Math.round(s.totalDps).toLocaleString();
+    $('hp').innerHTML = `${Math.ceil(state.hp).toLocaleString()}<em>/${state.maxHp.toLocaleString()}</em>`;
+    $('synergy').innerHTML = `${s.synergyCount}<em>/${filled}</em>`;
+    $('synergy').classList.toggle('is-amber', s.synergyCount > 0);
+    $('comp').textContent = `×${getCarDpsCompensation().toFixed(2)}`;
+    $('hpbar').style.width = `${hpPct}%`;
 }
 
 // 編成画面から直接強化する。画面遷移せず、その場で結果が分かるようにする。
@@ -3371,7 +3393,10 @@ function upgradeSephirahFromTrain(sephId) {
 function renderTrainSlots() {
     const container = document.getElementById('train-slots-container');
     if (!container) return;
-    container.innerHTML = '';
+
+    // 再構築ではなく差分更新。毎フレーム作り直すとクリックがボタンに届かない。
+    const existing = Array.from(container.children);
+    const needsRebuild = existing.length !== state.cars.length;
 
     state.cars.forEach((car, idx) => {
         const s = car.sephirahId ? SEPHIROTH.find(item => item.id === car.sephirahId) : null;
@@ -3379,98 +3404,159 @@ function renderTrainSlots() {
         const sideStats = getCarEffectiveStats(car, CAR_SLOT_SIDE);
         const isSynergy = !!(upperStats && upperStats.isSynergy) || !!(sideStats && sideStats.isSynergy);
 
-        const slotRow = (slot, stats, label) => {
+        let card = existing[idx];
+        const isNew = needsRebuild || !card;
+        if (isNew) {
+            card = document.createElement('div');
+            card.innerHTML = `
+                <div class="train-car-head">
+                    <div class="train-car-title"></div>
+                    <span class="train-car-syn">SYN</span>
+                </div>
+                <div class="train-car-slots">
+                    <div class="train-slot-row" data-slot-row="${CAR_SLOT_UPPER}" role="button" tabindex="0">
+                        <span class="train-slot-tag">上部</span>
+                        <span class="train-slot-main"></span>
+                        <span class="train-slot-power"></span>
+                        <button type="button" class="train-slot-upgrade" hidden></button>
+                    </div>
+                    <div class="train-slot-row" data-slot-row="${CAR_SLOT_SIDE}" role="button" tabindex="0">
+                        <span class="train-slot-tag">側面</span>
+                        <span class="train-slot-main"></span>
+                        <span class="train-slot-power"></span>
+                        <button type="button" class="train-slot-upgrade" hidden></button>
+                    </div>
+                </div>
+                <div class="train-seph-row">
+                    <span class="train-seph-portrait"></span>
+                    <div class="train-seph-info">
+                        <span class="train-seph-caption">配属セフィラ</span>
+                        <span class="train-seph-name"></span>
+                        <span class="train-seph-skill"></span>
+                    </div>
+                    <button type="button" class="train-seph-upgrade" hidden></button>
+                </div>
+            `;
+            card.className = 'train-car-card bg-slate-800 border-2 rounded-lg p-3 cursor-pointer flex flex-col justify-between gap-2';
+            // カード自身のクリックで上部スロットを開く（スロット行は自前で処理）。
+            card.addEventListener('click', ev => {
+                if (ev.target.closest('.train-slot-row, .train-seph-row button')) return;
+                openConfigModal(idx, CAR_SLOT_UPPER);
+            });
+            ['upper', 'side'].forEach(slotName => {
+                const row = card.querySelector(`[data-slot-row="${slotName}"]`);
+                const open = () => {
+                    // 機関車の側面など、存在しないスロットは開かない。
+                    if (row.classList.contains('is-disabled')) return;
+                    openConfigModal(idx, slotName);
+                };
+                row.addEventListener('click', ev => {
+                    if (ev.target.closest('.train-slot-upgrade')) return;
+                    open();
+                });
+                row.addEventListener('keydown', ev => {
+                    if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); open(); }
+                });
+            });
+            card.querySelectorAll('.train-slot-upgrade').forEach(btn => {
+                btn.addEventListener('click', ev => {
+                    ev.stopPropagation();
+                    const wid = btn.dataset.upgradeWeapon;
+                    if (wid) upgradeWeaponFromTrain(wid);
+                });
+            });
+            card.querySelector('.train-seph-upgrade').addEventListener('click', ev => {
+                ev.stopPropagation();
+                const sid = ev.currentTarget.dataset.upgradeSephirah;
+                if (sid) upgradeSephirahFromTrain(sid);
+            });
+        }
+
+        card.classList.toggle('synergy-active', isSynergy);
+        card.classList.toggle('border-slate-700', !isSynergy);
+        card.querySelector('.train-car-title').textContent = `${idx === 0 ? '👑 第1両目' : `第${idx + 1}両目`}`;
+        card.querySelector('.train-car-syn').hidden = !isSynergy;
+
+        const paintSlot = (slot, stats, label) => {
+            const row = card.querySelector(`[data-slot-row="${slot}"]`);
+            const mainEl = row.querySelector('.train-slot-main');
+            const powerEl = row.querySelector('.train-slot-power');
+            const btn = row.querySelector('.train-slot-upgrade');
             const weaponId = getCarSlotWeaponId(car, slot);
             const w = weaponId ? WEAPONS[weaponId] : null;
-            if (car.locked && slot === CAR_SLOT_SIDE) {
-                return `<div class="train-slot-row is-disabled" role="button" tabindex="-1" aria-disabled="true"
-                    aria-label="${car.name} は側面スロットを持ちません">
-                    <span class="train-slot-tag">${label}</span>
-                    <span class="train-slot-main">側面スロットなし（機関車）</span>
-                </div>`;
+
+            // 機関車の側面は存在しない枠として固定表示する。
+            const disabled = car.locked && slot === CAR_SLOT_SIDE;
+            row.classList.toggle('is-disabled', disabled);
+            row.classList.toggle('is-empty', !disabled && !w);
+            row.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+            row.tabIndex = disabled ? -1 : 0;
+
+            if (disabled) {
+                mainEl.textContent = '側面スロットなし（機関車）';
+                powerEl.textContent = '';
+                row.setAttribute('aria-label', `${car.name} は側面スロットを持ちません`);
+                btn.hidden = true;
+                return;
             }
-            const wLv = weaponId ? (state.weaponLevels[weaponId] || 1) : 1;
+
+            row.setAttribute('aria-label', `${car.name} ${label}スロット ${w ? `${w.name} レベル${state.weaponLevels[weaponId] || 1}` : '未搭載。選択する'}`);
+            mainEl.textContent = w ? `${w.name} ` : '未搭載';
+            if (w) {
+                const lvEl = document.createElement('span');
+                lvEl.className = 'train-slot-lv';
+                lvEl.textContent = `Lv.${state.weaponLevels[weaponId] || 1}`;
+                mainEl.appendChild(lvEl);
+            }
+            powerEl.textContent = stats ? stats.damage.toLocaleString() : '—';
+
+            if (!w) { btn.hidden = true; return; }
+            const wLv = state.weaponLevels[weaponId] || 1;
             const wMax = wLv >= WEAPON_MAX_LEVEL;
-            const wCost = weaponId && !wMax ? getWeaponUpgradeCost(weaponId) : Infinity;
+            const wCost = wMax ? Infinity : getWeaponUpgradeCost(weaponId);
             const canAfford = Number.isFinite(wCost) && state.gold >= wCost;
-            const upgradeBtn = w
-                ? `<button type="button" class="train-slot-upgrade${canAfford ? '' : ' is-short'}"
-                        data-upgrade-weapon="${weaponId}"
-                        aria-label="${w.name}をLv.${wLv + 1}へ強化。${Number.isFinite(wCost) ? wCost.toLocaleString() + 'ゴールド必要' : '上限'}"
-                        ${wMax ? 'disabled' : ''}>${wMax ? 'MAX' : `+${wCost.toLocaleString()}G`}</button>`
-                : '';
-            return `<div class="train-slot-row${w ? '' : ' is-empty'}" role="button" tabindex="0"
-                    data-car="${idx}" data-slot="${slot}"
-                    aria-label="${car.name} ${label}スロット ${w ? `${w.name} レベル${wLv}` : '未搭載。選択する'}">
-                <span class="train-slot-tag">${label}</span>
-                <span class="train-slot-main">${w ? `${w.name} <span class="train-slot-lv">Lv.${wLv}</span>` : '未搭載'}</span>
-                <span class="train-slot-power">${stats ? stats.damage.toLocaleString() : '—'}</span>
-                ${upgradeBtn}
-            </div>`;
+            btn.hidden = false;
+            btn.disabled = wMax;
+            btn.dataset.upgradeWeapon = weaponId;
+            btn.classList.toggle('is-short', !wMax && !canAfford);
+            btn.textContent = wMax ? 'MAX' : `+${wCost.toLocaleString()}G`;
+            btn.setAttribute('aria-label', `${w.name}をLv.${wLv + 1}へ強化。${Number.isFinite(wCost) ? `${wCost.toLocaleString()}ゴールド必要` : '上限'}`);
         };
 
-        const card = document.createElement('div');
-        card.className = `train-car-card flex-shrink-0 w-44 sm:w-48 bg-slate-800 border-2 ${isSynergy ? 'synergy-active' : 'border-slate-700'} rounded-lg p-3 cursor-pointer flex flex-col justify-between gap-2`;
-        card.innerHTML = `
-            <div>
-                <div class="flex justify-between items-center border-b border-slate-700 pb-1">
-                    <span class="text-xs font-bold text-amber-400">${idx === 0 ? '👑 第1両目' : `🚃 第${idx + 1}両目`}</span>
-                    ${isSynergy ? '<span class="text-[10px] font-black bg-amber-500 text-slate-950 px-1.5 py-0.2 rounded">SYN</span>' : ''}
-                </div>
-                <div class="mt-2 flex flex-col gap-1">
-                    ${slotRow(CAR_SLOT_UPPER, upperStats, '上部')}
-                    ${slotRow(CAR_SLOT_SIDE, sideStats, '側面')}
-                </div>
-            </div>
-            <div class="bg-slate-900/80 p-1.5 rounded border border-slate-700/80 flex items-center gap-2">
-                ${s ? getSephirahPortraitSVG(s.id, 'w-9 h-11') : '<div class="w-9 h-11 rounded bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-500 text-xs">＋</div>'}
-                <div class="min-w-0 flex-1">
-                    <div class="text-[10px] text-slate-400">配属セフィラ</div>
-                    <div class="text-[11px] font-bold ${s ? 'text-purple-300' : 'text-slate-500'} truncate">
-                        ${s ? `${s.name.split(' ')[0]} Lv.${state.sephirahLevels[s.id] || 1}` : (car.locked ? '艦長 固定' : '未配属')}
-                    </div>
-                    ${s ? `<div class="text-[9px] text-amber-300/90 truncate">⚡${s.autoSkillName}</div>` : ''}
-                </div>
-                ${s && s.id !== 'tiphareth' ? (() => {
-                    const sLv = state.sephirahLevels[s.id] || 1;
-                    const sMax = sLv >= SEPHIRAH_MAX_LEVEL;
-                    const sCost = sMax ? Infinity : getSephirahUpgradeCost(s.id);
-                    const sCan = Number.isFinite(sCost) && state.gold >= sCost;
-                    return `<button type="button" class="train-seph-upgrade${sCan ? '' : ' is-short'}"
-                        data-upgrade-sephirah="${s.id}"
-                        aria-label="${s.name}をLv.${sLv + 1}へ強化。${Number.isFinite(sCost) ? sCost.toLocaleString() + 'ゴールド必要' : '上限'}"
-                        ${sMax ? 'disabled' : ''}>${sMax ? 'MAX' : `+${sCost.toLocaleString()}G`}</button>`;
-                })() : ''}
-            </div>
-        `;
-        container.appendChild(card);
+        paintSlot(CAR_SLOT_UPPER, upperStats, '上部');
+        paintSlot(CAR_SLOT_SIDE, sideStats, '側面');
+
+        card.querySelector('.train-seph-portrait').innerHTML = s
+            ? getSephirahPortraitSVG(s.id, 'w-9 h-11')
+            : '<span class="train-seph-empty">＋</span>';
+        const nameEl = card.querySelector('.train-seph-name');
+        nameEl.textContent = s
+            ? `${s.name.split(' ')[0]} Lv.${state.sephirahLevels[s.id] || 1}`
+            : (car.locked ? '艦長 固定' : '未配属');
+        nameEl.classList.toggle('is-assigned', !!s);
+        const skillEl = card.querySelector('.train-seph-skill');
+        skillEl.textContent = s ? `⚡${s.autoSkillName}` : '';
+        skillEl.hidden = !s;
+
+        const sephBtn = card.querySelector('.train-seph-upgrade');
+        if (s && s.id !== 'tiphareth') {
+            const sLv = state.sephirahLevels[s.id] || 1;
+            const sMax = sLv >= SEPHIRAH_MAX_LEVEL;
+            const sCost = sMax ? Infinity : getSephirahUpgradeCost(s.id);
+            const sCan = Number.isFinite(sCost) && state.gold >= sCost;
+            sephBtn.hidden = false;
+            sephBtn.disabled = sMax;
+            sephBtn.dataset.upgradeSephirah = s.id;
+            sephBtn.classList.toggle('is-short', !sMax && !sCan);
+            sephBtn.textContent = sMax ? 'MAX' : `+${sCost.toLocaleString()}G`;
+            sephBtn.setAttribute('aria-label', `${s.name}をLv.${sLv + 1}へ強化。${Number.isFinite(sCost) ? `${sCost.toLocaleString()}ゴールド必要` : '上限'}`);
+        } else {
+            sephBtn.hidden = true;
+        }
+
+        if (isNew) container.appendChild(card);
     });
 
-    container.querySelectorAll('.train-slot-row[data-car]').forEach(row => {
-        const carIdx = Number(row.dataset.car);
-        const slot = row.dataset.slot;
-        const open = () => openConfigModal(carIdx, slot);
-        row.addEventListener('click', ev => {
-            // 強化ボタンのクリックはスロット選択に吸われないようにする。
-            if (ev.target.closest('.train-slot-upgrade')) return;
-            open();
-        });
-        row.addEventListener('keydown', ev => {
-            if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); open(); }
-        });
-    });
-    container.querySelectorAll('[data-upgrade-weapon]').forEach(btn => {
-        btn.addEventListener('click', ev => {
-            ev.stopPropagation();
-            upgradeWeaponFromTrain(btn.dataset.upgradeWeapon);
-        });
-    });
-    container.querySelectorAll('[data-upgrade-sephirah]').forEach(btn => {
-        btn.addEventListener('click', ev => {
-            ev.stopPropagation();
-            upgradeSephirahFromTrain(btn.dataset.upgradeSephirah);
-        });
-    });
     renderLoadoutSummary();
 }
 
@@ -5534,7 +5620,20 @@ function initializeMobileCommandDock() {
 
     mobileCommandDockMedia = window.matchMedia('(max-width: 639px)');
     moveForViewport(mobileCommandDockMedia.matches);
-    mobileCommandDockMedia.addEventListener('change', moveForViewport);
+    mobileCommandDockMedia.addEventListener('change', event => {
+        moveForViewport(event);
+        syncChromeInset();
+    });
+    // ドック／レールの高さは中身（フォント読み込み等）で変わるので実測して反映する。
+    syncChromeInset();
+    if (typeof ResizeObserver === 'function') {
+        const observer = new ResizeObserver(() => syncChromeInset());
+        [document.querySelector('.mobile-command-dock'), document.querySelector('.mobile-tab-rail')]
+            .filter(Boolean)
+            .forEach(el => observer.observe(el));
+    }
+    window.addEventListener('resize', syncChromeInset);
+    window.addEventListener('orientationchange', syncChromeInset);
 }
 
 // モバイルでは艦橋タブを常設レールへ複製する（元のDOMはデスクトップ用に残す）。
@@ -5581,6 +5680,22 @@ function syncMobileTabRail(activeTab) {
     if (active && typeof active.scrollIntoView === 'function') {
         active.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     }
+}
+
+// 固定クローム（ドック＋タブライン）の実高を CSS 変数へ反映する。
+// ここがずれるとコンテンツ末尾のボタンがクロームの下に隠れて押せなくなる。
+function syncChromeInset() {
+    const dock = document.querySelector('.mobile-command-dock');
+    const rail = document.querySelector('.mobile-tab-rail');
+    const root = document.documentElement;
+    const isMobile = window.matchMedia('(max-width: 639px)').matches;
+    if (!isMobile || !dock) {
+        root.style.removeProperty('--chrome-inset');
+        return;
+    }
+    const dockH = dock.getBoundingClientRect().height;
+    const railH = rail ? rail.getBoundingClientRect().height : 0;
+    root.style.setProperty('--chrome-inset', `${Math.ceil(dockH + railH)}px`);
 }
 
 function closeMobileCommandPanels() {
