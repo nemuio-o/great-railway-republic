@@ -350,10 +350,149 @@ function startInitialOperation() {
     SoundEngine.init();
     SoundEngine.playUI('launch');
     closeStoryModal();
+    // 開始直後にティファレトの導入会話を挟む（既読なら流さない）。
+    if (!hasSeenTutorial('intro')) {
+        openTutorial('intro', () => {
+            if (!state.inWave) startWave();
+        });
+        return;
+    }
     if (!state.inWave) {
         startWave();
     }
 }
+
+// ==========================================================
+// ティファレトの機能説明（初回のみ）
+// ----------------------------------------------------------
+// 会話中はメニュー操作を止め、読み終えてから対象メニューを開く。
+// 既読は state.tutorialSeen に保存する。再確認できるよう、
+// 表示処理は「id を渡せばいつでも再生できる」形にしてある。
+// ==========================================================
+
+let pendingTutorialTab = null;
+let activeTutorial = null;
+let activeTutorialStep = 0;
+
+function hasSeenTutorial(id) {
+    return Array.isArray(state.tutorialSeen) && state.tutorialSeen.includes(id);
+}
+
+function markTutorialSeen(id) {
+    if (!Array.isArray(state.tutorialSeen)) state.tutorialSeen = [];
+    if (!state.tutorialSeen.includes(id)) state.tutorialSeen.push(id);
+    saveGame(true);
+}
+
+function isTutorialOpen() {
+    const modal = document.getElementById('tutorial-modal');
+    return !!(modal && !modal.classList.contains('hidden'));
+}
+
+// 会話を開く。onDone は読み終えた後に一度だけ呼ぶ。
+function openTutorial(id, onDone) {
+    const data = typeof getTutorialById === 'function' ? getTutorialById(id) : null;
+    if (!data || !data.lines || data.lines.length === 0) {
+        if (typeof onDone === 'function') onDone();
+        return false;
+    }
+    const modal = document.getElementById('tutorial-modal');
+    if (!modal) {
+        if (typeof onDone === 'function') onDone();
+        return false;
+    }
+    activeTutorial = data;
+    activeTutorialStep = 0;
+    activeTutorial.onDone = typeof onDone === 'function' ? onDone : null;
+
+    document.getElementById('tutorial-title').textContent = data.title || '';
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    renderTutorialStep();
+
+    const nextBtn = document.getElementById('tutorial-next');
+    if (nextBtn) nextBtn.focus();
+    return true;
+}
+
+function renderTutorialStep() {
+    if (!activeTutorial) return;
+    const line = activeTutorial.lines[activeTutorialStep];
+    if (!line) return;
+
+    // 台詞はテキストとして流し込む（HTML として解釈させない）。
+    document.getElementById('tutorial-text').textContent = line.text;
+
+    const portrait = document.getElementById('tutorial-portrait');
+    if (portrait && typeof getSephirahPortraitSVG === 'function') {
+        portrait.innerHTML = getSephirahPortraitSVG('tiphareth', 'w-full h-full', line.mood);
+    }
+
+    const stepEl = document.getElementById('tutorial-step');
+    if (stepEl) {
+        stepEl.textContent = `${activeTutorialStep + 1} / ${activeTutorial.lines.length}`;
+    }
+
+    const progress = document.getElementById('tutorial-progress');
+    if (progress) {
+        progress.innerHTML = activeTutorial.lines.map((_, i) =>
+            `<span class="tutorial-dot${i <= activeTutorialStep ? ' is-on' : ''}"></span>`).join('');
+    }
+
+    const nextBtn = document.getElementById('tutorial-next');
+    if (nextBtn) {
+        const isLast = activeTutorialStep >= activeTutorial.lines.length - 1;
+        nextBtn.textContent = isLast ? '了解した' : '次へ';
+    }
+}
+
+function advanceTutorial() {
+    if (!activeTutorial) return;
+    if (activeTutorialStep < activeTutorial.lines.length - 1) {
+        activeTutorialStep += 1;
+        SoundEngine.playUI('click');
+        renderTutorialStep();
+        return;
+    }
+    closeTutorial();
+}
+
+function closeTutorial() {
+    const modal = document.getElementById('tutorial-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+    const data = activeTutorial;
+    activeTutorial = null;
+    activeTutorialStep = 0;
+    if (!data) return;
+
+    markTutorialSeen(data.id);
+    const done = data.onDone;
+    data.onDone = null;
+    if (typeof done === 'function') done();
+}
+
+// メニュー初回選択時に会話を挟む。既読なら即座に進める。
+function runTabTutorial(tabId, onDone) {
+    if (typeof getTutorialForTab !== 'function') { onDone(); return; }
+    const data = getTutorialForTab(tabId);
+    if (!data || hasSeenTutorial(data.id)) { onDone(); return; }
+    openTutorial(data.id, onDone);
+}
+
+// 会話中のキー操作。Enter/Space で進む。Escape では閉じない
+// （読み飛ばしでメニューに入れないようにするため）。
+window.addEventListener('keydown', event => {
+    if (!isTutorialOpen()) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        advanceTutorial();
+    } else if (event.key === 'Escape') {
+        event.preventDefault();
+    }
+});
 
 function closeStoryModal() {
     const modal = document.getElementById('story-modal');
@@ -3382,12 +3521,30 @@ function switchTab(tabId) {
         state.dexSubTab = tabId === 'relicdex' ? 'relic' : 'boss';
         tabId = 'dex';
     }
+    // 会話中は画面遷移を止める（読み終えてからメニューを開く）。
+    if (isTutorialOpen()) return;
     // 進行度で未解放の機能は開かせない（理由をトーストで示す）。
     if (typeof isTabUnlocked === 'function' && !isTabUnlocked(tabId)) {
         handleLockedTabAttempt(tabId);
         syncProgressionUI();
         return;
     }
+    // 初回選択時のみ、ティファレトの機能説明を挟む。
+    if (hasUnseenTutorialForTab(tabId)) {
+        runTabTutorial(tabId, () => switchTabNow(tabId));
+        return;
+    }
+    switchTabNow(tabId);
+}
+
+function hasUnseenTutorialForTab(tabId) {
+    if (typeof getTutorialForTab !== 'function') return false;
+    const data = getTutorialForTab(tabId);
+    return !!(data && !hasSeenTutorial(data.id));
+}
+
+// 会話を挟まずにタブを切り替える本体。
+function switchTabNow(tabId) {
     state.activeTab = tabId;
     const tabs = ['train', 'staff', 'rd', 'skills', 'escort', 'gacha', 'weapons', 'world', 'prestige', 'dex'];
     tabs.forEach(t => {
@@ -5565,6 +5722,8 @@ function loadGame() {
         if (!WEATHERS[state.weather]) state.weather = 'cloudy';
 
         if (!Array.isArray(state.unlockedFactions)) state.unlockedFactions = ['pol'];
+        // チュートリアル既読状態（旧セーブには無いので初期化する）。
+        if (!Array.isArray(state.tutorialSeen)) state.tutorialSeen = [];
         if (!Array.isArray(state.clearedFactions)) state.clearedFactions = [];
         if (!Array.isArray(state.runClearedFactions)) state.runClearedFactions = [];
         if (!state.stageClearCounts || typeof state.stageClearCounts !== 'object') state.stageClearCounts = {};

@@ -948,7 +948,7 @@ function updateSephirahAutoSkills() {
 }
 
 // セフィラ専用キャラクターポートレート生成
-function getSephirahPortraitSVG(id, sizeClass = 'w-16 h-20') {
+function getSephirahPortraitSVG(id, sizeClass = 'w-16 h-20', mood = null, altName = null) {
     const configs = {
         tiphareth: { hair: '#568c32', hairDark: '#2f5219', eye: '#e11d48', wink: true, smile: 'smirk', item: 'pipe', bgTop: '#1e293b', bgBot: '#3f3f26', accent: '#f59e0b' },
         geburah:   { hair: '#dc2626', hairDark: '#7f1d1d', eye: '#fbbf24', wink: false, smile: 'fierce', item: 'sword', bgTop: '#2a0e0e', bgBot: '#451a1a', accent: '#ef4444' },
@@ -961,7 +961,12 @@ function getSephirahPortraitSVG(id, sizeClass = 'w-16 h-20') {
         malkuth:   { hair: '#9333ea', hairDark: '#4c1d95', eye: '#f43f5e', wink: false, smile: 'smirk', item: 'baton', bgTop: '#1e0b36', bgBot: '#3b0764', accent: '#c084fc' },
         kether:    { hair: '#fef08a', hairDark: '#ca8a04', eye: '#f59e0b', wink: false, smile: 'calm', item: 'crown', bgTop: '#29210a', bgBot: '#524010', accent: '#fef08a' }
     };
-    const c = configs[id] || configs.tiphareth;
+    const c = Object.assign({}, configs[id] || configs.tiphareth);
+    // 会話シーンでは表情だけ差し替える（髪・持ち物・背景は同一人物のまま）。
+    if (mood && ['smirk', 'fierce', 'grin', 'calm', 'gentle'].includes(mood)) {
+        c.smile = mood;
+        c.wink = mood === 'smirk';
+    }
     const uid = `sep_${id}_${Math.random().toString(36).slice(2, 6)}`;
 
     const eyesHtml = c.wink

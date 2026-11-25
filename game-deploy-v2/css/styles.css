@@ -220,6 +220,80 @@
         .train-slot-upgrade:focus-visible, .train-seph-upgrade:focus-visible {
             outline: 2px solid var(--hud-brass-bright); outline-offset: 2px;
         }
+        /* ---- ティファレトの機能説明（初回のみ） ---- */
+        #tutorial-modal { overscroll-behavior: contain; }
+        .tutorial-card {
+            max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);
+            overflow: hidden;
+        }
+        .tutorial-head {
+            display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+            padding: 10px 14px; border-bottom: 1px solid var(--hud-line);
+            background: linear-gradient(180deg, #131c29, #0d1420);
+        }
+        .tutorial-eyebrow {
+            font: 700 9px/1.2 'Share Tech Mono', monospace;
+            letter-spacing: .18em; text-transform: uppercase; color: #c084fc;
+        }
+        .tutorial-title {
+            margin: 3px 0 0; font-size: 16px; font-weight: 900; color: var(--hud-brass-bright);
+            line-height: 1.25;
+        }
+        .tutorial-step {
+            flex-shrink: 0; font: 700 10px 'Share Tech Mono', monospace;
+            color: var(--hud-text-dim); border: 1px solid var(--hud-line);
+            border-radius: 3px; padding: 2px 7px;
+        }
+        .tutorial-body {
+            display: grid; grid-template-columns: 96px minmax(0, 1fr);
+            gap: 12px; align-items: start;
+            padding: 14px; overflow-y: auto; overscroll-behavior: contain;
+        }
+        .tutorial-portrait {
+            width: 96px; height: 120px; overflow: hidden;
+            border: 1px solid #a855f7aa; border-radius: 6px;
+            background: #0b1220; box-shadow: 0 0 18px rgba(168, 85, 247, .18);
+        }
+        .tutorial-speech {
+            position: relative; min-width: 0;
+            padding: 10px 12px; border-radius: var(--hud-radius);
+            border: 1px solid var(--hud-line); border-inline-start: 3px solid #a855f7;
+            background: #0b1220;
+        }
+        .tutorial-text {
+            margin: 0; font-size: 13px; line-height: 1.8; color: #e2e8f0;
+            letter-spacing: .01em;
+        }
+        .tutorial-foot {
+            display: flex; align-items: center; justify-content: space-between; gap: 10px;
+            padding: 10px 14px; border-top: 1px solid var(--hud-line);
+            background: #0d1420;
+        }
+        .tutorial-progress { display: flex; gap: 4px; }
+        .tutorial-dot {
+            width: 16px; height: 3px; border-radius: 2px;
+            background: #24303f;
+        }
+        .tutorial-dot.is-on { background: var(--hud-brass-bright); }
+        .tutorial-next {
+            min-height: 42px; min-width: 110px;
+            border: 1px solid #f2b13a; border-radius: var(--hud-radius);
+            background: #241d10; color: var(--hud-brass-bright);
+            font-size: 13px; font-weight: 900; cursor: pointer;
+            padding: 0 16px;
+        }
+        .tutorial-next:focus-visible { outline: 2px solid var(--hud-brass-bright); outline-offset: 2px; }
+        @media (max-width: 480px) {
+            .tutorial-body { grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 12px; }
+            .tutorial-portrait { width: 72px; height: 90px; }
+            .tutorial-text { font-size: 12.5px; line-height: 1.85; }
+        }
+        /* ランドスケープの低い画面では立ち絵を小さくして本文を優先する。 */
+        @media (max-height: 480px) and (min-width: 640px) {
+            .tutorial-body { grid-template-columns: 72px minmax(0, 1fr); }
+            .tutorial-portrait { width: 72px; height: 90px; }
+            .tutorial-text { font-size: 12px; line-height: 1.65; }
+        }
         .train-car-card {
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }

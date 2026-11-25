@@ -780,6 +780,30 @@
         </div>
     </div>
 
+    <!-- ティファレトによる機能説明（各メニューの初回選択時） -->
+    <div id="tutorial-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm hidden items-center justify-center p-3 sm:p-4 z-[60]"
+         role="dialog" aria-modal="true" aria-labelledby="tutorial-title" aria-describedby="tutorial-text">
+        <div class="tutorial-card bg-slate-900 border-2 border-amber-600 rounded-lg w-full max-w-xl shadow-2xl flex flex-col">
+            <div class="tutorial-head">
+                <div class="min-w-0">
+                    <div class="tutorial-eyebrow">SEPHIROTH COMM // ティファレト</div>
+                    <h3 id="tutorial-title" class="tutorial-title">車両編成</h3>
+                </div>
+                <div id="tutorial-step" class="tutorial-step"></div>
+            </div>
+            <div class="tutorial-body">
+                <div id="tutorial-portrait" class="tutorial-portrait" aria-hidden="true"></div>
+                <div class="tutorial-speech">
+                    <p id="tutorial-text" class="tutorial-text"></p>
+                </div>
+            </div>
+            <div class="tutorial-foot">
+                <div class="tutorial-progress" id="tutorial-progress" aria-hidden="true"></div>
+                <button type="button" id="tutorial-next" onclick="advanceTutorial()" class="tutorial-next">次へ</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 武装マージ確認モーダル -->
     <div id="weapon-merge-confirm-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
         <div class="bg-slate-900 border-2 border-emerald-600 rounded-lg max-w-lg w-full p-5 shadow-2xl space-y-4">
@@ -803,6 +827,7 @@
 <script src="js/state.js"></script>
 <script src="js/progression.js"></script>
 <script src="js/weapon-names.js"></script>
+<script src="js/tutorial.js"></script>
 <script src="js/gacha.js"></script>
 <script src="js/game.js"></script>
 

@@ -64,7 +64,9 @@ let state = {
     escortModuleLevels: {},
     weaponInstances: [],
     weaponNextUid: 1,
-    manufacturerGachaUnlocked: {}
+    manufacturerGachaUnlocked: {},
+    // ティファレトの機能説明を既読したメニューID（初回のみ再生する）。
+    tutorialSeen: []
 };
 
 function checkAndUnlockAntarcticBase(notify = true) {
