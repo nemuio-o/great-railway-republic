@@ -38,10 +38,13 @@ const TARGETS = [
     { local: 'css/styles.css', path: '/css/styles.css' }
 ];
 
-// 改行コードの違いや ?v= の有無で落とさないよう揃えてから比較する。
+// カードの表示は「デプロイされたビルドIDを画面で読める」ためのもの。
+// リポジトリ側はプレースホルダ（build —）、配信側は実ID（build 225cfbd）なので、
+// 比較時は同じ扱いに揃える。
 const normalize = text => text
     .replace(/\r\n/g, '\n')
     .replace(/((?:src|href)="(?:js|css)\/[^"?]+\.(?:js|css))\?v=[^"]*"/g, '$1"')
+    .replace(/(title="デプロイされたビルドID">)build [^<]*(<\/span>)/g, '$1build —$2')
     .trimEnd();
 
 const sha = text => createHash('sha256').update(normalize(text), 'utf8').digest('hex').slice(0, 12);
