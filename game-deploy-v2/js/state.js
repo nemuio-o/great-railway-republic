@@ -476,26 +476,34 @@ function getSephirahMatchingWeaponId(sephId) {
     const all = Object.values(WEAPONS).filter(w => w.type === s.specialty);
     if (!all.length) return null;
 
-    // 装備中の兵装と解放済みの同系統兵装のうち、最大DPSのものを基準にする。
+    // 装備中の兵装と所持している同系統兵装のうち、最大DPSのものを基準にする。
     // 弱い兵装に付け替えてから強化する、といった抜け道を防ぐため。
+    const owned = typeof getOwnedWeaponIds === 'function' ? getOwnedWeaponIds() : null;
     const ids = all
-        .filter(w => state.unlockedWeapons.includes(w.id))
+        .filter(w => w.id === 'railgun_tiphareth'
+            || STARTER_WEAPON_IDS.includes(w.id)
+            || (owned && owned.has(w.id)))
         .map(w => w.id);
-    const equipped = state.cars.find(car =>
-        car.sephirahId === sephId
-        && [car.weaponId, car.sideWeaponId].some(wid => WEAPONS[wid] && WEAPONS[wid].type === s.specialty)
-    );
-    if (equipped) {
-        const equippedWeaponId = [equipped.weaponId, equipped.sideWeaponId]
+    const equippedCar = state.cars.find(car => car.sephirahId === sephId
+        && [CAR_SLOT_UPPER, CAR_SLOT_SIDE].some(slot => {
+            const inst = getCarSlotWeaponInstance(car, slot);
+            return inst && WEAPONS[inst.weaponId] && WEAPONS[inst.weaponId].type === s.specialty;
+        }));
+    if (equippedCar) {
+        const equippedWeaponId = [CAR_SLOT_UPPER, CAR_SLOT_SIDE]
+            .map(slot => getCarSlotWeaponId(equippedCar, slot))
             .find(wid => WEAPONS[wid] && WEAPONS[wid].type === s.specialty);
         if (equippedWeaponId && !ids.includes(equippedWeaponId)) ids.push(equippedWeaponId);
     }
     const pool = ids.length ? ids : all.map(w => w.id);
 
+    // 実体があれば、その個体のLvで評価する（装備の実力が反映される）。
     let bestId = pool[0];
     let bestDps = -1;
     pool.forEach(id => {
-        const dps = getWeaponDpsAtLevel(id, state.weaponLevels[id] || 1);
+        const inst = getBestWeaponInstance(id);
+        const lv = inst ? inst.level : (state.weaponLevels[id] || 1);
+        const dps = getWeaponDpsAtLevel(id, lv) * (inst ? (1 + getWeaponInstanceBonus(inst)) : 1);
         if (dps > bestDps) { bestDps = dps; bestId = id; }
     });
     return bestId;
@@ -611,19 +619,22 @@ const CAR_BASE_SLOTS = 2;
 function getCarDpsCompensation() {
     const cars = Array.isArray(state.cars) ? state.cars : [];
     const filled = cars.reduce((n, car) =>
-        n + (car.weaponId ? 1 : 0) + (car.sideWeaponId ? 1 : 0), 0);
+        n + (car.weaponUid ? 1 : 0) + (car.sideWeaponUid ? 1 : 0), 0);
     const extra = Math.max(0, filled - CAR_BASE_SLOTS);
     const extraSlots = Math.max(1, CAR_TOTAL_SLOTS - CAR_BASE_SLOTS);
     return 1 + (CAR_DPS_COMPENSATION - 1) * Math.min(1, extra / extraSlots);
 }
 
+// 車両スロットは「武装インスタンスのuid」を指す。
+// 種別IDではなく実体を持つことで、レアリティ・＋値・Lvがそのまま戦闘に乗る。
 function createCar(index) {
     if (index === 0) {
         return {
             index: 0,
             name: '第1両目（先頭機関車）',
-            weaponId: 'railgun_tiphareth',
-            sideWeaponId: null,
+            weaponUid: null,
+            railgunFixed: true,
+            sideWeaponUid: null,
             sephirahId: 'tiphareth',
             cdTimer: 0,
             sideCdTimer: 0,
@@ -633,8 +644,8 @@ function createCar(index) {
     return {
         index,
         name: `第${index + 1}両目`,
-        weaponId: index === 1 ? 'mg_vulcan' : null,
-        sideWeaponId: index === 1 ? 'aa_flak' : null,
+        weaponUid: null,
+        sideWeaponUid: null,
         sephirahId: null,
         cdTimer: 0,
         sideCdTimer: 0,
@@ -649,19 +660,54 @@ function initCars() {
     }
 }
 
-function getCarSlotWeaponId(car, slot) {
+function getCarSlotWeaponUid(car, slot) {
     if (!car) return null;
-    return slot === CAR_SLOT_SIDE ? car.sideWeaponId : car.weaponId;
+    return slot === CAR_SLOT_SIDE ? car.sideWeaponUid : car.weaponUid;
 }
 
-function setCarSlotWeaponId(car, slot, weaponId) {
+function setCarSlotWeaponUid(car, slot, uid) {
     if (!car) return;
-    if (slot === CAR_SLOT_SIDE) car.sideWeaponId = weaponId;
-    else car.weaponId = weaponId;
+    if (slot === CAR_SLOT_SIDE) car.sideWeaponUid = uid;
+    else car.weaponUid = uid;
 }
 
-// その兵装が列車のどこかに搭載されているか（上部・側面の両方を見る）。
+// スロットに載っている武装の実体。uid が無い/見つからない場合は null。
+function getCarSlotWeaponInstance(car, slot) {
+    const uid = getCarSlotWeaponUid(car, slot);
+    if (!uid) return null;
+    return (state.weaponInstances || []).find(inst => inst && inst.uid === uid) || null;
+}
+
+// スロットに載っている武装の種別ID。描画や相性判定はこちらを使う。
+function getCarSlotWeaponId(car, slot) {
+    const inst = getCarSlotWeaponInstance(car, slot);
+    if (inst) return inst.weaponId;
+    // 機関車は固定でレールガンを積んでいる。
+    if (slot !== CAR_SLOT_SIDE && car && car.railgunFixed) return 'railgun_tiphareth';
+    return null;
+}
+
+// その兵装インスタンスが列車のどこかに搭載されているか（上部・側面の両方を見る）。
+function isWeaponInstanceMounted(uid) {
+    if (!uid) return false;
+    return (state.cars || []).some(car => car.weaponUid === uid || car.sideWeaponUid === uid);
+}
+
+// その種別の武装が1つでも列車に載っているか。
 function isWeaponMounted(weaponId) {
-    return (state.cars || []).some(car => car.weaponId === weaponId || car.sideWeaponId === weaponId);
+    return (state.cars || []).some(car =>
+        getCarSlotWeaponId(car, CAR_SLOT_UPPER) === weaponId
+        || getCarSlotWeaponId(car, CAR_SLOT_SIDE) === weaponId);
+}
+
+// マージで消えた実体を指しているスロットを空にする。
+// これをしないと「空に見えるのに埋まっている扱い」になり、自動搭載も効かなくなる。
+function pruneDanglingWeaponSlots() {
+    (state.cars || []).forEach(car => {
+        [CAR_SLOT_UPPER, CAR_SLOT_SIDE].forEach(slot => {
+            const uid = getCarSlotWeaponUid(car, slot);
+            if (uid && !getWeaponInstanceByUid(uid)) setCarSlotWeaponUid(car, slot, null);
+        });
+    });
 }
 

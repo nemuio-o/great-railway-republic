@@ -287,6 +287,28 @@ function getBestWeaponInstance(weaponId) {
     return getBestWeaponInstanceInList(list);
 }
 
+// uid から実体を引く。列車のスロットはこの実体を直接指す。
+function getWeaponInstanceByUid(uid) {
+    if (!uid) return null;
+    const n = Number(uid);
+    if (!Number.isFinite(n)) return null;
+    return (state.weaponInstances || []).find(inst => inst && Number(inst.uid) === n) || null;
+}
+
+// 武装種別ごとの所持インスタンス一覧。装備画面の選択肢に使う。
+function getWeaponInstancesOfType(weaponId) {
+    if (!weaponId) return [];
+    return (state.weaponInstances || [])
+        .filter(inst => inst && inst.weaponId === weaponId && WEAPON_RARITIES[inst.rarity])
+        .slice()
+        .sort((a, b) => {
+            const rarityDiff = WEAPON_RARITY_ORDER.indexOf(b.rarity) - WEAPON_RARITY_ORDER.indexOf(a.rarity);
+            if (rarityDiff !== 0) return rarityDiff;
+            if (b.plus !== a.plus) return b.plus - a.plus;
+            return b.level - a.level;
+        });
+}
+
 function getBestWeaponInstanceBonus(weaponId) {
     const best = getBestWeaponInstance(weaponId);
     return best ? getWeaponInstanceBonus(best) : 0;
@@ -300,9 +322,39 @@ function getOwnedWeaponIds() {
     return ids;
 }
 
-// 初期配備の武装。この2つは最初から車両に載っているため、ガチャを引かなくても使える。
-// それ以外の武装はガチャで1つ以上所持しないと使えない。
+// 初期配備の武装。開始時から列車に載っており、コモン個体として所持している扱い。
+// 以後はガチャで同種の上位レアリティを引けば、そちらへ載せ替えられる。
 const STARTER_WEAPON_IDS = ['mg_vulcan', 'aa_flak'];
+const STARTER_WEAPON_RARITY = 'Common';
+
+// 初期配備ぶんのインスタンスを用意する。既に同種を持っていれば何もしない。
+function ensureStarterWeaponInstances() {
+    if (!Array.isArray(state.weaponInstances)) state.weaponInstances = [];
+    const created = [];
+    STARTER_WEAPON_IDS.forEach(weaponId => {
+        if (!WEAPONS[weaponId]) return;
+        const has = state.weaponInstances.some(inst =>
+            inst && inst.weaponId === weaponId && !isRailgunWeapon(inst.weaponId));
+        if (has) return;
+        const inst = createWeaponInstance(weaponId, STARTER_WEAPON_RARITY, { plus: 0 });
+        if (!inst) return;
+        state.weaponInstances.push(inst);
+        created.push(inst);
+    });
+    return created;
+}
+
+// 初期配備インスタンスを既定の車両へ載せる（空きスロットのみ）。
+function equipStarterWeapons() {
+    const car = (state.cars || []).find(c => c && !c.locked);
+    if (!car) return;
+    STARTER_WEAPON_IDS.forEach((weaponId, i) => {
+        const slot = i === 0 ? CAR_SLOT_UPPER : CAR_SLOT_SIDE;
+        if (getCarSlotWeaponUid(car, slot)) return;
+        const inst = getBestWeaponInstance(weaponId);
+        if (inst) setCarSlotWeaponUid(car, slot, inst.uid);
+    });
+}
 
 // その武装を使えるか。レールガンと初期配備は常に使え、それ以外はガチャ所持が条件。
 function canUseWeapon(weaponId, ownedIds) {
@@ -321,6 +373,14 @@ function getEffectiveWeaponDamage(weaponId) {
     if (!canUseWeapon(weaponId)) return base;
     const bonus = getBestWeaponInstanceBonus(weaponId);
     return bonus > 0 ? Math.round(base * (1 + bonus)) : base;
+}
+
+// 実際に搭載しているインスタンスでの威力。
+// 装備画面で弱い個体を選べば、そのぶん弱くなる（選ぶ意味を持たせる）。
+function getWeaponInstanceDamage(inst) {
+    if (!inst) return 0;
+    const base = getWeaponDamage(inst.weaponId);
+    return Math.round(base * (1 + getWeaponInstanceBonus(inst)));
 }
 
 function createWeaponInstance(weaponId, rarity, options = {}) {
@@ -1161,6 +1221,7 @@ function executeWeaponMerge() {
     const uidSet = new Set(pending.uids);
     state.weaponInstances = (state.weaponInstances || []).filter(inst => !uidSet.has(inst.uid));
     state.weaponInstances.push(result);
+    if (typeof pruneDanglingWeaponSlots === 'function') pruneDanglingWeaponSlots();
     SoundEngine.playUI('upgrade');
     showToast(`🔧 マージ完了！ ${getWeaponName(result.weaponId, result.rarity)} +${result.plus} (Lv.${result.level})`);
     updateHeaderUI();
@@ -1203,6 +1264,7 @@ function mergeGroupRepeatedly(weaponId, rarity) {
         const uidSet = new Set(consume.map(inst => inst.uid));
         state.weaponInstances = (state.weaponInstances || []).filter(inst => !uidSet.has(inst.uid));
         state.weaponInstances.push(result);
+        if (typeof pruneDanglingWeaponSlots === 'function') pruneDanglingWeaponSlots();
         merged++;
     }
     return merged;

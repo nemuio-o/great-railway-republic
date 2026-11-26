@@ -1108,8 +1108,10 @@ function getCarEffectiveStats(car, slot = CAR_SLOT_UPPER) {
     if (!w) return null;
     const isSide = slot === CAR_SLOT_SIDE;
     const sephPassive = getSephirahPassiveEffects();
+    const inst = getCarSlotWeaponInstance(car, slot);
 
-    let dmg = getEffectiveWeaponDamage(weaponId);
+    // 搭載している実体があればその個体の性能、無ければ種別の基準値（レールガン）。
+    let dmg = inst ? getWeaponInstanceDamage(inst) : getEffectiveWeaponDamage(weaponId);
     let reloadMult = getRelicReloadMult() * getActiveSkillSpeedMult();
     let isSynergy = false;
 
@@ -3224,18 +3226,20 @@ function drawScene() {
         ctx.stroke();
 
         // 上部スロット：車体上端の主砲塔。
-        if (car.weaponId) {
+        const upperId = getCarSlotWeaponId(car, CAR_SLOT_UPPER);
+        if (upperId) {
             ctx.save();
             ctx.translate(cx, carTop);
-            drawCarWeaponSprite(ctx, car.weaponId);
+            drawCarWeaponSprite(ctx, upperId);
             ctx.restore();
         }
         // 側面スロット：車体中央の副砲。小さく描いて主砲と区別する。
-        if (car.sideWeaponId && !isLead) {
+        const sideId = getCarSlotWeaponId(car, CAR_SLOT_SIDE);
+        if (sideId && !isLead) {
             ctx.save();
             ctx.translate(cx, carTop + carH - 5);
             ctx.scale(0.62, 0.62);
-            drawCarWeaponSprite(ctx, car.sideWeaponId);
+            drawCarWeaponSprite(ctx, sideId);
             ctx.restore();
         }
     }
@@ -3736,12 +3740,12 @@ function getLoadoutSummary() {
 // 編成中の兵装とセフィラを、資金が続く限りまとめて強化する。
 // 対象は「実際に列車へ搭載・配属されているもの」だけ。
 function upgradeEquippedAll() {
-    const weaponIds = [];
+    const uids = [];
     const sephIds = [];
     state.cars.forEach(car => {
         [CAR_SLOT_UPPER, CAR_SLOT_SIDE].forEach(slot => {
-            const wid = getCarSlotWeaponId(car, slot);
-            if (wid && !weaponIds.includes(wid)) weaponIds.push(wid);
+            const uid = getCarSlotWeaponUid(car, slot);
+            if (uid && !uids.includes(uid)) uids.push(uid);
         });
         if (car.sephirahId && !sephIds.includes(car.sephirahId)) sephIds.push(car.sephirahId);
     });
@@ -3757,13 +3761,14 @@ function upgradeEquippedAll() {
     while (progressed && guard < 5000) {
         progressed = false;
         guard++;
-        weaponIds.forEach(wid => {
-            if (!canUseWeapon(wid)) return;
-            if ((state.weaponLevels[wid] || 1) >= WEAPON_MAX_LEVEL) return;
-            const cost = getWeaponUpgradeCost(wid);
+        uids.forEach(uid => {
+            const inst = getWeaponInstanceByUid(uid);
+            if (!inst) return;
+            if (inst.level >= getWeaponInstanceUnlockedMaxLevel(inst)) return;
+            const cost = getWeaponInstanceUpgradeCost(inst);
             if (!Number.isFinite(cost) || state.gold < cost) return;
             state.gold -= cost;
-            state.weaponLevels[wid] = (state.weaponLevels[wid] || 1) + 1;
+            inst.level += 1;
             weaponUps++;
             progressed = true;
         });
@@ -3858,23 +3863,26 @@ function renderLoadoutSummary() {
 }
 
 // 編成画面から直接強化する。画面遷移せず、その場で結果が分かるようにする。
-function upgradeWeaponFromTrain(weaponId) {
-    if (!state.unlockedWeapons.includes(weaponId)) return;
-    if (state.weaponLevels[weaponId] >= WEAPON_MAX_LEVEL) {
-        showToast('この兵装は上限まで強化済みです');
+// 対象はスロットに載っている実体（uid）。
+function upgradeWeaponFromTrain(uid) {
+    const inst = getWeaponInstanceByUid(uid);
+    if (!inst) return;
+    const unlocked = getWeaponInstanceUnlockedMaxLevel(inst);
+    if (inst.level >= unlocked) {
+        showToast('上限到達です。研究開発で上限突破してください');
         return;
     }
-    const cost = getWeaponUpgradeCost(weaponId);
+    const cost = getWeaponInstanceUpgradeCost(inst);
     if (!Number.isFinite(cost) || state.gold < cost) {
         showToast(`資金が不足しています（${Number.isFinite(cost) ? formatMoney(cost) : '—'}必要）`);
         return;
     }
     state.gold -= cost;
-    state.weaponLevels[weaponId] = (state.weaponLevels[weaponId] || 1) + 1;
+    inst.level += 1;
     SoundEngine.playUI('upgrade');
     updateHeaderUI();
     renderTrainSlots();
-    showToast(`🔧 ${WEAPONS[weaponId].name} を Lv.${state.weaponLevels[weaponId]} に強化しました`);
+    showToast(`🔧 ${getWeaponName(inst.weaponId, inst.rarity)} を Lv.${inst.level} に強化しました`);
     saveGame(true);
 }
 
@@ -3992,6 +4000,7 @@ function renderTrainSlots() {
             const btn = row.querySelector('.train-slot-upgrade');
             const silhouette = row.querySelector('.train-slot-silhouette');
             const weaponId = getCarSlotWeaponId(car, slot);
+            const inst = getCarSlotWeaponInstance(car, slot);
             const w = weaponId ? WEAPONS[weaponId] : null;
 
             // 機関車の側面は存在しない枠として固定表示する。
@@ -4017,27 +4026,29 @@ function renderTrainSlots() {
             silhouette.hidden = false;
             row.querySelector('.train-slot-foot').hidden = false;
 
-            row.setAttribute('aria-label', `${car.name} ${label}スロット ${w ? `${w.name} レベル${state.weaponLevels[weaponId] || 1}` : '未搭載。選択する'}`);
+            const instLabel = inst ? ` ${getRarityMeta(inst.rarity).label} +${inst.plus} Lv.${inst.level}` : '';
+            row.setAttribute('aria-label', `${car.name} ${label}スロット ${w ? `${getWeaponName(weaponId, inst && inst.rarity)}${instLabel}` : '未搭載。選択する'}`);
             mainEl.textContent = w ? `${w.name} ` : '未搭載';
             if (w) {
                 const lvEl = document.createElement('span');
                 lvEl.className = 'train-slot-lv';
-                lvEl.textContent = `Lv.${state.weaponLevels[weaponId] || 1}`;
+                lvEl.textContent = inst
+                    ? `Lv.${formatNumber(inst.level)} ${getRarityMeta(inst.rarity).label} +${inst.plus}`
+                    : `Lv.${state.weaponLevels[weaponId] || 1}`;
                 mainEl.appendChild(lvEl);
             }
             powerEl.textContent = stats ? formatNumber(stats.damage) : '—';
 
-            if (!w) { btn.hidden = true; return; }
-            const wLv = state.weaponLevels[weaponId] || 1;
-            const wMax = wLv >= WEAPON_MAX_LEVEL;
-            const wCost = wMax ? Infinity : getWeaponUpgradeCost(weaponId);
+            if (!w || !inst) { btn.hidden = true; return; }
+            const wMax = inst.level >= getWeaponInstanceUnlockedMaxLevel(inst);
+            const wCost = wMax ? Infinity : getWeaponInstanceUpgradeCost(inst);
             const canAfford = Number.isFinite(wCost) && state.gold >= wCost;
             btn.hidden = false;
             btn.disabled = wMax;
-            btn.dataset.upgradeWeapon = weaponId;
+            btn.dataset.upgradeWeapon = inst.uid;
             btn.classList.toggle('is-short', !wMax && !canAfford);
             btn.textContent = wMax ? 'MAX' : `+${formatMoney(wCost)}`;
-            btn.setAttribute('aria-label', `${w.name}をLv.${wLv + 1}へ強化。${Number.isFinite(wCost) ? `${formatNumber(wCost)}ゴールド必要` : '上限'}`);
+            btn.setAttribute('aria-label', `${w.name}をLv.${inst.level + 1}へ強化。${Number.isFinite(wCost) ? `${formatMoney(wCost)}必要` : '上限'}`);
         };
 
         paintSlot(CAR_SLOT_UPPER, upperStats, '上部');
@@ -4103,32 +4114,93 @@ function openConfigModal(carIdx, slot = CAR_SLOT_UPPER) {
             </div>`;
             return;
         }
-        const mounted = getCarSlotWeaponId(car, slot);
+        // 所持している「実体」を並べる。種別ではなく個体を選ぶので、
+        // レアリティ・＋値・Lvがそのまま戦力になる。
+        const mountedUid = getCarSlotWeaponUid(car, slot);
         const ownedIds = getOwnedWeaponIds();
-        Object.values(WEAPONS).forEach(w => {
-            if (w.id === 'railgun_tiphareth') return;
-            const unlocked = canUseWeapon(w.id, ownedIds);
-            const selected = mounted === w.id;
-            const sideMult = slot === CAR_SLOT_SIDE
-                ? ` / 空×${(w.multipliers.AIR * SIDE_SLOT_AIR_MULT).toFixed(1)}`
-                : ` / 空×${w.multipliers.AIR}`;
-            const btn = document.createElement('button');
-            btn.disabled = !unlocked;
-            btn.onclick = () => {
-                setCarSlotWeaponId(car, slot, selected ? null : w.id);
+        const equippedElsewhere = new Set(
+            (state.cars || [])
+                .filter(c => c !== car)
+                .flatMap(c => [c.weaponUid, c.sideWeaponUid])
+                .filter(Boolean)
+        );
+
+        const usableTypes = Object.values(WEAPONS)
+            .filter(w => w.id !== 'railgun_tiphareth' && canUseWeapon(w.id, ownedIds));
+        if (!usableTypes.length) {
+            listEl.innerHTML = `<div class="col-span-2 bg-slate-800 border border-slate-600 p-3 rounded text-xs text-slate-400">
+                搭載できる武装がありません。武装はガチャで入手できます。
+            </div>`;
+            return;
+        }
+
+        // 「外す」はリスト先頭に1つだけ置く（各武装の下に繰り返すと選びにくい）。
+        if (getCarSlotWeaponUid(car, slot)) {
+            const clear = document.createElement('button');
+            clear.type = 'button';
+            clear.className = 'weapon-instance-option is-clear col-span-1 sm:col-span-2';
+            clear.textContent = 'このスロットを空ける';
+            clear.addEventListener('click', () => {
+                setCarSlotWeaponUid(car, slot, null);
                 openConfigModal(carIdx, slot);
                 renderTrainSlots();
                 saveGame(true);
-            };
-            btn.className = `p-2.5 rounded border text-left transition ${selected ? 'bg-amber-900/50 border-amber-400' : unlocked ? 'bg-slate-800 hover:bg-slate-700 border-slate-700' : 'bg-slate-900 border-slate-800 opacity-45'}`;
-            btn.innerHTML = `
-                <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-white">${w.name}</span>
-                    <span class="text-[10px] tech-font text-amber-300">${unlocked ? `Lv.${getWeaponInstanceUnlockedMaxLevel(getBestWeaponInstance(w.id))}` : '未所持'}</span>
+            });
+            listEl.appendChild(clear);
+        }
+
+        usableTypes.forEach(w => {
+            // 初期配備はコモン個体を必ず持っている扱いなので、実体が無くても選択肢に出す。
+            let instances = getWeaponInstancesOfType(w.id);
+            if (!instances.length && STARTER_WEAPON_IDS.includes(w.id)) {
+                const created = createWeaponInstance(w.id, STARTER_WEAPON_RARITY, { plus: 0 });
+                if (created) {
+                    state.weaponInstances.push(created);
+                    instances = [created];
+                }
+            }
+            if (!instances.length) return;
+
+            const group = document.createElement('div');
+            group.className = 'col-span-1 sm:col-span-2';
+            const sideMult = slot === CAR_SLOT_SIDE
+                ? ` / 空×${(w.multipliers.AIR * SIDE_SLOT_AIR_MULT).toFixed(1)}`
+                : ` / 空×${w.multipliers.AIR}`;
+            group.innerHTML = `
+                <div class="flex items-center justify-between gap-2 mb-1">
+                    <span class="text-[11px] font-bold text-slate-200">${w.name}</span>
+                    <span class="text-[10px] text-slate-400 tech-font">[${w.typeName}] 陸×${w.multipliers.LAND} / 海×${w.multipliers.SEA}${sideMult}${slot === CAR_SLOT_SIDE ? ' / 射程−15%' : ''}</span>
                 </div>
-                <div class="text-[10px] text-slate-400 mt-0.5">[${w.typeName}] 陸×${w.multipliers.LAND} / 海×${w.multipliers.SEA}${sideMult}${slot === CAR_SLOT_SIDE ? ' / 射程−15%' : ''}</div>
+                <div class="grid grid-cols-1 gap-1.5 weapon-instance-list"></div>
             `;
-            listEl.appendChild(btn);
+            const list = group.querySelector('.weapon-instance-list');
+
+            instances.forEach(inst => {
+                const meta = getRarityMeta(inst.rarity);
+                const selected = mountedUid === inst.uid;
+                const usedElsewhere = equippedElsewhere.has(inst.uid);
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.disabled = usedElsewhere && !selected;
+                btn.className = `weapon-instance-option${selected ? ' is-selected' : ''}`;
+                btn.innerHTML = `
+                    <span class="wio-rarity" style="color:${meta.color};border-color:${meta.color}66;background:${meta.color}18">${meta.label}</span>
+                    <span class="wio-name">${getWeaponName(w.id, inst.rarity)}</span>
+                    <span class="wio-num tech-font">+${inst.plus} Lv.${formatNumber(inst.level)}</span>
+                    <span class="wio-power tech-font">威力 ${formatNumber(getWeaponInstanceDamage(inst))}</span>
+                `;
+                if (usedElsewhere && !selected) {
+                    btn.setAttribute('aria-label', `${getWeaponName(w.id, inst.rarity)} は他の車両に搭載中`);
+                }
+                btn.addEventListener('click', () => {
+                    setCarSlotWeaponUid(car, slot, selected ? null : inst.uid);
+                    openConfigModal(carIdx, slot);
+                    renderTrainSlots();
+                    saveGame(true);
+                });
+                list.appendChild(btn);
+            });
+            listEl.appendChild(group);
         });
     };
 
@@ -4207,8 +4279,25 @@ function closeConfigModal() {
 }
 
 function autoEquipAllWeapons() {
-    const unlocked = state.unlockedWeapons.filter(id => id !== 'railgun_tiphareth');
-    if (unlocked.length === 0) return;
+    // 所持している実体から、最も強い個体を1つずつ選ぶ。同じ個体は使い回さない。
+    const used = new Set();
+    (state.cars || []).forEach(car => {
+        [car.weaponUid, car.sideWeaponUid].filter(Boolean).forEach(uid => used.add(uid));
+    });
+
+    const pool = (state.weaponInstances || [])
+        .filter(inst => inst
+            && !isRailgunWeapon(inst.weaponId)
+            && WEAPONS[inst.weaponId]
+            && WEAPON_RARITIES[inst.rarity]
+            && !used.has(inst.uid))
+        .slice()
+        .sort((a, b) => getWeaponInstanceBonus(b) - getWeaponInstanceBonus(a));
+
+    if (pool.length === 0) {
+        showToast('搭載できる武装を所持していません（ガチャで入手できます）');
+        return;
+    }
 
     let synergyMatchedCount = 0;
     let filledSlots = 0;
@@ -4217,37 +4306,38 @@ function autoEquipAllWeapons() {
     for (let i = 1; i < state.cars.length; i++) {
         const car = state.cars[i];
         const seph = car.sephirahId ? SEPHIROTH.find(s => s.id === car.sephirahId) : null;
-        const matchingWeapons = seph
-            ? unlocked
-                .map(wid => WEAPONS[wid])
-                .filter(w => w && w.type === seph.specialty)
-                .sort((a, b) => getWeaponDamage(b.id) - getWeaponDamage(a.id))
-            : [];
 
         [CAR_SLOT_UPPER, CAR_SLOT_SIDE].forEach((slot, slotIdx) => {
-            if (getCarSlotWeaponId(car, slot)) return;
-            let chosenWeaponId = null;
+            if (getCarSlotWeaponUid(car, slot)) return;
+            let chosen = null;
             // 上部はシナジー一致を優先。側面は対地・対艦向きの兵装を優先する。
-            if (matchingWeapons.length > 0 && slotIdx === 0) {
-                chosenWeaponId = matchingWeapons[0].id;
-                synergyMatchedCount++;
+            if (seph && slotIdx === 0) {
+                chosen = pool.find(inst =>
+                    WEAPONS[inst.weaponId].type === seph.specialty && !used.has(inst.uid));
+                if (chosen) synergyMatchedCount++;
             }
-            if (!chosenWeaponId) {
-                const pool = unlocked.map(wid => WEAPONS[wid]).filter(Boolean);
-                const preferred = slot === CAR_SLOT_SIDE
-                    ? pool.slice().sort((a, b) =>
-                        (b.multipliers.LAND + b.multipliers.SEA) - (a.multipliers.LAND + a.multipliers.SEA))
-                    : pool;
-                chosenWeaponId = (preferred[(filledSlots) % preferred.length] || preferred[0]).id;
+            if (!chosen) {
+                const candidates = pool.filter(inst => !used.has(inst.uid));
+                if (!candidates.length) return;
+                chosen = slot === CAR_SLOT_SIDE
+                    ? candidates.slice().sort((a, b) => {
+                        const am = WEAPONS[a.weaponId].multipliers;
+                        const bm = WEAPONS[b.weaponId].multipliers;
+                        return (bm.LAND + bm.SEA) - (am.LAND + am.SEA);
+                    })[0]
+                    : candidates[0];
             }
-            setCarSlotWeaponId(car, slot, chosenWeaponId);
+            setCarSlotWeaponUid(car, slot, chosen.uid);
+            used.add(chosen.uid);
             filledSlots++;
         });
     }
 
     SoundEngine.playUI('upgrade');
     renderTrainSlots();
-    showToast(`⚡ 2〜4両目の上部・側面に兵装を自動搭載しました（シナジー一致: ${synergyMatchedCount}枠）`);
+    showToast(filledSlots > 0
+        ? `⚡ 2〜4両目の空きスロットに武装を自動搭載しました（${filledSlots}枠 / シナジー一致 ${synergyMatchedCount}枠）`
+        : '空きスロットがありません');
     saveGame(true);
 }
 
@@ -4487,6 +4577,9 @@ function renderRdWeapons() {
     if (!grid) return;
     grid.innerHTML = '';
 
+    // 初期配備は「コモン個体を所持している」扱いなので、実体を必ず用意する。
+    if (typeof ensureStarterWeaponInstances === 'function') ensureStarterWeaponInstances();
+
     const owned = getOwnedWeaponIds();
     const usable = Object.keys(WEAPONS).filter(id => !isRailgunWeapon(id) && canUseWeapon(id, owned));
     // 保存されていた絞り込みが今は使えない武装を指していたら、全体表示へ戻す。
@@ -4507,12 +4600,7 @@ function renderRdWeapons() {
 
     ids.forEach(id => {
         const best = getBestWeaponInstance(id);
-        // ガチャ産のインスタンスが無い初期配備（バルカン・対空砲）は、
-        // 従来どおりゴールドでレベルを上げる。マージ対象にはならない。
-        if (!best) {
-            grid.appendChild(buildStarterWeaponCard(id));
-            return;
-        }
+        if (!best) return;
         const groups = getWeaponInstanceGroups()
             .filter(g => g.weaponId === id)
             .sort((a, b) => WEAPON_RARITY_ORDER.indexOf(b.rarity) - WEAPON_RARITY_ORDER.indexOf(a.rarity));
@@ -4524,6 +4612,15 @@ function renderRdWeapons() {
         const maxLevel = getWeaponInstanceMaxLevel(best);
         const atLevelCap = best.level >= unlockedMax;
         const mergeGroup = groups.find(g => g.count >= 3 && g.plus < WEAPON_MAX_PLUS);
+
+        // いま列車に載っている個体（育てる対象と一致しないことがある）。
+        const mounted = (state.cars || [])
+            .flatMap(c => [getCarSlotWeaponInstance(c, CAR_SLOT_UPPER), getCarSlotWeaponInstance(c, CAR_SLOT_SIDE)])
+            .filter(inst => inst && inst.weaponId === id)
+            .sort((a, b) => getWeaponInstanceBonus(b) - getWeaponInstanceBonus(a))[0];
+        const mountedLine = mounted
+            ? `<div class="text-[10px] text-emerald-300">搭載中 ${getRarityMeta(mounted.rarity).label} +${mounted.plus} Lv.${formatNumber(mounted.level)}</div>`
+            : `<div class="text-[10px] text-slate-500">未搭載</div>`;
 
         const card = document.createElement('div');
         card.className = 'rd-weapon-card';
@@ -4546,6 +4643,7 @@ function renderRdWeapons() {
                 <div>所持 <span class="text-slate-300">${groups.reduce((n, g) => n + g.count, 0)}個</span></div>
                 <div>最大Lv. <span class="text-slate-300">${formatNumber(maxLevel)}</span></div>
             </div>
+            ${mountedLine}
             <div class="rd-weapon-actions">
                 <button type="button" class="rd-btn-upgrade" ${atLevelCap ? 'disabled' : ''}>
                     ${atLevelCap ? '上限突破が必要' : `レベルアップ ${Number.isFinite(levelCost) ? formatMoney(levelCost) : '不可'}`}
@@ -4563,44 +4661,6 @@ function renderRdWeapons() {
         });
         grid.appendChild(card);
     });
-}
-
-// 初期配備の武装（ガチャ産インスタンス無し）用のカード。ゴールドでLvを上げる。
-function buildStarterWeaponCard(id) {
-    const w = WEAPONS[id];
-    const lv = state.weaponLevels[id] || 1;
-    const isMax = lv >= WEAPON_MAX_LEVEL;
-    const dmg = getWeaponDamage(id);
-    const cost = isMax ? Infinity : getWeaponUpgradeCost(id);
-    const nextDmg = isMax ? dmg : getWeaponDamageAtLevel(id, lv + 1);
-    const card = document.createElement('div');
-    card.className = 'rd-weapon-card';
-    card.style.setProperty('--w-accent', w.color || '#94a3b8');
-    card.innerHTML = `
-        <div class="rd-weapon-head">
-            <canvas class="rd-weapon-icon" aria-hidden="true"></canvas>
-            <div class="min-w-0 flex-1">
-                <div class="rd-weapon-name">${w.name}</div>
-                <div class="rd-weapon-meta">
-                    <span class="rd-rarity" style="color:#94a3b8;border-color:#94a3b866;background:#94a3b818">初期配備</span>
-                    <span class="tech-font">Lv.${formatNumber(lv)}/${WEAPON_MAX_LEVEL}</span>
-                </div>
-            </div>
-        </div>
-        <div class="rd-weapon-stats">
-            <div>威力 <span class="text-amber-300 font-bold">${formatNumber(getEffectiveWeaponDamage(id))}</span></div>
-            <div>次の威力 <span class="text-slate-300">${isMax ? 'MAX' : formatNumber(nextDmg)}</span></div>
-            <div class="col-span-2">[${w.typeName}] 陸×${w.multipliers.LAND} / 海×${w.multipliers.SEA} / 空×${w.multipliers.AIR}</div>
-        </div>
-        <div class="rd-weapon-actions">
-            <button type="button" class="rd-btn-upgrade rd-btn-wide" ${isMax ? 'disabled' : ''}>
-                ${isMax ? 'MAX' : `強化する ${Number.isFinite(cost) ? formatMoney(cost) : '不可'}`}
-            </button>
-        </div>
-    `;
-    drawWeaponTopDown(card.querySelector('.rd-weapon-icon'), id);
-    card.querySelector('.rd-btn-upgrade').addEventListener('click', () => upgradeWeapon(id));
-    return card;
 }
 
 // マージ可能な組み合わせだけを一覧する（研究開発タブ内）。
@@ -4672,71 +4732,43 @@ function unlockWeapon() {
     showToast('武装はガチャでのみ入手できます');
 }
 
-// 武装の強化。ガチャ産インスタンスがあればそれを、無ければ初期配備として
-// state.weaponLevels をゴールドで1段上げる。
+// 武装の強化。所持している実体のうち最も強い個体を1段上げる。
 function upgradeWeapon(id) {
     const inst = getBestWeaponInstance(id);
-    if (inst) { upgradeWeaponInstanceByUid(inst.uid); return; }
-    if (!canUseWeapon(id)) return;
-    const cost = getWeaponUpgradeCost(id);
-    if (!Number.isFinite(cost)) {
-        showToast('これ以上強化できません');
-        return;
-    }
-    if (state.gold < cost) {
-        showToast(`資金が不足しています（${formatMoney(cost)}必要）`);
-        return;
-    }
-    state.gold -= cost;
-    state.weaponLevels[id] = (state.weaponLevels[id] || 1) + 1;
-    SoundEngine.playUI('upgrade');
-    updateHeaderUI();
-    renderRDTab();
-    saveGame(true);
+    if (inst) upgradeWeaponInstanceByUid(inst.uid);
 }
 
 function bulkUnlockWeapons() {
-  showToast('武装はガチャでのみ入手できます');
+    showToast('武装はガチャでのみ入手できます');
 }
 
+// 所持している全インスタンスを、資金が続く限り1段ずつ上げる。
 function bulkUpgradeWeapons() {
-  const ids = [...getOwnedWeaponIds()];
-  if (!ids.length) { showToast('強化できる武装がありません'); return; }
-  let count = 0;
-  let progressed = true;
-  let guard = 0;
-  while (progressed && guard < 500) {
-    progressed = false;
-    guard++;
-    ids.forEach(id => {
-      const inst = getBestWeaponInstance(id);
-      if (!inst) {
-        // 初期配備はゴールドでLvを上げる。
-        const lv = state.weaponLevels[id] || 1;
-        if (lv >= WEAPON_MAX_LEVEL) return;
-        const cost = getWeaponUpgradeCost(id);
-        if (!Number.isFinite(cost) || state.gold < cost) return;
-        state.gold -= cost;
-        state.weaponLevels[id] = lv + 1;
-        count++;
-        progressed = true;
-        return;
-      }
-      if (inst.level >= getWeaponInstanceUnlockedMaxLevel(inst)) return;
-      const cost = getWeaponInstanceUpgradeCost(inst);
-      if (!Number.isFinite(cost) || state.gold < cost) return;
-      state.gold -= cost;
-      inst.level += 1;
-      count++;
-      progressed = true;
-    });
-  }
-  if (count > 0) {
-    SoundEngine.playUI('upgrade');
-    updateHeaderUI();
-    renderRDTab();
-    showToast(`⚡ 所持武装を合計 ${count} 回一括強化しました！`);
-    saveGame(true);
+    const instances = (state.weaponInstances || [])
+        .filter(inst => inst && !isRailgunWeapon(inst.weaponId) && WEAPON_RARITIES[inst.rarity]);
+    if (!instances.length) { showToast('強化できる武装がありません'); return; }
+    let count = 0;
+    let progressed = true;
+    let guard = 0;
+    while (progressed && guard < 500) {
+        progressed = false;
+        guard++;
+        instances.forEach(inst => {
+            if (inst.level >= getWeaponInstanceUnlockedMaxLevel(inst)) return;
+            const cost = getWeaponInstanceUpgradeCost(inst);
+            if (!Number.isFinite(cost) || state.gold < cost) return;
+            state.gold -= cost;
+            inst.level += 1;
+            count++;
+            progressed = true;
+        });
+    }
+    if (count > 0) {
+        SoundEngine.playUI('upgrade');
+        updateHeaderUI();
+        renderRDTab();
+        showToast(`⚡ 所持武装を合計 ${count} 回一括強化しました！`);
+        saveGame(true);
   } else {
     showToast('強化に必要な資金が不足しています');
   }
@@ -5661,6 +5693,16 @@ function executePrestige() {
         railgun_tiphareth: 1, mg_vulcan: 1, aa_flak: 1,
         torpedo_launcher: 1, howitzer_heavy: 1, missile_malkuth: 1, laser_kether: 1
     };
+    // 武装の実体は転生で失わない（レベルだけ初期化する）。
+    // ガチャで引いた個体を消すと、編成が空になって進行不能になる。
+    (state.weaponInstances || []).forEach(inst => {
+        if (!inst) return;
+        inst.level = 1;
+        inst.unlockedMaxLevel = Math.min(
+            getWeaponInstanceMaxLevel(inst),
+            getRarityData(inst.weaponId, inst.rarity).maxLevel
+        );
+    });
     // セフィラの解放（雇用）は転生で失わない。レベルだけ初期化する。
     // 解放条件は到達ステージ基準なので、maxReachedStages を初期化した後でも
     // ここで明示的に引き継がないと、また条件を満たすまで使えなくなる。
@@ -6241,61 +6283,92 @@ function loadGame() {
     }
 }
 
-// 旧セーブ（10両・1両1兵装）を4両×2スロットへ縮約する。
-// 兵装を捨てず、はみ出したぶんは予備兵装として保持する。
+// 旧セーブ（10両・1両1兵装／4両・種別ID保持）を
+// 「4両 × 上部/側面 = uid参照」へ移行する。兵装を捨てない。
 function migrateCarsToCurrentLayout() {
     if (!Array.isArray(state.reserveWeapons)) state.reserveWeapons = [];
     if (!Array.isArray(state.reserveSephiroth)) state.reserveSephiroth = [];
 
+    // まず武装の実体を整える（旧セーブには weaponInstances が無い）。
+    if (typeof ensureStarterWeaponInstances === 'function') ensureStarterWeaponInstances();
+
     if (!Array.isArray(state.cars) || state.cars.length === 0) {
         initCars();
+        if (typeof equipStarterWeapons === 'function') equipStarterWeapons();
         return;
     }
 
-    const needsMigration = state.cars.length !== CAR_COUNT
-        || state.cars.some(car => !('sideWeaponId' in car) || !('sideCdTimer' in car));
-    if (!needsMigration) return;
+    // 旧スロット値（種別ID文字列）を、所持している実体のuidへ解決する。
+    const resolveUid = legacyValue => {
+        if (legacyValue == null) return null;
+        // 既に uid 参照になっている（数値）ならそのまま。
+        if (typeof legacyValue === 'number') return legacyValue;
+        const weaponId = String(legacyValue);
+        if (!WEAPONS[weaponId]) return null;
+        if (isRailgunWeapon(weaponId)) return null;
+        let inst = getBestWeaponInstance(weaponId);
+        if (!inst && typeof createWeaponInstance === 'function') {
+            const rarity = STARTER_WEAPON_IDS.includes(weaponId) ? STARTER_WEAPON_RARITY : 'Common';
+            inst = createWeaponInstance(weaponId, rarity, { plus: 0 });
+            if (inst) state.weaponInstances.push(inst);
+        }
+        return inst ? inst.uid : null;
+    };
+
+    const isLegacyLayout = state.cars.some(car =>
+        car && ('weaponId' in car || 'sideWeaponId' in car));
+    const wrongCarCount = state.cars.length !== CAR_COUNT;
+
+    if (!isLegacyLayout && !wrongCarCount) {
+        // 現行レイアウト。参照先が消えているスロットだけ掃除する。
+        state.cars.forEach(car => {
+            [CAR_SLOT_UPPER, CAR_SLOT_SIDE].forEach(slot => {
+                const uid = getCarSlotWeaponUid(car, slot);
+                if (uid && !getWeaponInstanceByUid(uid)) setCarSlotWeaponUid(car, slot, null);
+            });
+        });
+        return;
+    }
 
     const oldCars = state.cars;
     const nextCars = [];
     for (let i = 0; i < CAR_COUNT; i++) nextCars.push(createCar(i));
-    // 移行先は旧セーブの内容だけで埋める（初期装備の既定値は使わない）。
-    nextCars.slice(1).forEach(car => { car.weaponId = null; car.sideWeaponId = null; });
 
     // 1両目（機関車）は固定。旧セーブの値は使わない。
     oldCars.slice(1).forEach((old, idx) => {
-        const weaponId = old && old.weaponId ? old.weaponId : null;
-        if (!weaponId) return;
+        if (!old) return;
+        const upperSrc = old.weaponId !== undefined ? old.weaponId : old.weaponUid;
+        const sideSrc = old.sideWeaponId !== undefined ? old.sideWeaponId : old.sideWeaponUid;
         // 旧2,3両目 → 新2両目、旧4,5両目 → 新3両目、旧6,7両目 → 新4両目。
         const carIndex = Math.min(CAR_COUNT - 1, 1 + Math.floor(idx / 2));
-        const slot = idx % 2 === 0 ? CAR_SLOT_UPPER : CAR_SLOT_SIDE;
         const target = nextCars[carIndex];
         if (!target) return;
-        if (slot === CAR_SLOT_UPPER && !target.weaponId) {
-            target.weaponId = weaponId;
-        } else if (slot === CAR_SLOT_SIDE && !target.sideWeaponId) {
-            target.sideWeaponId = weaponId;
-        } else if (!target.weaponId) {
-            target.weaponId = weaponId;
-        } else if (!target.sideWeaponId) {
-            target.sideWeaponId = weaponId;
-        } else {
-            state.reserveWeapons.push(weaponId);
-        }
+
+        // 10両時代は1両1兵装なので、偶数番目を上部、奇数番目を側面へ振り分ける。
+        const legacySingle = old.weaponId !== undefined && old.sideWeaponId === undefined;
+        const entries = legacySingle
+            ? [[idx % 2 === 0 ? CAR_SLOT_UPPER : CAR_SLOT_SIDE, upperSrc]]
+            : [[CAR_SLOT_UPPER, upperSrc], [CAR_SLOT_SIDE, sideSrc]];
+
+        entries.forEach(([slot, src]) => {
+            const uid = resolveUid(src);
+            if (!uid) return;
+            if (!getCarSlotWeaponUid(target, slot)) {
+                setCarSlotWeaponUid(target, slot, uid);
+            } else if (!getCarSlotWeaponUid(target, CAR_SLOT_UPPER)) {
+                setCarSlotWeaponUid(target, CAR_SLOT_UPPER, uid);
+            } else if (!getCarSlotWeaponUid(target, CAR_SLOT_SIDE)) {
+                setCarSlotWeaponUid(target, CAR_SLOT_SIDE, uid);
+            }
+        });
+
         // セフィラは兵装と同じ車両へ。埋まっていれば予備へ。
-        if (old && old.sephirahId && old.sephirahId !== 'tiphareth') {
+        if (old.sephirahId && old.sephirahId !== 'tiphareth') {
             if (!target.sephirahId) target.sephirahId = old.sephirahId;
             else state.reserveSephiroth.push(old.sephirahId);
         }
     });
 
-    // 想定より残った兵装・セフィラも失わない。
-    oldCars.slice(1 + CAR_COUNT * 2).forEach(old => {
-        if (old && old.weaponId) state.reserveWeapons.push(old.weaponId);
-        if (old && old.sephirahId && old.sephirahId !== 'tiphareth') state.reserveSephiroth.push(old.sephirahId);
-    });
-
-    state.reserveWeapons = [...new Set(state.reserveWeapons)].filter(Boolean);
     state.reserveSephiroth = [...new Set(state.reserveSephiroth)].filter(Boolean);
     state.cars = nextCars;
 }
@@ -6470,6 +6543,10 @@ window.addEventListener('DOMContentLoaded', () => {
     loadTutorialSeenOutsideSave();
     if (!hasSave) {
         state.weather = 'cloudy';
+        // 新規開始時は初期配備（コモンのバルカン・対空砲）を実体として持たせ、
+        // 2両目の上部／側面に載せた状態から始める。
+        if (typeof ensureStarterWeaponInstances === 'function') ensureStarterWeaponInstances();
+        if (typeof equipStarterWeapons === 'function') equipStarterWeapons();
     }
     resizeCanvas();
     updateSoundToggleButton();
