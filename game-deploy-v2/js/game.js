@@ -3058,22 +3058,33 @@ function formatEnemyHp(value) {
 
 // 戦場下部のボスHP計器。出現中のボス（中ボス・大ボス・ネームド）のうち
 // 最もHPが高い1体を表示する。ボスがいなければパネルごと隠す。
+let bossHpPanelSignature = '';
 function updateBossHpPanel() {
     const panel = document.getElementById('boss-hp-panel');
     if (!panel) return;
     const bosses = enemies.filter(e => e.isBoss && e.hp > 0);
     if (!bosses.length) {
-        panel.classList.add('hidden');
+        if (bossHpPanelSignature !== '') {
+            panel.classList.add('hidden');
+            bossHpPanelSignature = '';
+        }
         return;
     }
     const boss = bosses.reduce((a, b) => (b.hp > a.hp ? b : a), bosses[0]);
     const ratio = Math.max(0, Math.min(1, boss.hp / boss.maxHp));
+    const name = (boss.name || '').replace(/^【.*?】/, '') || 'ボス';
+    const num = `${formatNumber(boss.hp)} / ${formatNumber(boss.maxHp)}`;
+    // 毎フレーム書き換えるとスクリーンリーダーが読み上げ続けるので、
+    // 実際に表示内容が変わったときだけDOMへ反映する。
+    const signature = `${name}|${num}|${ratio.toFixed(3)}`;
+    if (signature === bossHpPanelSignature) return;
+    bossHpPanelSignature = signature;
     panel.classList.remove('hidden');
     const nameEl = document.getElementById('boss-hp-name');
     const numEl = document.getElementById('boss-hp-num');
     const fillEl = document.getElementById('boss-hp-fill');
-    if (nameEl) nameEl.textContent = (boss.name || '').replace(/^【.*?】/, '') || 'ボス';
-    if (numEl) numEl.textContent = `${formatNumber(boss.hp)} / ${formatNumber(boss.maxHp)}`;
+    if (nameEl) nameEl.textContent = name;
+    if (numEl) numEl.textContent = num;
     if (fillEl) {
         fillEl.style.width = `${(ratio * 100).toFixed(1)}%`;
         fillEl.classList.toggle('is-low', ratio <= 0.25);
@@ -4477,9 +4488,13 @@ function renderRdWeapons() {
     grid.innerHTML = '';
 
     const owned = getOwnedWeaponIds();
-    const filter = state.rdWeaponFilter || 'all';
-    const ids = Object.keys(WEAPONS).filter(id =>
-        !isRailgunWeapon(id) && canUseWeapon(id, owned) && (filter === 'all' || filter === id));
+    const usable = Object.keys(WEAPONS).filter(id => !isRailgunWeapon(id) && canUseWeapon(id, owned));
+    // 保存されていた絞り込みが今は使えない武装を指していたら、全体表示へ戻す。
+    const filter = (state.rdWeaponFilter && state.rdWeaponFilter !== 'all' && !usable.includes(state.rdWeaponFilter))
+        ? 'all'
+        : (state.rdWeaponFilter || 'all');
+    if (filter !== state.rdWeaponFilter) state.rdWeaponFilter = filter;
+    const ids = usable.filter(id => filter === 'all' || filter === id);
 
     if (ids.length === 0) {
         grid.innerHTML = `
