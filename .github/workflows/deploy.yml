@@ -31,6 +31,13 @@ jobs:
           for f in game-deploy-v2/js/*.js; do
             node --check "$f" || exit 1
           done
+          node --check scripts/build.mjs
+          node --check scripts/verify-deploy.mjs
+
+      # 配信物にビルドIDを付け、JS/CSS のURLを ?v=<id> にする。
+      # これでブラウザが前回のJSを掴んだままになるのを防ぐ。
+      - name: Build
+        run: node scripts/build.mjs --id "${GITHUB_SHA::7}"
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
@@ -38,21 +45,21 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: >-
-            pages deploy game-deploy-v2
+            pages deploy dist
             --project-name=great-railway-republic
             --branch=main
 
       # デプロイ成功の通知だけでは「本当に反映されたか」は分からないので、
-      # 配信中のファイルをリポジトリの内容と突き合わせる。
+      # 配信中のファイルをビルド結果と突き合わせる。
       # 反映待ちがあるため、最大5回まで間隔を空けて再試行する。
-      - name: Verify production matches the repository
+      - name: Verify production matches this build
         run: |
           for attempt in 1 2 3 4 5; do
-            if node scripts/verify-deploy.mjs; then
+            if node scripts/verify-deploy.mjs --dir dist; then
               exit 0
             fi
             echo "attempt $attempt failed, retrying in 15s..."
             sleep 15
           done
-          echo "production does not match the repository"
+          echo "production does not match this build"
           exit 1

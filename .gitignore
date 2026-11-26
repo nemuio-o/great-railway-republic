@@ -8,6 +8,9 @@
 # Node
 node_modules/
 
+# デプロイ用のビルド成果物（scripts/build.mjs が生成する）
+dist/
+
 # Temp / scratch
 _tmp_*
 *.log

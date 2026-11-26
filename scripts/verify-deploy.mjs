@@ -2,8 +2,9 @@
 // 一致しているかを検証する。デプロイ直後に CI から実行する想定。
 //
 // 使い方:
-//   node scripts/verify-deploy.mjs [--base https://example.pages.dev]
+//   node scripts/verify-deploy.mjs [--base https://example.pages.dev] [--dir dist]
 //
+// --dir を dist にすると、ビルド時にアセットURLへ付与した ?v= を無視して比較する。
 // 終了コード 0 = すべて一致 / 1 = 不一致または取得失敗。
 
 import { readFile } from 'node:fs/promises';
@@ -12,7 +13,16 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(HERE, '..', 'game-deploy-v2');
+const ROOT = join(HERE, '..');
+
+const args = process.argv.slice(2);
+const getArg = (name, fallback) => {
+    const i = args.indexOf(name);
+    return i >= 0 && args[i + 1] ? args[i + 1] : fallback;
+};
+
+const DIR = join(ROOT, getArg('--dir', 'game-deploy-v2'));
+const BASE = getArg('--base', 'https://great-railway-republic.pages.dev').replace(/\/+$/, '');
 
 // 配信対象のうち、中身がそのまま出るものだけを突き合わせる。
 // /index.html は Pages が / へ 308 するので / を取得する。
@@ -28,13 +38,11 @@ const TARGETS = [
     { local: 'css/styles.css', path: '/css/styles.css' }
 ];
 
-const args = process.argv.slice(2);
-const baseIdx = args.indexOf('--base');
-const BASE = (baseIdx >= 0 ? args[baseIdx + 1] : 'https://great-railway-republic.pages.dev')
-    .replace(/\/+$/, '');
-
-// 改行コードの違いで落とさないよう LF に揃えて比較する。
-const normalize = text => text.replace(/\r\n/g, '\n').trimEnd();
+// 改行コードの違いや ?v= の有無で落とさないよう揃えてから比較する。
+const normalize = text => text
+    .replace(/\r\n/g, '\n')
+    .replace(/((?:src|href)="(?:js|css)\/[^"?]+\.(?:js|css))\?v=[^"]*"/g, '$1"')
+    .trimEnd();
 
 const sha = text => createHash('sha256').update(normalize(text), 'utf8').digest('hex').slice(0, 12);
 
@@ -49,18 +57,36 @@ async function fetchText(path) {
 const results = [];
 for (const target of TARGETS) {
     try {
-        const local = normalize(await readFile(join(ROOT, target.local), 'utf8'));
+        const local = normalize(await readFile(join(DIR, target.local), 'utf8'));
         const remote = normalize(await fetchText(target.path));
+        const ok = local === remote;
         results.push({
             file: target.local,
-            ok: local === remote,
-            detail: local === remote
-                ? `${sha(local)}`
+            ok,
+            detail: ok
+                ? sha(local)
                 : `local ${sha(local)} / remote ${sha(remote)} (${local.length} vs ${remote.length} chars)`
         });
     } catch (error) {
         results.push({ file: target.local, ok: false, detail: `取得失敗: ${error.message}` });
     }
+}
+
+// ビルドIDが配信物と一致しているかも見る（どのビルドが生きているかの断定に使う）。
+let buildLine = '';
+try {
+    const localIndex = await readFile(join(DIR, 'index.html'), 'utf8');
+    const remoteIndex = await fetchText('/');
+    const pick = text => (text.match(/build\s+([0-9A-Za-z_-]+)/) || [])[1] || null;
+    const localId = pick(localIndex);
+    const remoteId = pick(remoteIndex);
+    if (localId) {
+        const same = localId === remoteId;
+        buildLine = `build id: local ${localId} / remote ${remoteId ?? '(なし)'}${same ? '' : ' ←不一致'}`;
+        if (!same) results.push({ file: '(build id)', ok: false, detail: buildLine });
+    }
+} catch {
+    // build id の確認は補助情報なので、失敗しても本判定は続ける。
 }
 
 const width = Math.max(...results.map(r => r.file.length));
