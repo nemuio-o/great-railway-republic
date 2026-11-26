@@ -732,3 +732,20 @@ function isWeaponInstanceEquipped(uid) {
     return getMountedWeaponUids().has(uid);
 }
 
+// マージで消えた個体が載っていたスロットを、マージ結果で埋め直す。
+// 予備が無くて装備中を消費した場合、編成が空になって戦力が落ちるのを防ぐ。
+function replaceConsumedWeaponSlots(consumedUids, resultUid) {
+    if (!resultUid || !consumedUids || !consumedUids.size) return 0;
+    let replaced = 0;
+    (state.cars || []).forEach(car => {
+        [CAR_SLOT_UPPER, CAR_SLOT_SIDE].forEach(slot => {
+            const uid = getCarSlotWeaponUid(car, slot);
+            if (uid && consumedUids.has(uid)) {
+                setCarSlotWeaponUid(car, slot, resultUid);
+                replaced++;
+            }
+        });
+    });
+    return replaced;
+}
+

@@ -430,14 +430,12 @@ function getWeaponInstanceCapUnlockCost(inst) {
     return CAP_UNLOCK_MATERIAL_BASE + done;
 }
 
-// マージ用のグループ。装備中の個体は在庫ではないので数えない
-// （装備が勝手に合成されて消えるのを防ぐ）。
+// マージ用のグループ。所持している個体は装備中でも数える
+// （3個持っているのに合成できない、という状態を作らない）。
+// ただし消費するときは未装備を優先する（getMergeConsumeCandidates）。
 function getWeaponInstanceGroups() {
     const map = new Map();
-    const inventory = typeof getWeaponInventoryInstances === 'function'
-        ? getWeaponInventoryInstances()
-        : (state.weaponInstances || []);
-    inventory.forEach(inst => {
+    (state.weaponInstances || []).forEach(inst => {
         if (!inst || !WEAPONS[inst.weaponId] || isRailgunWeapon(inst.weaponId) || !WEAPON_RARITIES[inst.rarity]) return;
         const key = `${inst.weaponId}|${inst.rarity}|${inst.plus}`;
         let group = map.get(key);
@@ -1089,9 +1087,15 @@ function renderWeaponsTab() {
 
 let pendingWeaponMerge = null;
 
+// マージで消費する3個を選ぶ。
+// 装備中の個体は最後に回す（予備があるのに装備が消えるのを避ける）。
 function getMergeConsumeCandidates(group) {
     if (!group) return [];
+    const mounted = typeof getMountedWeaponUids === 'function' ? getMountedWeaponUids() : new Set();
     const sorted = group.instances.slice().sort((a, b) => {
+        const aEq = mounted.has(a.uid) ? 1 : 0;
+        const bEq = mounted.has(b.uid) ? 1 : 0;
+        if (aEq !== bEq) return aEq - bEq;
         if (MERGE_CONSUME_ORDER === 'highest') return b.level - a.level || a.uid - b.uid;
         return a.level - b.level || a.uid - b.uid;
     });
@@ -1226,6 +1230,8 @@ function executeWeaponMerge() {
     const uidSet = new Set(pending.uids);
     state.weaponInstances = (state.weaponInstances || []).filter(inst => !uidSet.has(inst.uid));
     state.weaponInstances.push(result);
+    // 装備中を消費した場合は、そのスロットをマージ結果で埋め直す。
+    if (typeof replaceConsumedWeaponSlots === 'function') replaceConsumedWeaponSlots(uidSet, result.uid);
     if (typeof pruneDanglingWeaponSlots === 'function') pruneDanglingWeaponSlots();
     SoundEngine.playUI('upgrade');
     showToast(`🔧 マージ完了！ ${getWeaponName(result.weaponId, result.rarity)} +${result.plus} (Lv.${result.level})`);
@@ -1269,6 +1275,7 @@ function mergeGroupRepeatedly(weaponId, rarity) {
         const uidSet = new Set(consume.map(inst => inst.uid));
         state.weaponInstances = (state.weaponInstances || []).filter(inst => !uidSet.has(inst.uid));
         state.weaponInstances.push(result);
+        if (typeof replaceConsumedWeaponSlots === 'function') replaceConsumedWeaponSlots(uidSet, result.uid);
         if (typeof pruneDanglingWeaponSlots === 'function') pruneDanglingWeaponSlots();
         merged++;
     }

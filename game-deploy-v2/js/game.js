@@ -4115,15 +4115,15 @@ function openConfigModal(carIdx, slot = CAR_SLOT_UPPER) {
             </div>`;
             return;
         }
-        // 所持している「実体」を並べる。種別ではなく個体を選ぶので、
+        // 所持している「実体」はすべて並べる。種別ではなく個体を選ぶので、
         // レアリティ・＋値・Lvがそのまま戦力になる。
-        // 装備すると在庫から消費されるので、候補は在庫＋このスロットの装備中だけ。
+        // 装備中の個体も消さずに残し、状態をタグで示す
+        // （消すと「1個編成したら一覧から消えた」ように見えてしまう）。
         const mountedUid = getCarSlotWeaponUid(car, slot);
         const ownedIds = getOwnedWeaponIds();
-        const inventoryUids = new Set(
-            (typeof getWeaponInventoryInstances === 'function' ? getWeaponInventoryInstances() : [])
-                .map(inst => inst.uid)
-        );
+        const equippedUidSet = typeof getMountedWeaponUids === 'function'
+            ? getMountedWeaponUids()
+            : new Set();
 
         const usableTypes = Object.values(WEAPONS)
             .filter(w => w.id !== 'railgun_tiphareth' && canUseWeapon(w.id, ownedIds));
@@ -4178,17 +4178,19 @@ function openConfigModal(carIdx, slot = CAR_SLOT_UPPER) {
             instances.forEach(inst => {
                 const meta = getRarityMeta(inst.rarity);
                 const selected = mountedUid === inst.uid;
-                // 装備中の個体は在庫に無いが、このスロットのものだけは選択肢に残す。
-                if (!selected && !inventoryUids.has(inst.uid)) return;
+                // 他の車両に載っている個体は、このスロットへは持ってこられない。
+                const equippedElsewhere = !selected && equippedUidSet.has(inst.uid);
                 const btn = document.createElement('button');
                 btn.type = 'button';
-                btn.className = `weapon-instance-option${selected ? ' is-selected' : ''}`;
+                btn.disabled = equippedElsewhere;
+                btn.className = `weapon-instance-option${selected ? ' is-selected' : ''}${equippedElsewhere ? ' is-elsewhere' : ''}`;
                 btn.innerHTML = `
                     <span class="wio-rarity" style="color:${meta.color};border-color:${meta.color}66;background:${meta.color}18">${meta.label}</span>
                     <span class="wio-name">${getWeaponName(w.id, inst.rarity)}</span>
                     <span class="wio-num tech-font">+${inst.plus} Lv.${formatNumber(inst.level)}</span>
                     <span class="wio-power tech-font">威力 ${formatNumber(getWeaponInstanceDamage(inst))}</span>
-                    ${selected ? '<span class="wio-tag">装備中</span>' : ''}
+                    ${selected ? '<span class="wio-tag">このスロット</span>' : ''}
+                    ${equippedElsewhere ? '<span class="wio-tag is-elsewhere">他車両</span>' : ''}
                 `;
                 btn.addEventListener('click', () => {
                     setCarSlotWeaponUid(car, slot, selected ? null : inst.uid);
@@ -4611,26 +4613,37 @@ function renderRdWeapons() {
         const atLevelCap = best.level >= unlockedMax;
         const mergeGroup = groups.find(g => g.count >= 3 && g.plus < WEAPON_MAX_PLUS);
 
-        // 装備中の個体（消費済み）と未装備（在庫）を分けて数える。
+        // 所持数（装備中も含む）と、そのうち何個を列車に載せているか。
         const mountedList = (state.cars || [])
             .flatMap(c => [getCarSlotWeaponInstance(c, CAR_SLOT_UPPER), getCarSlotWeaponInstance(c, CAR_SLOT_SIDE)])
             .filter(inst => inst && inst.weaponId === id)
             .sort((a, b) => getWeaponInstanceBonus(b) - getWeaponInstanceBonus(a));
-        const inventoryCount = groups.reduce((n, g) => n + g.count, 0);
+        const ownedCount = groups.reduce((n, g) => n + g.count, 0);
         const mountedLine = mountedList.length
             ? `<div class="text-[10px] text-emerald-300">装備中 ${mountedList.map(inst =>
                 `${getRarityMeta(inst.rarity).label}+${inst.plus} Lv.${formatNumber(inst.level)}`).join(' / ')}</div>`
             : `<div class="text-[10px] text-slate-500">未装備</div>`;
 
         // ＋値は別アイテム扱い。内訳を出さないと「3個あるのに合成できない」理由が分からない。
-        const breakdown = groups.map(g =>
-            `<span class="rd-plus-chip${g.count >= 3 && g.plus < WEAPON_MAX_PLUS ? ' is-ready' : ''}">+${g.plus} ×${g.count}</span>`
-        ).join('');
+        // マージ可能なチップには、予備があるか（装備を消費せずに済むか）も添える。
+        const breakdown = groups.map(g => {
+            const ready = g.count >= 3 && g.plus < WEAPON_MAX_PLUS;
+            return `<span class="rd-plus-chip${ready ? ' is-ready' : ''}">+${g.plus} ×${g.count}</span>`;
+        }).join('');
         let mergeHint;
         if (mergeGroup) {
-            mergeHint = `マージ可（+${mergeGroup.plus} が ${mergeGroup.count}個）`;
+            // 予備が足りず装備中を消費する場合は、結果をそのスロットへ載せ替える旨を伝える。
+            const mountedInGroup = mergeGroup.instances.filter(inst => mountedList.some(m => m.uid === inst.uid)).length;
+            const spare = mergeGroup.count - mountedInGroup;
+            if (spare >= 3) {
+                mergeHint = `マージ可（+${mergeGroup.plus} が ${mergeGroup.count}個）`;
+            } else if (spare > 0) {
+                mergeHint = `マージ可（+${mergeGroup.plus} が ${mergeGroup.count}個 / 装備中も合成に含まれます）`;
+            } else {
+                mergeHint = `マージ可（+${mergeGroup.plus} が ${mergeGroup.count}個 / 装備中を合成し、結果を装備します）`;
+            }
         } else if (!groups.length) {
-            mergeHint = '在庫がありません（装備中は合成対象外）';
+            mergeHint = '所持していません';
         } else if (groups.every(g => g.plus >= WEAPON_MAX_PLUS)) {
             mergeHint = '＋値が上限です';
         } else {
@@ -4658,11 +4671,11 @@ function renderRdWeapons() {
             <div class="rd-weapon-stats">
                 <div>威力 <span class="text-amber-300 font-bold">${formatNumber(getEffectiveWeaponDamage(id))}</span></div>
                 <div>適用ボーナス <span class="text-emerald-300 font-bold">+${bonusPct}%</span></div>
-                <div>在庫 <span class="text-slate-300">${formatNumber(inventoryCount)}個</span></div>
+                <div>所持 <span class="text-slate-300">${formatNumber(ownedCount)}個</span></div>
                 <div>装備 <span class="text-slate-300">${formatNumber(mountedList.length)}個</span></div>
             </div>
             ${mountedLine}
-            ${breakdown ? `<div class="rd-plus-row" aria-label="＋値ごとの在庫内訳">${breakdown}</div>` : ''}
+            ${breakdown ? `<div class="rd-plus-row" aria-label="＋値ごとの所持内訳">${breakdown}</div>` : ''}
             <div class="rd-merge-hint">${mergeHint}</div>
             <div class="rd-weapon-actions">
                 <button type="button" class="rd-btn-upgrade" ${atLevelCap ? 'disabled' : ''}>
