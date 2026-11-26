@@ -711,3 +711,24 @@ function pruneDanglingWeaponSlots() {
     });
 }
 
+// 列車に載っている個体のuid集合。載せた個体は在庫から消える（＝装備で消費）。
+function getMountedWeaponUids() {
+    const set = new Set();
+    (state.cars || []).forEach(car => {
+        [getCarSlotWeaponUid(car, CAR_SLOT_UPPER), getCarSlotWeaponUid(car, CAR_SLOT_SIDE)]
+            .filter(Boolean)
+            .forEach(uid => set.add(uid));
+    });
+    return set;
+}
+
+// 未装備＝在庫。育成・マージの対象はこちらだけ。
+function getWeaponInventoryInstances() {
+    const mounted = getMountedWeaponUids();
+    return (state.weaponInstances || []).filter(inst => inst && !mounted.has(inst.uid));
+}
+
+function isWeaponInstanceEquipped(uid) {
+    return getMountedWeaponUids().has(uid);
+}
+

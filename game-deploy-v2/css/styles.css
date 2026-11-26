@@ -500,6 +500,23 @@
             padding: 5px 7px; border-radius: 3px;
             background: #0b1220; border: 1px solid var(--hud-line-soft);
         }
+        .rd-plus-row {
+            display: flex; flex-wrap: wrap; gap: 4px;
+        }
+        .rd-plus-chip {
+            font-family: var(--hud-mono, monospace);
+            font-size: 9px; font-weight: 800; letter-spacing: .02em;
+            padding: 2px 6px; border-radius: 2px;
+            border: 1px solid var(--hud-line-soft);
+            background: #0b1220; color: var(--hud-text-dim);
+        }
+        .rd-plus-chip.is-ready {
+            border-color: #14532d; background: #0f2a1c; color: #6ee7b7;
+        }
+        .rd-merge-hint {
+            font-size: 10px; line-height: 1.35; color: var(--hud-text-dim);
+            padding-left: 1px;
+        }
         .rd-weapon-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
         .rd-btn-upgrade, .rd-btn-merge {
             min-height: 42px; border-radius: 4px; cursor: pointer;
@@ -585,6 +602,12 @@
         .wio-name { flex: 1 1 100px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
         .wio-num { flex-shrink: 0; color: #fcd34d; font-size: 10px; }
         .wio-power { flex-shrink: 0; color: var(--hud-text-dim); font-size: 10px; }
+        .wio-tag {
+            flex-shrink: 0; font-size: 9px; font-weight: 900;
+            padding: 1px 5px; border-radius: 2px;
+            background: #241d10; color: var(--hud-brass-bright);
+            border: 1px solid #4b3a12;
+        }
         .train-car-card {
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }

@@ -430,9 +430,14 @@ function getWeaponInstanceCapUnlockCost(inst) {
     return CAP_UNLOCK_MATERIAL_BASE + done;
 }
 
+// マージ用のグループ。装備中の個体は在庫ではないので数えない
+// （装備が勝手に合成されて消えるのを防ぐ）。
 function getWeaponInstanceGroups() {
     const map = new Map();
-    (state.weaponInstances || []).forEach(inst => {
+    const inventory = typeof getWeaponInventoryInstances === 'function'
+        ? getWeaponInventoryInstances()
+        : (state.weaponInstances || []);
+    inventory.forEach(inst => {
         if (!inst || !WEAPONS[inst.weaponId] || isRailgunWeapon(inst.weaponId) || !WEAPON_RARITIES[inst.rarity]) return;
         const key = `${inst.weaponId}|${inst.rarity}|${inst.plus}`;
         let group = map.get(key);
@@ -441,7 +446,7 @@ function getWeaponInstanceGroups() {
                 key,
                 weaponId: inst.weaponId,
                 rarity: inst.rarity,
-                plus: inst.plus,
+                plus: clampInt(inst.plus, 0, WEAPON_MAX_PLUS, 0),
                 instances: []
             };
             map.set(key, group);

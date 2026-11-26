@@ -4027,8 +4027,9 @@ function renderTrainSlots() {
             row.querySelector('.train-slot-foot').hidden = false;
 
             const instLabel = inst ? ` ${getRarityMeta(inst.rarity).label} +${inst.plus} Lv.${inst.level}` : '';
-            row.setAttribute('aria-label', `${car.name} ${label}スロット ${w ? `${getWeaponName(weaponId, inst && inst.rarity)}${instLabel}` : '未搭載。選択する'}`);
-            mainEl.textContent = w ? `${w.name} ` : '未搭載';
+            const displayName = w ? getWeaponName(weaponId, inst ? inst.rarity : undefined) : '';
+            row.setAttribute('aria-label', `${car.name} ${label}スロット ${w ? `${displayName}${instLabel}` : '未搭載。選択する'}`);
+            mainEl.textContent = w ? `${displayName} ` : '未搭載';
             if (w) {
                 const lvEl = document.createElement('span');
                 lvEl.className = 'train-slot-lv';
@@ -4116,13 +4117,12 @@ function openConfigModal(carIdx, slot = CAR_SLOT_UPPER) {
         }
         // 所持している「実体」を並べる。種別ではなく個体を選ぶので、
         // レアリティ・＋値・Lvがそのまま戦力になる。
+        // 装備すると在庫から消費されるので、候補は在庫＋このスロットの装備中だけ。
         const mountedUid = getCarSlotWeaponUid(car, slot);
         const ownedIds = getOwnedWeaponIds();
-        const equippedElsewhere = new Set(
-            (state.cars || [])
-                .filter(c => c !== car)
-                .flatMap(c => [c.weaponUid, c.sideWeaponUid])
-                .filter(Boolean)
+        const inventoryUids = new Set(
+            (typeof getWeaponInventoryInstances === 'function' ? getWeaponInventoryInstances() : [])
+                .map(inst => inst.uid)
         );
 
         const usableTypes = Object.values(WEAPONS)
@@ -4178,20 +4178,18 @@ function openConfigModal(carIdx, slot = CAR_SLOT_UPPER) {
             instances.forEach(inst => {
                 const meta = getRarityMeta(inst.rarity);
                 const selected = mountedUid === inst.uid;
-                const usedElsewhere = equippedElsewhere.has(inst.uid);
+                // 装備中の個体は在庫に無いが、このスロットのものだけは選択肢に残す。
+                if (!selected && !inventoryUids.has(inst.uid)) return;
                 const btn = document.createElement('button');
                 btn.type = 'button';
-                btn.disabled = usedElsewhere && !selected;
                 btn.className = `weapon-instance-option${selected ? ' is-selected' : ''}`;
                 btn.innerHTML = `
                     <span class="wio-rarity" style="color:${meta.color};border-color:${meta.color}66;background:${meta.color}18">${meta.label}</span>
                     <span class="wio-name">${getWeaponName(w.id, inst.rarity)}</span>
                     <span class="wio-num tech-font">+${inst.plus} Lv.${formatNumber(inst.level)}</span>
                     <span class="wio-power tech-font">威力 ${formatNumber(getWeaponInstanceDamage(inst))}</span>
+                    ${selected ? '<span class="wio-tag">装備中</span>' : ''}
                 `;
-                if (usedElsewhere && !selected) {
-                    btn.setAttribute('aria-label', `${getWeaponName(w.id, inst.rarity)} は他の車両に搭載中`);
-                }
                 btn.addEventListener('click', () => {
                     setCarSlotWeaponUid(car, slot, selected ? null : inst.uid);
                     openConfigModal(carIdx, slot);
@@ -4613,14 +4611,34 @@ function renderRdWeapons() {
         const atLevelCap = best.level >= unlockedMax;
         const mergeGroup = groups.find(g => g.count >= 3 && g.plus < WEAPON_MAX_PLUS);
 
-        // いま列車に載っている個体（育てる対象と一致しないことがある）。
-        const mounted = (state.cars || [])
+        // 装備中の個体（消費済み）と未装備（在庫）を分けて数える。
+        const mountedList = (state.cars || [])
             .flatMap(c => [getCarSlotWeaponInstance(c, CAR_SLOT_UPPER), getCarSlotWeaponInstance(c, CAR_SLOT_SIDE)])
             .filter(inst => inst && inst.weaponId === id)
-            .sort((a, b) => getWeaponInstanceBonus(b) - getWeaponInstanceBonus(a))[0];
-        const mountedLine = mounted
-            ? `<div class="text-[10px] text-emerald-300">搭載中 ${getRarityMeta(mounted.rarity).label} +${mounted.plus} Lv.${formatNumber(mounted.level)}</div>`
-            : `<div class="text-[10px] text-slate-500">未搭載</div>`;
+            .sort((a, b) => getWeaponInstanceBonus(b) - getWeaponInstanceBonus(a));
+        const inventoryCount = groups.reduce((n, g) => n + g.count, 0);
+        const mountedLine = mountedList.length
+            ? `<div class="text-[10px] text-emerald-300">装備中 ${mountedList.map(inst =>
+                `${getRarityMeta(inst.rarity).label}+${inst.plus} Lv.${formatNumber(inst.level)}`).join(' / ')}</div>`
+            : `<div class="text-[10px] text-slate-500">未装備</div>`;
+
+        // ＋値は別アイテム扱い。内訳を出さないと「3個あるのに合成できない」理由が分からない。
+        const breakdown = groups.map(g =>
+            `<span class="rd-plus-chip${g.count >= 3 && g.plus < WEAPON_MAX_PLUS ? ' is-ready' : ''}">+${g.plus} ×${g.count}</span>`
+        ).join('');
+        let mergeHint;
+        if (mergeGroup) {
+            mergeHint = `マージ可（+${mergeGroup.plus} が ${mergeGroup.count}個）`;
+        } else if (!groups.length) {
+            mergeHint = '在庫がありません（装備中は合成対象外）';
+        } else if (groups.every(g => g.plus >= WEAPON_MAX_PLUS)) {
+            mergeHint = '＋値が上限です';
+        } else {
+            const closest = groups
+                .filter(g => g.plus < WEAPON_MAX_PLUS)
+                .sort((a, b) => b.count - a.count)[0];
+            mergeHint = `同じ＋値が3個必要（+${closest.plus} は${closest.count}個 / あと${3 - closest.count}個）`;
+        }
 
         const card = document.createElement('div');
         card.className = 'rd-weapon-card';
@@ -4640,10 +4658,12 @@ function renderRdWeapons() {
             <div class="rd-weapon-stats">
                 <div>威力 <span class="text-amber-300 font-bold">${formatNumber(getEffectiveWeaponDamage(id))}</span></div>
                 <div>適用ボーナス <span class="text-emerald-300 font-bold">+${bonusPct}%</span></div>
-                <div>所持 <span class="text-slate-300">${groups.reduce((n, g) => n + g.count, 0)}個</span></div>
-                <div>最大Lv. <span class="text-slate-300">${formatNumber(maxLevel)}</span></div>
+                <div>在庫 <span class="text-slate-300">${formatNumber(inventoryCount)}個</span></div>
+                <div>装備 <span class="text-slate-300">${formatNumber(mountedList.length)}個</span></div>
             </div>
             ${mountedLine}
+            ${breakdown ? `<div class="rd-plus-row" aria-label="＋値ごとの在庫内訳">${breakdown}</div>` : ''}
+            <div class="rd-merge-hint">${mergeHint}</div>
             <div class="rd-weapon-actions">
                 <button type="button" class="rd-btn-upgrade" ${atLevelCap ? 'disabled' : ''}>
                     ${atLevelCap ? '上限突破が必要' : `レベルアップ ${Number.isFinite(levelCost) ? formatMoney(levelCost) : '不可'}`}
