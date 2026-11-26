@@ -25,6 +25,13 @@ jobs:
         with:
           node-version: '20'
 
+      # 壊れた JS を配信しないよう、デプロイ前に構文を確認する。
+      - name: Syntax check
+        run: |
+          for f in game-deploy-v2/js/*.js; do
+            node --check "$f" || exit 1
+          done
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
@@ -34,3 +41,18 @@ jobs:
             pages deploy game-deploy-v2
             --project-name=great-railway-republic
             --branch=main
+
+      # デプロイ成功の通知だけでは「本当に反映されたか」は分からないので、
+      # 配信中のファイルをリポジトリの内容と突き合わせる。
+      # 反映待ちがあるため、最大5回まで間隔を空けて再試行する。
+      - name: Verify production matches the repository
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if node scripts/verify-deploy.mjs; then
+              exit 0
+            fi
+            echo "attempt $attempt failed, retrying in 15s..."
+            sleep 15
+          done
+          echo "production does not match the repository"
+          exit 1
