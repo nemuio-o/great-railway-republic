@@ -59,6 +59,8 @@ let state = {
     gachaLastResult: null,
     gachaSubTab: 'normal',
     weaponSubTab: 'inventory',
+    // 研究開発タブの武装絞り込み。'all' か武装ID。
+    rdWeaponFilter: 'all',
     enhanceMaterials: 0,
     escortEnhanceModules: 0,
     escortModuleLevels: {},

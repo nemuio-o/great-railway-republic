@@ -96,6 +96,22 @@
 
                 <canvas id="battleCanvas" width="1206" height="120"></canvas>
 
+                <!-- 戦場下部に出るボスHP計器。装甲HUDの反対側に置き、ボス出現中だけ表示する。 -->
+                <div id="boss-hp-panel" class="boss-hp-anchor hidden" aria-live="polite">
+                    <div class="boss-hp-inner">
+                        <div class="boss-hp-head">
+                            <span class="boss-hp-tag">BOSS</span>
+                            <span id="boss-hp-name" class="boss-hp-name">—</span>
+                        </div>
+                        <div class="boss-hp-track">
+                            <i id="boss-hp-fill" style="width:100%"></i>
+                        </div>
+                        <div class="boss-hp-foot">
+                            <span id="boss-hp-num" class="boss-hp-num tech-font">0 / 0</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 勢力カットイン＆ボスカットイン＆ビーコン作動イベントオーバーレイ -->
                 <div id="cutin-overlay" class="absolute inset-0 pointer-events-none z-30 flex items-center justify-center overflow-hidden hidden">
                     <div id="cutin-banner" class="w-[115%] bg-slate-950/95 border-y-4 border-amber-500 shadow-[0_0_40px_rgba(0,0,0,0.95)] relative">
@@ -241,7 +257,7 @@
                 <div class="flex items-center gap-1 text-yellow-400 font-bold">
                     <span>💰 FUNDS:</span>
                     <span class="ui-gold-display">300</span>
-                    <span>G</span>
+                    <span>$</span>
                 </div>
             </div>
             <div class="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-10 gap-1">
@@ -262,9 +278,6 @@
                 </button>
                 <button onclick="switchTab('gacha')" id="tab-btn-gacha" data-progression-tab="gacha" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-purple-300 hover:text-white hover:border-slate-500 transition text-center truncate">
                     🎟 ガチャ (<span id="tab-gacha-ticket-count">0</span>)
-                </button>
-                <button onclick="switchTab('weapons')" id="tab-btn-weapons" data-progression-tab="weapons" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-emerald-300 hover:text-white hover:border-slate-500 transition text-center truncate">
-                    🔧 武装
                 </button>
                 <button onclick="switchTab('world')" id="tab-btn-world" data-progression-tab="world" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-sky-300 hover:text-white hover:border-slate-500 transition text-center truncate">
                     🌐 世界
@@ -301,7 +314,7 @@
                         <div class="bg-slate-950 border border-yellow-600/70 px-3 py-1.5 rounded text-xs tech-font shadow-inner flex items-center gap-1">
                             <span class="text-slate-400">💰 FUNDS:</span>
                             <span class="ui-gold-display text-yellow-400 font-bold text-sm">300</span>
-                            <span class="text-yellow-500 font-bold">G</span>
+                            <span class="text-yellow-500 font-bold">$</span>
                         </div>
                         <button onclick="bulkHireSephiroth()" class="bg-amber-600 hover:bg-amber-500 text-slate-950 text-xs font-black px-3 py-1.5 rounded border border-amber-300 transition">
                             👤 未雇用駅員を一括雇用＆配備
@@ -332,27 +345,42 @@
                         <div class="bg-slate-950 border border-yellow-600/70 px-3 py-2 rounded text-xs tech-font shadow-inner flex items-center gap-1">
                             <span class="text-slate-400">💰 FUNDS:</span>
                             <span class="ui-gold-display text-yellow-400 font-bold text-sm">300</span>
-                            <span class="text-yellow-500 font-bold">G</span>
+                            <span class="text-yellow-500 font-bold">$</span>
                         </div>
                         <button id="btn-upgrade-armor" onclick="upgradeTrainArmor()" class="bg-emerald-700 hover:bg-emerald-600 text-white font-bold px-4 py-2 rounded border border-emerald-400 text-xs sm:text-sm transition tech-font">
-                            強化する (200 G)
+                            強化する
                         </button>
                     </div>
                 </div>
 
+                <!-- 武装：ガチャで入手した武装だけを使い、ここで育成・合成する -->
                 <div>
                     <div class="flex flex-wrap justify-between items-center gap-2 mb-2">
-                        <h3 class="text-sm font-bold text-amber-400 border-l-4 border-amber-500 pl-2">兵装技術ツリー（段階開放 ＆ 火力強化）</h3>
-                        <div class="flex flex-wrap gap-2">
-                            <button onclick="bulkUnlockWeapons()" class="bg-sky-700 hover:bg-sky-600 text-white text-xs font-bold px-3 py-1.5 rounded border border-sky-400 transition">
-                                🔬 開発可能な兵装を一括開発
-                            </button>
-                            <button onclick="bulkUpgradeWeapons()" class="bg-amber-700 hover:bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded border border-amber-400 transition">
-                                ⚡ 全兵装を一括均等強化
+                        <div class="min-w-0">
+                            <h3 class="text-sm font-bold text-amber-400 border-l-4 border-amber-500 pl-2">武装（ガチャ入手のみ）</h3>
+                            <p class="text-[11px] text-slate-400 mt-1 pl-2">
+                                武装はガチャでのみ入手できます。ここでレベルアップとマージを行います。
+                            </p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2 text-[11px] tech-font">
+                            <div class="bg-slate-950 border border-slate-700 px-2.5 py-1.5 rounded">
+                                素材 <span id="weapon-material-count" class="text-emerald-300 font-bold">0</span>
+                            </div>
+                            <div class="bg-slate-950 border border-slate-700 px-2.5 py-1.5 rounded">
+                                モジュール <span id="weapon-module-count" class="text-purple-300 font-bold">0</span>
+                            </div>
+                            <button type="button" onclick="executeBulkMergeAll()" class="min-h-[38px] px-3 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-black text-[11px] transition">
+                                🔧 一括合成
                             </button>
                         </div>
                     </div>
+                    <div id="rd-weapon-filter" class="flex flex-wrap gap-1.5 mb-2"></div>
                     <div id="rd-weapons-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-bold text-sky-400 border-l-4 border-sky-500 pl-2 mb-2">合成（同条件3個をまとめる）</h3>
+                    <div id="rd-merge-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
                 </div>
             </div>
 
@@ -372,7 +400,7 @@
                     <div class="bg-slate-950 border border-yellow-600/70 px-3 py-1.5 rounded text-xs tech-font shadow-inner flex items-center gap-1">
                         <span class="text-slate-400">💰 FUNDS:</span>
                         <span class="ui-gold-display text-yellow-400 font-bold text-sm">300</span>
-                        <span class="text-yellow-500 font-bold">G</span>
+                        <span class="text-yellow-500 font-bold">$</span>
                     </div>
                 </div>
                 <div id="skills-list-grid" class="tactic-list"></div>
@@ -394,7 +422,7 @@
                         <div class="bg-slate-950 border border-yellow-600/70 px-3 py-2 rounded text-xs tech-font shadow-inner flex items-center gap-1">
                             <span class="text-slate-400">💰 FUNDS:</span>
                             <span class="ui-gold-display text-yellow-400 font-bold text-sm">300</span>
-                            <span class="text-yellow-500 font-bold">G</span>
+                            <span class="text-yellow-500 font-bold">$</span>
                         </div>
                         <div class="bg-slate-950 border border-cyan-500/60 px-3 py-2 rounded text-right tech-font">
                             <div class="text-[10px] text-slate-400">出撃枠（プレステージで拡張可能）</div>
@@ -479,49 +507,6 @@
                 <div id="gacha-last-result"></div>
             </div>
 
-            <!-- タブ: 武装管理 -->
-            <div id="tab-content-weapons" class="p-3 sm:p-4 hidden flex-col gap-3">
-                <div class="bg-slate-800/90 border border-emerald-700/70 rounded-lg p-3 flex flex-wrap justify-between items-center gap-3">
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <span class="px-2 py-0.5 text-[10px] font-bold bg-emerald-900 text-emerald-200 rounded">レアリティ / マージ</span>
-                            <h3 class="text-sm sm:text-base font-bold text-emerald-300">武装管理</h3>
-                        </div>
-                        <p class="text-xs text-slate-300 mt-1">ガチャ産武装のレアリティ・＋値・Lv・上限を管理します。レールガン系はこの画面の対象外です。</p>
-                    </div>
-                    <div class="flex flex-wrap items-center gap-2 text-[11px] tech-font">
-                        <div class="bg-slate-950 border border-slate-700 px-2.5 py-1.5 rounded">
-                            強化素材 <span id="weapon-material-count" class="text-emerald-300 font-bold">0</span>
-                        </div>
-                        <div class="bg-slate-950 border border-slate-700 px-2.5 py-1.5 rounded">
-                            モジュール <span id="weapon-module-count" class="text-purple-300 font-bold">0</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="weapon-subtabs" class="grid grid-cols-2 gap-2">
-                    <button id="weapon-subtab-inventory" onclick="switchWeaponSubTab('inventory')" class="px-2 py-2 rounded text-xs font-black border-2 border-emerald-400 bg-emerald-950/80 text-emerald-200 transition">所持武装</button>
-                    <button id="weapon-subtab-merge" onclick="switchWeaponSubTab('merge')" class="px-2 py-2 rounded text-xs font-black border border-slate-600 bg-slate-900 text-slate-300 hover:border-emerald-400 transition">マージ</button>
-                </div>
-
-                <div id="weapon-subview-inventory" class="flex flex-col gap-3">
-                    <div id="weapon-inventory-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
-                </div>
-
-                <div id="weapon-subview-merge" class="hidden flex-col gap-3">
-                    <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-800/80 border border-emerald-700/60 rounded-lg p-2.5">
-                        <div class="min-w-0 text-[11px] text-slate-300 leading-snug">
-                            <div class="font-bold text-emerald-300">一括合成</div>
-                            <div class="text-slate-400">同条件3個以上そろった武装を、可能な限りまとめてマージします。</div>
-                        </div>
-                        <button type="button" id="btn-bulk-merge" onclick="executeBulkMergeAll()"
-                            class="flex-shrink-0 min-h-[44px] px-4 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-black text-xs transition">
-                            🔧 すべて合成
-                        </button>
-                    </div>
-                    <div id="weapon-merge-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
-                </div>
-            </div>
 
             <!-- タブ: 世界・勢力選択（現実世界 / 暗黒世界 動的タブ生成） -->
             <div id="tab-content-world" class="p-3 sm:p-4 hidden flex-col gap-3">

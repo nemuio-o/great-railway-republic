@@ -1,5 +1,24 @@
 const canvas = document.getElementById('battleCanvas');
 const ctx = canvas.getContext('2d');
+
+// 数値の表示用短縮。1,200 → 1.2K / 3,400,000 → 3.4M。
+// 桁が増えてもUIの幅を食わないように、全体でこの関数を通す。
+function formatNumber(value) {
+    const n = Math.round(Number(value) || 0);
+    const abs = Math.abs(n);
+    if (abs >= 1e12) return `${(n / 1e12).toFixed(abs >= 1e13 ? 0 : 1)}T`;
+    if (abs >= 1e9) return `${(n / 1e9).toFixed(abs >= 1e10 ? 0 : 1)}B`;
+    if (abs >= 1e6) return `${(n / 1e6).toFixed(abs >= 1e7 ? 0 : 1)}M`;
+    if (abs >= 1e4) return `${Math.round(n / 1e3)}K`;
+    if (abs >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
+    return `${n}`;
+}
+
+// 通貨表記。ゲーム内の金額はすべて $ で表す。
+function formatMoney(value) {
+    return `$${formatNumber(value)}`;
+}
+
 let enemies = [];
 let projectiles = [];
 let particles = [];
@@ -651,7 +670,7 @@ function triggerGrandBossUltimate(boss, isEntranceCast = false) {
         floatingTexts.push({
             x: boss.x,
             y: boss.y - boss.radius - 24,
-            text: `✨+${healVal.toLocaleString()}`,
+            text: `✨+${formatNumber(healVal)}`,
             color: '#34d399',
             life: 44
         });
@@ -677,7 +696,7 @@ function triggerGrandBossUltimate(boss, isEntranceCast = false) {
         floatingTexts.push({
             x: targetEscort.x,
             y: targetEscort.y - targetEscort.radius - 12,
-            text: `⚡${ult.name} -${escortDmg.toLocaleString()}`,
+            text: `⚡${ult.name} -${formatNumber(escortDmg)}`,
             color: '#f43f5e',
             life: 46
         });
@@ -700,7 +719,7 @@ function triggerGrandBossUltimate(boss, isEntranceCast = false) {
         floatingTexts.push({
             x: trainMidX,
             y: railY - 38,
-            text: `⚡${ult.name} -${finalTrainDmg.toLocaleString()}`,
+            text: `⚡${ult.name} -${formatNumber(finalTrainDmg)}`,
             color: '#fda4af',
             life: 52
         });
@@ -750,8 +769,8 @@ function triggerGrandBossUltimate(boss, isEntranceCast = false) {
 
     if (!isEntranceCast) {
         showToast(targetEscort
-            ? `⚠️ 大ボス必殺技【${ult.name}】発動！鹵獲護衛機「${targetEscort.name}」へ集中攻撃！（-${escortDmg.toLocaleString()} DMG）`
-            : `⚠️ 大ボス必殺技【${ult.name}】発動！（-${finalTrainDmg.toLocaleString()} DMG）`);
+            ? `⚠️ 大ボス必殺技【${ult.name}】発動！鹵獲護衛機「${targetEscort.name}」へ集中攻撃！（-${formatNumber(escortDmg)} DMG）`
+            : `⚠️ 大ボス必殺技【${ult.name}】発動！（-${formatNumber(finalTrainDmg)} DMG）`);
     }
 
     if (state.hp <= 0) {
@@ -1225,7 +1244,7 @@ function handleEnemyDefeated(enemy) {
     floatingTexts.push({
         x: enemy.x,
         y: enemy.y - enemy.radius - 18,
-        text: `+${gainGold}G`,
+        text: `+${formatMoney(gainGold)}`,
         color: '#fde047',
         life: 42
     });
@@ -1256,7 +1275,7 @@ function handleEnemyDefeated(enemy) {
         if (state.soldEscorts.includes(enemy.id)) {
             const sellBonus = Math.max(50, Math.round(enemy.reward * 1.5));
             state.gold += sellBonus;
-            showToast(`💰 ロック中機体「${enemy.name.replace(/【.*?】/, '')}」を即時自動売却 (+${sellBonus}G)`);
+            showToast(`💰 ロック中機体「${enemy.name.replace(/【.*?】/, '')}」を即時自動売却 (+${formatMoney(sellBonus)})`);
         } else {
             registerEscortCapture(enemy.id, enemy.name.replace(/【.*?】/, ''));
         }
@@ -1343,7 +1362,7 @@ function handleStageVictory() {
                 isBoss: false,
                 durationMs: 5400
             });
-            showToast(`🌌 ビーコン作動イベント発生！「暗黒世界」タブが追加され「Gewinnerビーコン基地」が解放されました！ (+${clearBonus}G)${ticketMsg}`);
+            showToast(`🌌 ビーコン作動イベント発生！「暗黒世界」タブが追加され「Gewinnerビーコン基地」が解放されました！ (+${formatMoney(clearBonus)})${ticketMsg}`);
             showEnemyPreviewTemporarily();
             updateHeaderUI();
             renderCurrentTab();
@@ -1357,7 +1376,7 @@ function handleStageVictory() {
 
             if (state.loopStage) {
                 rollStageWeather(state.stage, faction.id, true);
-                showToast(`🏆 ${faction.name} 制圧！(+${clearBonus}G)${keyMsg} 周回継続${ticketMsg}`);
+                showToast(`🏆 ${faction.name} 制圧！(+${formatMoney(clearBonus)})${keyMsg} 周回継続${ticketMsg}`);
             } else {
                 showToast(`🚩 国家統治崩壊！「世界企業連合」とテロ組織「Gewinner」が同時に出現！${keyMsg}${ticketMsg}`);
                 switchFaction('corp', true);
@@ -1390,13 +1409,13 @@ function handleStageVictory() {
 
         if (state.loopStage) {
             rollStageWeather(state.stage, faction.id, true);
-            showToast(`🏆 ${faction.name} ST.${state.stage} 制圧＆装甲30%回復！(+${clearBonus}G)${keyMsg} 周回継続${ticketMsg}`);
+            showToast(`🏆 ${faction.name} ST.${state.stage} 制圧＆装甲30%回復！(+${formatMoney(clearBonus)})${keyMsg} 周回継続${ticketMsg}`);
         } else if (nextFaction) {
             showToast(`🚩 チェックポイント更新！${faction.name} 制圧${keyMsg} → 新戦線「${nextFaction.name}」へ転進！${ticketMsg}`);
             switchFaction(nextFaction.id, true);
         } else {
             rollStageWeather(state.stage, faction.id, true);
-            showToast(`👑 戦線完全制覇！(+${clearBonus}G)${keyMsg}${ticketMsg}`);
+            showToast(`👑 戦線完全制覇！(+${formatMoney(clearBonus)})${keyMsg}${ticketMsg}`);
         }
     } else {
         if (!state.loopStage) {
@@ -1407,7 +1426,7 @@ function handleStageVictory() {
             }
         }
         rollStageWeather(state.stage, faction.id, true);
-        showToast(`✅ STAGE CLEAR! 装甲30%回復 ＆ 報酬 +${clearBonus}G（${Math.round(stageRewardMult * 100)}%）${ticketMsg}`);
+        showToast(`✅ STAGE CLEAR! 装甲30%回復 ＆ 報酬 +${formatMoney(clearBonus)}（${Math.round(stageRewardMult * 100)}%）${ticketMsg}`);
     }
 
     if (state.autoMarch) {
@@ -2879,7 +2898,7 @@ function drawWeaponTopDown(canvas, weaponId) {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    const k = 2;
+    const k = 3;
     const W = 64, H = 34;
     if (canvas.width !== W * k) { canvas.width = W * k; canvas.height = H * k; }
     ctx.setTransform(k, 0, 0, k, 0, 0);
@@ -3032,13 +3051,33 @@ function weaponTint(hex, amount) {
     return `rgb(${mix(base[0], r)}, ${mix(base[1], g)}, ${mix(base[2], b)})`;
 }
 
-// 敵HPの表示用短縮。4桁以上は 1.2k / 3.4M のように丸めて幅を抑える。
+// 敵HPの表示用短縮は共通の formatNumber に任せる。
 function formatEnemyHp(value) {
-    const n = Math.max(0, Math.round(Number(value) || 0));
-    if (n >= 1000000) return `${(n / 1000000).toFixed(n >= 10000000 ? 0 : 1)}M`;
-    if (n >= 10000) return `${Math.round(n / 1000)}k`;
-    if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
-    return `${n}`;
+    return formatNumber(value);
+}
+
+// 戦場下部のボスHP計器。出現中のボス（中ボス・大ボス・ネームド）のうち
+// 最もHPが高い1体を表示する。ボスがいなければパネルごと隠す。
+function updateBossHpPanel() {
+    const panel = document.getElementById('boss-hp-panel');
+    if (!panel) return;
+    const bosses = enemies.filter(e => e.isBoss && e.hp > 0);
+    if (!bosses.length) {
+        panel.classList.add('hidden');
+        return;
+    }
+    const boss = bosses.reduce((a, b) => (b.hp > a.hp ? b : a), bosses[0]);
+    const ratio = Math.max(0, Math.min(1, boss.hp / boss.maxHp));
+    panel.classList.remove('hidden');
+    const nameEl = document.getElementById('boss-hp-name');
+    const numEl = document.getElementById('boss-hp-num');
+    const fillEl = document.getElementById('boss-hp-fill');
+    if (nameEl) nameEl.textContent = (boss.name || '').replace(/^【.*?】/, '') || 'ボス';
+    if (numEl) numEl.textContent = `${formatNumber(boss.hp)} / ${formatNumber(boss.maxHp)}`;
+    if (fillEl) {
+        fillEl.style.width = `${(ratio * 100).toFixed(1)}%`;
+        fillEl.classList.toggle('is-low', ratio <= 0.25);
+    }
 }
 
 function drawScene() {
@@ -3495,9 +3534,10 @@ function updateHeaderUI() {
         if (state.stage % 5 === 0 || faction.isEndless) bossBadge.classList.remove('hidden');
         else bossBadge.classList.add('hidden');
     }
+    updateBossHpPanel();
 
     document.querySelectorAll('.ui-gold-display').forEach(el => {
-        el.textContent = state.gold.toLocaleString();
+        el.textContent = formatNumber(state.gold);
     });
 
     const hpPct = Math.max(0, Math.min(100, Math.round((state.hp / state.maxHp) * 100)));
@@ -3505,8 +3545,8 @@ function updateHeaderUI() {
     const maxHpEl = document.getElementById('ui-max-hp');
     const hpPctEl = document.getElementById('ui-hp-percent');
     const hpBarEl = document.getElementById('ui-hp-bar');
-    if (hpEl) hpEl.textContent = Math.ceil(state.hp).toLocaleString();
-    if (maxHpEl) maxHpEl.textContent = state.maxHp.toLocaleString();
+    if (hpEl) hpEl.textContent = formatNumber(Math.ceil(state.hp));
+    if (maxHpEl) maxHpEl.textContent = formatNumber(state.maxHp);
     if (hpPctEl) hpPctEl.textContent = `${hpPct}%`;
     if (hpBarEl) {
         hpBarEl.style.width = `${hpPct}%`;
@@ -3620,7 +3660,7 @@ function hasUnseenTutorialForTab(tabId) {
 // 会話を挟まずにタブを切り替える本体。
 function switchTabNow(tabId) {
     state.activeTab = tabId;
-    const tabs = ['train', 'staff', 'rd', 'skills', 'escort', 'gacha', 'weapons', 'world', 'prestige', 'dex'];
+    const tabs = ['train', 'staff', 'rd', 'skills', 'escort', 'gacha', 'world', 'prestige', 'dex'];
     tabs.forEach(t => {
         const btn = document.getElementById(`tab-btn-${t}`);
         const content = document.getElementById(`tab-content-${t}`);
@@ -3652,7 +3692,6 @@ function renderCurrentTab() {
         case 'skills': renderSkillsTab(); break;
         case 'escort': renderEscortTab(); break;
         case 'gacha': renderGachaTab(); break;
-        case 'weapons': renderWeaponsTab(); break;
         case 'world': renderWorldTab(); break;
         case 'prestige': renderPrestigeTab(); break;
         case 'dex': renderDexTab(); break;
@@ -3708,7 +3747,7 @@ function upgradeEquippedAll() {
         progressed = false;
         guard++;
         weaponIds.forEach(wid => {
-            if (!state.unlockedWeapons.includes(wid)) return;
+            if (!canUseWeapon(wid)) return;
             if ((state.weaponLevels[wid] || 1) >= WEAPON_MAX_LEVEL) return;
             const cost = getWeaponUpgradeCost(wid);
             if (!Number.isFinite(cost) || state.gold < cost) return;
@@ -3740,7 +3779,7 @@ function upgradeEquippedAll() {
     SoundEngine.playUI('upgrade');
     updateHeaderUI();
     renderTrainSlots();
-    showToast(`⚡ 編成一括強化：兵装 ${weaponUps}段 / セフィラ ${sephUps}段（-${spent.toLocaleString()} G）`);
+    showToast(`⚡ 編成一括強化：兵装 ${weaponUps}段 / セフィラ ${sephUps}段（-${formatMoney(spent)}）`);
     saveGame(true);
 }
 
@@ -3799,8 +3838,8 @@ function renderLoadoutSummary() {
     const capEl = $('cap');
     capEl.textContent = `スロット ${filled}/${capacity}`;
     capEl.classList.toggle('is-full', filled >= capacity);
-    $('dps').textContent = Math.round(s.totalDps).toLocaleString();
-    $('hp').innerHTML = `${Math.ceil(state.hp).toLocaleString()}<em>/${state.maxHp.toLocaleString()}</em>`;
+    $('dps').textContent = formatNumber(s.totalDps);
+    $('hp').innerHTML = `${formatNumber(Math.ceil(state.hp))}<em>/${formatNumber(state.maxHp)}</em>`;
     $('synergy').innerHTML = `${s.synergyCount}<em>/${filled}</em>`;
     $('synergy').classList.toggle('is-amber', s.synergyCount > 0);
     $('comp').textContent = `×${getCarDpsCompensation().toFixed(2)}`;
@@ -3816,7 +3855,7 @@ function upgradeWeaponFromTrain(weaponId) {
     }
     const cost = getWeaponUpgradeCost(weaponId);
     if (!Number.isFinite(cost) || state.gold < cost) {
-        showToast(`資金が不足しています（${Number.isFinite(cost) ? cost.toLocaleString() : '—'} G必要）`);
+        showToast(`資金が不足しています（${Number.isFinite(cost) ? formatMoney(cost) : '—'}必要）`);
         return;
     }
     state.gold -= cost;
@@ -3836,7 +3875,7 @@ function upgradeSephirahFromTrain(sephId) {
     }
     const cost = getSephirahUpgradeCost(sephId);
     if (!Number.isFinite(cost) || state.gold < cost) {
-        showToast(`資金が不足しています（${Number.isFinite(cost) ? cost.toLocaleString() : '—'} G必要）`);
+        showToast(`資金が不足しています（${Number.isFinite(cost) ? formatMoney(cost) : '—'}必要）`);
         return;
     }
     state.gold -= cost;
@@ -3975,7 +4014,7 @@ function renderTrainSlots() {
                 lvEl.textContent = `Lv.${state.weaponLevels[weaponId] || 1}`;
                 mainEl.appendChild(lvEl);
             }
-            powerEl.textContent = stats ? stats.damage.toLocaleString() : '—';
+            powerEl.textContent = stats ? formatNumber(stats.damage) : '—';
 
             if (!w) { btn.hidden = true; return; }
             const wLv = state.weaponLevels[weaponId] || 1;
@@ -3986,8 +4025,8 @@ function renderTrainSlots() {
             btn.disabled = wMax;
             btn.dataset.upgradeWeapon = weaponId;
             btn.classList.toggle('is-short', !wMax && !canAfford);
-            btn.textContent = wMax ? 'MAX' : `+${wCost.toLocaleString()}G`;
-            btn.setAttribute('aria-label', `${w.name}をLv.${wLv + 1}へ強化。${Number.isFinite(wCost) ? `${wCost.toLocaleString()}ゴールド必要` : '上限'}`);
+            btn.textContent = wMax ? 'MAX' : `+${formatMoney(wCost)}`;
+            btn.setAttribute('aria-label', `${w.name}をLv.${wLv + 1}へ強化。${Number.isFinite(wCost) ? `${formatNumber(wCost)}ゴールド必要` : '上限'}`);
         };
 
         paintSlot(CAR_SLOT_UPPER, upperStats, '上部');
@@ -4015,8 +4054,8 @@ function renderTrainSlots() {
             sephBtn.disabled = sMax;
             sephBtn.dataset.upgradeSephirah = s.id;
             sephBtn.classList.toggle('is-short', !sMax && !sCan);
-            sephBtn.textContent = sMax ? 'MAX' : `+${sCost.toLocaleString()}G`;
-            sephBtn.setAttribute('aria-label', `${s.name}をLv.${sLv + 1}へ強化。${Number.isFinite(sCost) ? `${sCost.toLocaleString()}ゴールド必要` : '上限'}`);
+            sephBtn.textContent = sMax ? 'MAX' : `+${formatMoney(sCost)}`;
+            sephBtn.setAttribute('aria-label', `${s.name}をLv.${sLv + 1}へ強化。${Number.isFinite(sCost) ? `${formatNumber(sCost)}ゴールド必要` : '上限'}`);
         } else {
             sephBtn.hidden = true;
         }
@@ -4054,9 +4093,10 @@ function openConfigModal(carIdx, slot = CAR_SLOT_UPPER) {
             return;
         }
         const mounted = getCarSlotWeaponId(car, slot);
+        const ownedIds = getOwnedWeaponIds();
         Object.values(WEAPONS).forEach(w => {
             if (w.id === 'railgun_tiphareth') return;
-            const unlocked = state.unlockedWeapons.includes(w.id);
+            const unlocked = canUseWeapon(w.id, ownedIds);
             const selected = mounted === w.id;
             const sideMult = slot === CAR_SLOT_SIDE
                 ? ` / 空×${(w.multipliers.AIR * SIDE_SLOT_AIR_MULT).toFixed(1)}`
@@ -4073,7 +4113,7 @@ function openConfigModal(carIdx, slot = CAR_SLOT_UPPER) {
             btn.innerHTML = `
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-bold text-white">${w.name}</span>
-                    <span class="text-[10px] tech-font text-amber-300">${unlocked ? `Lv.${state.weaponLevels[w.id] || 1}` : '未開発'}</span>
+                    <span class="text-[10px] tech-font text-amber-300">${unlocked ? `Lv.${getWeaponInstanceUnlockedMaxLevel(getBestWeaponInstance(w.id))}` : '未所持'}</span>
                 </div>
                 <div class="text-[10px] text-slate-400 mt-0.5">[${w.typeName}] 陸×${w.multipliers.LAND} / 海×${w.multipliers.SEA}${sideMult}${slot === CAR_SLOT_SIDE ? ' / 射程−15%' : ''}</div>
             `;
@@ -4206,7 +4246,7 @@ function repairTrain() {
         return;
     }
     if (state.gold < 100) {
-        showToast('資金が不足しています（100G必要）');
+        showToast(`資金が不足しています（${formatMoney(100)}必要）`);
         return;
     }
     state.gold -= 100;
@@ -4270,7 +4310,7 @@ function renderStaffTab() {
                     : isMax
                         ? `<button disabled class="w-full bg-slate-900 text-slate-500 font-bold py-1.5 rounded text-xs tech-font cursor-not-allowed">MAX Lv.${SEPHIRAH_MAX_LEVEL}</button>`
                         : Number.isFinite(upgCost)
-                            ? `<button onclick="upgradeSephirah('${s.id}')" class="w-full bg-purple-700 hover:bg-purple-600 text-white font-bold py-1.5 rounded text-xs tech-font transition">Lv.${lv + 1} へ強化 (${upgCost.toLocaleString()} G)</button>`
+                            ? `<button onclick="upgradeSephirah('${s.id}')" class="w-full bg-purple-700 hover:bg-purple-600 text-white font-bold py-1.5 rounded text-xs tech-font transition">Lv.${lv + 1} へ強化 (${formatMoney(upgCost)})</button>`
                             : `<button disabled class="w-full bg-slate-900 text-slate-500 font-bold py-1.5 rounded text-xs tech-font cursor-not-allowed">強化不可</button>`
                 }
             </div>
@@ -4380,11 +4420,11 @@ function renderRDTab() {
     if (lvEl) lvEl.textContent = `Lv.${state.armorLevel}/${ARMOR_MAX_LEVEL}${armorMax ? ' MAX' : ''}`;
     if (deltaEl) {
         if (armorMax || !Number.isFinite(armorCost)) {
-            deltaEl.textContent = `最大耐久: ${state.maxHp.toLocaleString()}（MAX）`;
+            deltaEl.textContent = `最大耐久: ${formatNumber(state.maxHp)}（MAX）`;
         } else {
             const cur = state.maxHp;
             const next = calcMaxHpForArmor(state.armorLevel + 1);
-            deltaEl.innerHTML = deltaStatHTML(cur.toLocaleString(), next.toLocaleString(), `+${(next - cur).toLocaleString()}`, '#34d399');
+            deltaEl.innerHTML = deltaStatHTML(formatNumber(cur), formatNumber(next), `+${formatNumber(next - cur)}`, '#34d399');
         }
     }
     if (btnEl) {
@@ -4392,71 +4432,198 @@ function renderRDTab() {
         btnEl.textContent = armorMax
             ? `MAX Lv.${ARMOR_MAX_LEVEL}`
             : Number.isFinite(armorCost)
-                ? `強化する (${armorCost.toLocaleString()} G)`
+                ? `強化する（${formatMoney(armorCost)}）`
                 : '強化不可';
     }
 
+    const matEl = document.getElementById('weapon-material-count');
+    if (matEl) matEl.textContent = formatNumber(toNonNegativeInt(state.enhanceMaterials));
+    const modEl = document.getElementById('weapon-module-count');
+    if (modEl) modEl.textContent = formatNumber(toNonNegativeInt(state.escortEnhanceModules));
+
+    renderRdWeaponFilter();
+    renderRdWeapons();
+    renderRdMergeList();
+}
+
+// 武装の絞り込み。所持している武装と初期配備だけをチップに出す。
+function renderRdWeaponFilter() {
+    const host = document.getElementById('rd-weapon-filter');
+    if (!host) return;
+    const owned = getOwnedWeaponIds();
+    const active = state.rdWeaponFilter || 'all';
+    const usable = Object.values(WEAPONS)
+        .filter(w => !isRailgunWeapon(w.id) && canUseWeapon(w.id, owned));
+    const chips = [{ id: 'all', label: `すべて（${usable.length}）` }]
+        .concat(usable.map(w => ({ id: w.id, label: w.name })));
+    host.innerHTML = '';
+    chips.forEach(chip => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `rd-filter-chip${active === chip.id ? ' is-active' : ''}`;
+        btn.textContent = chip.label;
+        btn.addEventListener('click', () => {
+            state.rdWeaponFilter = chip.id;
+            renderRDTab();
+        });
+        host.appendChild(btn);
+    });
+}
+
+// 武装カード。所持していない武装は一覧に出さない（未使用の非表示化）。
+function renderRdWeapons() {
     const grid = document.getElementById('rd-weapons-grid');
     if (!grid) return;
     grid.innerHTML = '';
 
-    Object.values(WEAPONS).forEach(w => {
-        const unlocked = state.unlockedWeapons.includes(w.id);
-        const reqMet = !w.reqWeapon || state.unlockedWeapons.includes(w.reqWeapon);
-        const lv = state.weaponLevels[w.id] || 1;
-        const isMax = lv >= WEAPON_MAX_LEVEL;
-        const dmg = getWeaponDamage(w.id);
-        const upgCost = isMax ? Infinity : getWeaponUpgradeCost(w.id);
-        // 次のレベルの威力（getWeaponDamageAtLevel と同式）
-        const nextDmg = isMax ? dmg : getWeaponDamageAtLevel(w.id, lv + 1);
-        const railInfo = isRailgunWeapon(w.id) ? getRailgunRarityInfo() : null;
-        const railBlock = railInfo ? `
-            <div class="mt-1.5 rounded border p-2" style="border-color:${railInfo.meta.color}66;background:${railInfo.meta.color}12">
-                <div class="flex justify-between items-center gap-2">
-                    <span class="text-[10px] font-black px-1.5 py-0.5 rounded" style="background:${railInfo.meta.color}22;color:${railInfo.meta.color};border:1px solid ${railInfo.meta.color}66">${railInfo.meta.label}</span>
-                    <span class="text-[9px] tech-font text-slate-400">レールガン自動レアリティ</span>
-                </div>
-                <div class="text-[10px] tech-font text-slate-300 mt-1">
-                    補正: <span class="text-emerald-300">+${Math.round(railInfo.bonus * 100)}%</span>
-                    <span class="text-slate-500">|</span>
-                    実効威力: <span class="text-amber-300">${getEffectiveWeaponDamage(w.id).toLocaleString()}</span>
-                </div>
-                <div class="text-[10px] text-slate-400 mt-0.5">
-                    ${railInfo.next ? `次: ${getRarityMeta(railInfo.next.rarity).label}（${getRailgunRequirementText(railInfo.next)}）` : '最大レアリティ'}
-                </div>
-            </div>
-        ` : '';
+    const owned = getOwnedWeaponIds();
+    const filter = state.rdWeaponFilter || 'all';
+    const ids = Object.keys(WEAPONS).filter(id =>
+        !isRailgunWeapon(id) && canUseWeapon(id, owned) && (filter === 'all' || filter === id));
+
+    if (ids.length === 0) {
+        grid.innerHTML = `
+            <div class="col-span-full bg-slate-800/70 border border-slate-700 rounded-lg p-5 text-center text-xs text-slate-400 leading-relaxed">
+                使える武装がありません。武装は<strong class="text-purple-300">ガチャ</strong>でのみ入手できます。<br>
+                ガチャで武装を引くと、ここでレベルアップとマージができます。
+            </div>`;
+        return;
+    }
+
+    ids.forEach(id => {
+        const best = getBestWeaponInstance(id);
+        // ガチャ産のインスタンスが無い初期配備（バルカン・対空砲）は、
+        // 従来どおりゴールドでレベルを上げる。マージ対象にはならない。
+        if (!best) {
+            grid.appendChild(buildStarterWeaponCard(id));
+            return;
+        }
+        const groups = getWeaponInstanceGroups()
+            .filter(g => g.weaponId === id)
+            .sort((a, b) => WEAPON_RARITY_ORDER.indexOf(b.rarity) - WEAPON_RARITY_ORDER.indexOf(a.rarity));
+
+        const meta = getRarityMeta(best.rarity);
+        const bonusPct = Math.round(getWeaponInstanceBonus(best) * 100);
+        const levelCost = getWeaponInstanceUpgradeCost(best);
+        const unlockedMax = getWeaponInstanceUnlockedMaxLevel(best);
+        const maxLevel = getWeaponInstanceMaxLevel(best);
+        const atLevelCap = best.level >= unlockedMax;
+        const mergeGroup = groups.find(g => g.count >= 3 && g.plus < WEAPON_MAX_PLUS);
 
         const card = document.createElement('div');
-        card.className = `bg-slate-800 border ${unlocked ? 'border-amber-600/60' : 'border-slate-700'} rounded-lg p-3 flex flex-col justify-between gap-2`;
+        card.className = 'rd-weapon-card';
+        card.style.setProperty('--w-accent', meta.color);
         card.innerHTML = `
-            <div>
-                <div class="flex justify-between items-center">
-                    <span class="text-xs font-bold text-amber-300">${w.name}</span>
-                    <span class="text-xs tech-font text-slate-300">${unlocked ? `Lv.${lv}/${WEAPON_MAX_LEVEL}${isMax ? ' MAX' : ''}` : `Tier ${w.tier}`}</span>
+            <div class="rd-weapon-head">
+                <canvas class="rd-weapon-icon" aria-hidden="true"></canvas>
+                <div class="min-w-0 flex-1">
+                    <div class="rd-weapon-name">${getWeaponName(id, best.rarity)}</div>
+                    <div class="rd-weapon-meta">
+                        <span class="rd-rarity" style="color:${meta.color};border-color:${meta.color}66;background:${meta.color}18">${meta.label}</span>
+                        <span class="tech-font">Lv.${formatNumber(best.level)}/${formatNumber(unlockedMax)}</span>
+                        <span class="tech-font text-amber-300">+${best.plus}</span>
+                    </div>
                 </div>
-                <div class="text-[10px] text-slate-400 mt-0.5">[${w.typeName}] 陸×${w.multipliers.LAND} / 海×${w.multipliers.SEA} / 空×${w.multipliers.AIR}</div>
-                <p class="text-[11px] text-slate-300 mt-1">${w.desc}</p>
-                <div class="text-xs tech-font text-amber-400 mt-1">
-                    現在基礎威力: ${unlocked
-                        ? (isMax ? dmg.toLocaleString() : deltaStatHTML(dmg.toLocaleString(), nextDmg.toLocaleString(), `+${(nextDmg - dmg).toLocaleString()}`, '#fbbf24'))
-                        : dmg.toLocaleString()}
-                </div>
-                ${railBlock}
             </div>
-            <div>
-                ${unlocked
-                    ? (isMax
-                        ? `<button disabled class="w-full bg-slate-900 text-slate-500 font-black py-1.5 rounded text-xs tech-font cursor-not-allowed">MAX Lv.${WEAPON_MAX_LEVEL}</button>`
-                        : Number.isFinite(upgCost)
-                            ? `<button onclick="upgradeWeapon('${w.id}')" class="w-full bg-amber-600 hover:bg-amber-500 text-slate-950 font-black py-1.5 rounded text-xs tech-font transition">Lv.${lv + 1} へ強化 (${upgCost.toLocaleString()} G)</button>`
-                            : `<button disabled class="w-full bg-slate-900 text-slate-500 font-black py-1.5 rounded text-xs tech-font cursor-not-allowed">強化不可</button>`)
-                    : reqMet
-                        ? `<button onclick="unlockWeapon('${w.id}')" class="w-full bg-sky-700 hover:bg-sky-600 text-white font-bold py-1.5 rounded text-xs tech-font transition">研究開発する (${w.unlockCost.toLocaleString()} G)</button>`
-                        : `<div class="text-center text-[11px] text-slate-500 bg-slate-900 py-1.5 rounded">前提兵装「${WEAPONS[w.reqWeapon].name}」が必要</div>`
-                }
+            <div class="rd-weapon-stats">
+                <div>威力 <span class="text-amber-300 font-bold">${formatNumber(getEffectiveWeaponDamage(id))}</span></div>
+                <div>適用ボーナス <span class="text-emerald-300 font-bold">+${bonusPct}%</span></div>
+                <div>所持 <span class="text-slate-300">${groups.reduce((n, g) => n + g.count, 0)}個</span></div>
+                <div>最大Lv. <span class="text-slate-300">${formatNumber(maxLevel)}</span></div>
+            </div>
+            <div class="rd-weapon-actions">
+                <button type="button" class="rd-btn-upgrade" ${atLevelCap ? 'disabled' : ''}>
+                    ${atLevelCap ? '上限突破が必要' : `レベルアップ ${Number.isFinite(levelCost) ? formatMoney(levelCost) : '不可'}`}
+                </button>
+                <button type="button" class="rd-btn-merge" ${mergeGroup ? '' : 'disabled'}>
+                    ${mergeGroup ? 'マージ' : 'マージ不可'}
+                </button>
             </div>
         `;
+        drawWeaponTopDown(card.querySelector('.rd-weapon-icon'), id);
+        card.querySelector('.rd-btn-upgrade').addEventListener('click', () => upgradeWeaponInstanceByUid(best.uid));
+        const mergeBtn = card.querySelector('.rd-btn-merge');
+        mergeBtn.addEventListener('click', () => {
+            if (mergeGroup) openWeaponMergeConfirm(mergeGroup.weaponId, mergeGroup.rarity, mergeGroup.plus);
+        });
+        grid.appendChild(card);
+    });
+}
+
+// 初期配備の武装（ガチャ産インスタンス無し）用のカード。ゴールドでLvを上げる。
+function buildStarterWeaponCard(id) {
+    const w = WEAPONS[id];
+    const lv = state.weaponLevels[id] || 1;
+    const isMax = lv >= WEAPON_MAX_LEVEL;
+    const dmg = getWeaponDamage(id);
+    const cost = isMax ? Infinity : getWeaponUpgradeCost(id);
+    const nextDmg = isMax ? dmg : getWeaponDamageAtLevel(id, lv + 1);
+    const card = document.createElement('div');
+    card.className = 'rd-weapon-card';
+    card.style.setProperty('--w-accent', w.color || '#94a3b8');
+    card.innerHTML = `
+        <div class="rd-weapon-head">
+            <canvas class="rd-weapon-icon" aria-hidden="true"></canvas>
+            <div class="min-w-0 flex-1">
+                <div class="rd-weapon-name">${w.name}</div>
+                <div class="rd-weapon-meta">
+                    <span class="rd-rarity" style="color:#94a3b8;border-color:#94a3b866;background:#94a3b818">初期配備</span>
+                    <span class="tech-font">Lv.${formatNumber(lv)}/${WEAPON_MAX_LEVEL}</span>
+                </div>
+            </div>
+        </div>
+        <div class="rd-weapon-stats">
+            <div>威力 <span class="text-amber-300 font-bold">${formatNumber(getEffectiveWeaponDamage(id))}</span></div>
+            <div>次の威力 <span class="text-slate-300">${isMax ? 'MAX' : formatNumber(nextDmg)}</span></div>
+            <div class="col-span-2">[${w.typeName}] 陸×${w.multipliers.LAND} / 海×${w.multipliers.SEA} / 空×${w.multipliers.AIR}</div>
+        </div>
+        <div class="rd-weapon-actions">
+            <button type="button" class="rd-btn-upgrade rd-btn-wide" ${isMax ? 'disabled' : ''}>
+                ${isMax ? 'MAX' : `強化する ${Number.isFinite(cost) ? formatMoney(cost) : '不可'}`}
+            </button>
+        </div>
+    `;
+    drawWeaponTopDown(card.querySelector('.rd-weapon-icon'), id);
+    card.querySelector('.rd-btn-upgrade').addEventListener('click', () => upgradeWeapon(id));
+    return card;
+}
+
+// マージ可能な組み合わせだけを一覧する（研究開発タブ内）。
+function renderRdMergeList() {
+    const grid = document.getElementById('rd-merge-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    const groups = getWeaponInstanceGroups()
+        .filter(g => !isRailgunWeapon(g.weaponId) && g.count >= 3 && g.plus < WEAPON_MAX_PLUS)
+        .sort((a, b) => WEAPON_RARITY_ORDER.indexOf(b.rarity) - WEAPON_RARITY_ORDER.indexOf(a.rarity));
+    if (!groups.length) {
+        grid.innerHTML = `<div class="col-span-full bg-slate-800/50 border border-slate-700/70 rounded-lg p-4 text-center text-[11px] text-slate-400">
+            マージできる武装がありません（同じ武装・レアリティ・＋値が3個以上で合成できます）。
+        </div>`;
+        return;
+    }
+    groups.forEach(group => {
+        const meta = getRarityMeta(group.rarity);
+        const card = document.createElement('div');
+        card.className = 'rd-weapon-card';
+        card.style.setProperty('--w-accent', meta.color);
+        card.innerHTML = `
+            <div class="rd-weapon-head">
+                <canvas class="rd-weapon-icon" aria-hidden="true"></canvas>
+                <div class="min-w-0 flex-1">
+                    <div class="rd-weapon-name">${getWeaponName(group.weaponId, group.rarity)}</div>
+                    <div class="rd-weapon-meta">
+                        <span class="rd-rarity" style="color:${meta.color};border-color:${meta.color}66;background:${meta.color}18">${meta.label}</span>
+                        <span class="tech-font text-amber-300">+${group.plus} → +${group.plus + 1}</span>
+                        <span class="tech-font">×${group.count}</span>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="rd-btn-merge rd-btn-wide">マージ確認へ</button>
+        `;
+        drawWeaponTopDown(card.querySelector('.rd-weapon-icon'), group.weaponId);
+        card.querySelector('.rd-btn-merge').addEventListener('click', () =>
+            openWeaponMergeConfirm(group.weaponId, group.rarity, group.plus));
         grid.appendChild(card);
     });
 }
@@ -4483,31 +4650,26 @@ function upgradeTrainArmor() {
     saveGame(true);
 }
 
-function unlockWeapon(id) {
-    const w = WEAPONS[id];
-    if (!w || state.unlockedWeapons.includes(id)) return;
-    if (state.gold < w.unlockCost) {
-        showToast('資金が不足しています！');
-        return;
-    }
-    state.gold -= w.unlockCost;
-    state.unlockedWeapons.push(id);
-    SoundEngine.playUI('upgrade');
-    updateHeaderUI();
-    renderRDTab();
-    showToast(`🔬 新兵装「${w.name}」を開発しました！`);
-    saveGame(true);
+// 旧: ゴールドで武装を「研究開発」する仕組みは廃止した。
+// 武装はガチャでのみ入手し、育成とマージは研究開発タブの武装セクションで行う。
+// ここは既存セーブや古い導線からの呼び出しに応えるための薄い実装。
+function unlockWeapon() {
+    showToast('武装はガチャでのみ入手できます');
 }
 
+// 武装の強化。ガチャ産インスタンスがあればそれを、無ければ初期配備として
+// state.weaponLevels をゴールドで1段上げる。
 function upgradeWeapon(id) {
-    if (!state.unlockedWeapons.includes(id)) return;
+    const inst = getBestWeaponInstance(id);
+    if (inst) { upgradeWeaponInstanceByUid(inst.uid); return; }
+    if (!canUseWeapon(id)) return;
     const cost = getWeaponUpgradeCost(id);
     if (!Number.isFinite(cost)) {
         showToast('これ以上強化できません');
         return;
     }
     if (state.gold < cost) {
-        showToast('資金が不足しています！');
+        showToast(`資金が不足しています（${formatMoney(cost)}必要）`);
         return;
     }
     state.gold -= cost;
@@ -4519,56 +4681,50 @@ function upgradeWeapon(id) {
 }
 
 function bulkUnlockWeapons() {
-    let count = 0;
-    Object.values(WEAPONS).forEach(w => {
-        const reqMet = !w.reqWeapon || state.unlockedWeapons.includes(w.reqWeapon);
-        if (!state.unlockedWeapons.includes(w.id) && reqMet && state.gold >= w.unlockCost) {
-            state.gold -= w.unlockCost;
-            state.unlockedWeapons.push(w.id);
-            count++;
-        }
-    });
-    if (count > 0) {
-        SoundEngine.playUI('upgrade');
-        updateHeaderUI();
-        renderRDTab();
-        showToast(`🔬 ${count}種の新兵装を一括開発しました！`);
-        saveGame(true);
-    } else {
-        showToast('開発可能な兵装がないか、資金が不足しています');
-    }
+  showToast('武装はガチャでのみ入手できます');
 }
 
 function bulkUpgradeWeapons() {
-    let count = 0;
-    let upgraded = true;
-    while (upgraded && count < 500) {
-        upgraded = false;
-        let cheapestId = null;
-        let cheapestCost = Infinity;
-        state.unlockedWeapons.forEach(id => {
-            const c = getWeaponUpgradeCost(id);
-            if (c < cheapestCost) {
-                cheapestCost = c;
-                cheapestId = id;
-            }
-        });
-        if (cheapestId && state.gold >= cheapestCost) {
-            state.gold -= cheapestCost;
-            state.weaponLevels[cheapestId] = (state.weaponLevels[cheapestId] || 1) + 1;
-            count++;
-            upgraded = true;
-        }
-    }
-    if (count > 0) {
-        SoundEngine.playUI('upgrade');
-        updateHeaderUI();
-        renderRDTab();
-        showToast(`⚡ 全開発済み兵装を合計 ${count} 回一括強化しました！`);
-        saveGame(true);
-    } else {
-        showToast('強化に必要な資金が不足しています');
-    }
+  const ids = [...getOwnedWeaponIds()];
+  if (!ids.length) { showToast('強化できる武装がありません'); return; }
+  let count = 0;
+  let progressed = true;
+  let guard = 0;
+  while (progressed && guard < 500) {
+    progressed = false;
+    guard++;
+    ids.forEach(id => {
+      const inst = getBestWeaponInstance(id);
+      if (!inst) {
+        // 初期配備はゴールドでLvを上げる。
+        const lv = state.weaponLevels[id] || 1;
+        if (lv >= WEAPON_MAX_LEVEL) return;
+        const cost = getWeaponUpgradeCost(id);
+        if (!Number.isFinite(cost) || state.gold < cost) return;
+        state.gold -= cost;
+        state.weaponLevels[id] = lv + 1;
+        count++;
+        progressed = true;
+        return;
+      }
+      if (inst.level >= getWeaponInstanceUnlockedMaxLevel(inst)) return;
+      const cost = getWeaponInstanceUpgradeCost(inst);
+      if (!Number.isFinite(cost) || state.gold < cost) return;
+      state.gold -= cost;
+      inst.level += 1;
+      count++;
+      progressed = true;
+    });
+  }
+  if (count > 0) {
+    SoundEngine.playUI('upgrade');
+    updateHeaderUI();
+    renderRDTab();
+    showToast(`⚡ 所持武装を合計 ${count} 回一括強化しました！`);
+    saveGame(true);
+  } else {
+    showToast('強化に必要な資金が不足しています');
+  }
 }
 
 // --- タブ: 戦術 ---
@@ -4662,12 +4818,12 @@ function renderSkillsTab() {
         upBtn.classList.toggle('is-short', !maxed && !canAfford);
         upBtn.textContent = maxed
             ? `MAX Lv.${TACTICAL_MAX_LEVEL}`
-            : `強化 Lv.${lv + 1}（${upgCost.toLocaleString()} G）`;
+            : `強化 Lv.${lv + 1}（${formatMoney(upgCost)}）`;
         upBtn.title = maxed
             ? '最大レベルです'
             : canAfford
-                ? `${sk.name}をLv.${lv + 1}へ強化（${upgCost.toLocaleString()} G）`
-                : `資金が足りません（必要 ${upgCost.toLocaleString()} G / 所持 ${state.gold.toLocaleString()} G）`;
+                ? `${sk.name}をLv.${lv + 1}へ強化（${formatMoney(upgCost)}）`
+                : `資金が足りません（必要 ${formatMoney(upgCost)} / 所持 ${formatMoney(state.gold)}）`;
     });
 
     // 再描画しても読んでいた位置を保つ。
@@ -4702,7 +4858,7 @@ function upgradeTacticalSkill(skillId) {
         return;
     }
     if (state.gold < cost) {
-        showToast(`資金が不足しています！（必要: ${cost.toLocaleString()} G）`);
+        showToast(`資金が不足しています！（必要: ${formatMoney(cost)}）`);
         return;
     }
     state.gold -= cost;
@@ -4831,8 +4987,8 @@ function renderEscortTab() {
                     </div>
                     <div class="text-xs sm:text-sm font-bold text-white mt-1.5 truncate">${stats.name}</div>
                     <div class="text-[11px] tech-font text-slate-300 mt-0.5 space-y-0.5">
-                        <div>耐久(HP): ${isMax ? stats.maxHp.toLocaleString() : deltaStatHTML(stats.maxHp.toLocaleString(), nextStats.maxHp.toLocaleString(), `+${(nextStats.maxHp - stats.maxHp).toLocaleString()}`, '#34d399')}</div>
-                        <div>火力: ${isMax ? stats.damage.toLocaleString() : deltaStatHTML(stats.damage.toLocaleString(), nextStats.damage.toLocaleString(), `+${(nextStats.damage - stats.damage).toLocaleString()}`, '#fbbf24')}</div>
+                        <div>耐久(HP): ${isMax ? formatNumber(stats.maxHp) : deltaStatHTML(formatNumber(stats.maxHp), formatNumber(nextStats.maxHp), `+${(nextStats.maxHp - stats.maxHp).toLocaleString()}`, '#34d399')}</div>
+                        <div>火力: ${isMax ? formatNumber(stats.damage) : deltaStatHTML(formatNumber(stats.damage), formatNumber(nextStats.damage), `+${(nextStats.damage - stats.damage).toLocaleString()}`, '#fbbf24')}</div>
                     </div>
                     <div class="escort-break mt-1">
                         <div class="escort-break-head">
@@ -4867,10 +5023,10 @@ function renderEscortTab() {
                         MAX Lv.${ESCORT_MAX_LEVEL}
                     </button>` : `
                     <button onclick="upgradeEscort('${bid}')" class="bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold py-1.5 rounded text-[11px] tech-font transition">
-                        強化 ${Number.isFinite(upgCost) ? upgCost.toLocaleString() : '不可'}G
+                        強化 ${Number.isFinite(upgCost) ? formatMoney(upgCost) : '不可'}
                     </button>`}
                     <button onclick="sellEscort('${bid}')" class="bg-red-900/80 hover:bg-red-800 text-red-200 border border-red-600/70 py-1.5 rounded text-[11px] tech-font transition">
-                        売却 +${sellPrice}G
+                        売却 +${formatMoney(sellPrice)}
                     </button>
                 </div>
             `;
@@ -4958,7 +5114,7 @@ function sellEscort(bossId) {
         <div class="bg-slate-800 border border-slate-700 rounded p-3 space-y-1 text-xs">
             <div class="text-white font-bold">🤖 ${stats.name}</div>
             <div class="text-slate-300">機体Lv: ${stats.lv}</div>
-            <div class="text-amber-300 font-bold">売却額: +${price.toLocaleString()} G</div>
+            <div class="text-amber-300 font-bold">売却額: +${formatMoney(price)}</div>
             ${equipped ? '<div class="text-cyan-300">編成からも外れます</div>' : ''}
         </div>
         <div class="bg-red-950/60 border border-red-700 rounded p-3 text-xs text-red-200 leading-relaxed">
@@ -4966,7 +5122,7 @@ function sellEscort(bossId) {
             売却後はロック解除するまで、討伐時に自動売却されます。
         </div>
     `;
-    execBtn.textContent = `売却する (+${price.toLocaleString()} G)`;
+    execBtn.textContent = `売却する (+${formatMoney(price)})`;
     modal.classList.remove('hidden');
     modal.classList.add('flex');
     SoundEngine.playUI('click');
@@ -4997,7 +5153,7 @@ function executeSellEscort() {
     SoundEngine.playUI('upgrade');
     updateHeaderUI();
     renderEscortTab();
-    showToast(`💰 鹵獲兵器を売却し +${price.toLocaleString()}G 獲得（ロック解除まで討伐時即売却）`);
+    showToast(`💰 鹵獲兵器を売却し +${formatMoney(price)} 獲得（ロック解除まで討伐時即売却）`);
     saveGame(true);
 }
 
@@ -5238,8 +5394,8 @@ function renderPrestigeTab() {
     const canPrestige = canPrestigeNow();
 
     if (countEl) countEl.textContent = `転生回数: ${state.prestigeCount}回`;
-    if (curEl) curEl.textContent = state.sephirothShards.toLocaleString();
-    if (gainEl) gainEl.textContent = `+${gain.toLocaleString()}`;
+    if (curEl) curEl.textContent = formatNumber(state.sephirothShards);
+    if (gainEl) gainEl.textContent = `+${formatNumber(gain)}`;
     if (resumeEl) resumeEl.textContent = '国連防衛軍 STAGE 1';
     if (btnEl) btnEl.disabled = !canPrestige || gain <= 0;
 
@@ -5374,7 +5530,7 @@ function renderPrestigeTab() {
                 ${selMax ? 'MAX LEVEL 到達済み' : `🌳 欠片 ${selCost} 個を捧げて強化する`}
             </button>
             <div class="text-center text-[10px] text-slate-400">
-                所持欠片: <span class="text-emerald-300 font-bold tech-font">${state.sephirothShards.toLocaleString()}</span> 個（全10セフィラのノードを自由に選択可能）
+                所持欠片: <span class="text-emerald-300 font-bold tech-font">${formatNumber(state.sephirothShards)}</span> 個（全10セフィラのノードを自由に選択可能）
             </div>
         </div>
     `;
@@ -5425,7 +5581,7 @@ function openPrestigeConfirmModal() {
         <p>現在の戦線進行をリセットし、新たな輪廻へと旅立ちます。</p>
         <div class="bg-emerald-950/70 border border-emerald-500 p-3 rounded text-center">
             <div class="text-xs text-emerald-200">今回獲得できる強化素材</div>
-            <div class="text-xl font-black text-emerald-300 mt-0.5">🌳 セフィロトの木の欠片 +${gain.toLocaleString()} 個</div>
+            <div class="text-xl font-black text-emerald-300 mt-0.5">🌳 セフィロトの木の欠片 +${formatNumber(gain)} 個</div>
         </div>
         <div class="bg-slate-800 p-3 rounded border border-slate-700 text-xs space-y-1">
             <div class="text-red-300 font-bold">【リセットされる項目】</div>
@@ -5438,7 +5594,7 @@ function openPrestigeConfirmModal() {
         </div>
         <div class="text-[11px] text-amber-300/90">※欠片は「まだ欠片化していない進行度」の分だけ付与されます。同じ進行度から重複して獲得することはできません。</div>
     `;
-    execBtn.textContent = `🌳 転生を実行する (+${gain.toLocaleString()} 個)`;
+    execBtn.textContent = `🌳 転生を実行する (+${formatNumber(gain)} 個)`;
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 }
@@ -5669,7 +5825,7 @@ function renderBossDexGrid() {
             </div>
             <div class="text-[10px] tech-font text-slate-300 border-t border-slate-700/80 pt-1 flex justify-between">
                 <span>属性: ${tmpl.attr}</span>
-                <span>基準HP: ${rec.seen ? tmpl.hp.toLocaleString() : '???'}</span>
+                <span>基準HP: ${rec.seen ? formatNumber(tmpl.hp) : '???'}</span>
             </div>
         `;
         grid.appendChild(card);
@@ -6193,7 +6349,6 @@ const MOBILE_TAB_RAIL = [
     ['skills', '戦術'],
     ['escort', '鹵獲'],
     ['gacha', 'ガチャ'],
-    ['weapons', '武装'],
     ['world', '世界'],
     ['prestige', 'プレステージ'],
     ['dex', '図鑑']
@@ -6269,7 +6424,7 @@ function syncMobileDockUI() {
     if (!labelEl || !subEl || !launchBtn) return;
     if (state.inWave) {
         labelEl.textContent = '進軍中';
-        subEl.textContent = `${Math.floor(marchMeters).toLocaleString()} m`;
+        subEl.textContent = `${formatNumber(Math.floor(marchMeters))} m`;
         launchBtn.classList.add('is-marching');
         launchBtn.setAttribute('aria-label', `STAGE ${state.stage} 進軍中。${Math.floor(marchMeters)}メートル`);
     } else {

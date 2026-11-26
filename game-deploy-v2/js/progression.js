@@ -34,8 +34,7 @@ const TAB_UNLOCKS = {
     staff:  { type: 'stage', factionId: 'pol', stage: 5, requirement: '国連警察 STAGE 5 到達' },
     skills: { type: 'stage', factionId: 'pol', stage: 10, requirement: '国連警察 STAGE 10 到達' },
     escort: { type: 'faction', factionId: 'un', requirement: '国連防衛軍を制圧' },
-    gacha:  { type: 'faction', factionId: 'usa', requirement: 'アメリカ合衆国を制圧' },
-    weapons:{ type: 'faction', factionId: 'chn', requirement: '中華人民共和国を制圧' },
+    gacha:  { type: 'faction', factionId: 'pol', requirement: '国連警察を制圧' },
     prestige:{ type: 'prestigeOrStage', factionId: 'usa', stage: 30, count: 1, requirement: 'アメリカ合衆国 STAGE 30 到達' },
     dex:    { type: 'prestige', count: 1, requirement: '転生 1 回' }
 };

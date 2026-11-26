@@ -461,6 +461,105 @@
             .tactic-card { padding: 10px; gap: 7px; }
             .tactic-title { font-size: 13px; }
         }
+        /* ---- 研究開発：武装カード（アイコン付き） ---- */
+        .rd-filter-chip {
+            min-height: 32px; padding: 3px 10px; border-radius: 999px;
+            border: 1px solid var(--hud-line); background: #101a27; color: var(--hud-text-dim);
+            font-size: 10px; font-weight: 800; font-family: inherit; cursor: pointer;
+            max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            touch-action: manipulation;
+        }
+        .rd-filter-chip.is-active {
+            border-color: var(--hud-brass-bright); color: var(--hud-brass-bright); background: #241d10;
+        }
+        .rd-filter-chip:focus-visible { outline: 2px solid var(--hud-brass-bright); outline-offset: 2px; }
+        .rd-weapon-card {
+            display: flex; flex-direction: column; gap: 7px;
+            padding: 10px; border-radius: var(--hud-radius);
+            background: linear-gradient(180deg, #101827, #0a1018);
+            border: 1px solid var(--hud-line);
+            border-inline-start: 3px solid var(--w-accent, var(--hud-line));
+        }
+        .rd-weapon-head { display: flex; align-items: center; gap: 9px; min-width: 0; }
+        .rd-weapon-icon {
+            flex-shrink: 0; width: 92px; height: 49px; display: block;
+            background: rgba(2, 6, 23, .55); border-radius: 4px;
+            border: 1px solid var(--hud-line-soft);
+        }
+        .rd-weapon-name {
+            font-size: 12px; font-weight: 800; color: #e2e8f0; line-height: 1.35;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .rd-weapon-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 3px; font-size: 10px; }
+        .rd-rarity {
+            font-size: 9px; font-weight: 900; padding: 1px 5px; border-radius: 2px; border: 1px solid transparent;
+        }
+        .rd-weapon-stats {
+            display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 8px;
+            font-size: 10px; color: var(--hud-text-dim);
+            padding: 5px 7px; border-radius: 3px;
+            background: #0b1220; border: 1px solid var(--hud-line-soft);
+        }
+        .rd-weapon-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+        .rd-btn-upgrade, .rd-btn-merge {
+            min-height: 42px; border-radius: 4px; cursor: pointer;
+            font-size: 11px; font-weight: 800; font-family: inherit; padding: 5px 9px;
+            touch-action: manipulation;
+        }
+        .rd-btn-upgrade { border: 1px solid #4b3a12; background: #241d10; color: var(--hud-brass-bright); }
+        .rd-btn-merge { border: 1px solid #14532d; background: #0f2a1c; color: #6ee7b7; }
+        .rd-btn-wide { grid-column: 1 / -1; }
+        .rd-btn-upgrade:disabled, .rd-btn-merge:disabled {
+            border-color: var(--hud-line-soft); background: #0b1220; color: #7c8ba1; cursor: default;
+        }
+        .rd-btn-upgrade:focus-visible, .rd-btn-merge:focus-visible {
+            outline: 2px solid var(--hud-brass-bright); outline-offset: 2px;
+        }
+        @media (max-width: 400px) {
+            .rd-weapon-icon { width: 74px; height: 39px; }
+            .rd-weapon-actions { grid-template-columns: minmax(0, 1fr); }
+        }
+        /* ---- 戦場下部のボスHP計器 ---- */
+        .boss-hp-anchor {
+            position: absolute; bottom: 6px; right: 10px; z-index: 20; pointer-events: none;
+            max-width: min(64vw, 270px);
+        }
+        .boss-hp-anchor.hidden { display: none !important; }
+        .boss-hp-inner {
+            background: rgba(2, 6, 23, .92);
+            border: 1px solid var(--hud-line);
+            border-inline-start: 3px solid #ef4444;
+            border-radius: 4px;
+            padding: 3px 7px 4px;
+            backdrop-filter: blur(2px);
+        }
+        .boss-hp-head {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 10px; line-height: 1.25; margin-bottom: 3px;
+        }
+        .boss-hp-tag {
+            flex-shrink: 0; font-size: 8px; font-weight: 900; letter-spacing: .08em;
+            padding: 1px 4px; border-radius: 2px;
+            background: #7f1d1d; color: #fecaca; border: 1px solid #ef444466;
+        }
+        .boss-hp-name {
+            flex: 1; min-width: 0; font-weight: 800; color: #e2e8f0;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .boss-hp-num { color: var(--hud-brass-bright); font-weight: 700; }
+        .boss-hp-foot {
+            display: flex; justify-content: flex-end; margin-top: 3px;
+            font-size: 10px; line-height: 1.2;
+        }
+        .boss-hp-track {
+            height: 6px; border-radius: 2px; overflow: hidden;
+            background: rgba(15, 23, 42, .95); box-shadow: inset 0 0 0 1px var(--hud-line-soft);
+        }
+        .boss-hp-track > i {
+            display: block; height: 100%; background: linear-gradient(90deg, #dc2626, #f87171);
+            transition: width .12s linear;
+        }
+        .boss-hp-track > i.is-low { background: linear-gradient(90deg, #b91c1c, #ef4444); }
         .train-car-card {
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }

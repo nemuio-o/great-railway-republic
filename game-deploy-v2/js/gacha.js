@@ -292,13 +292,33 @@ function getBestWeaponInstanceBonus(weaponId) {
     return best ? getWeaponInstanceBonus(best) : 0;
 }
 
+function getOwnedWeaponIds() {
+    const ids = new Set();
+    (state.weaponInstances || []).forEach(inst => {
+        if (inst && !isRailgunWeapon(inst.weaponId)) ids.add(inst.weaponId);
+    });
+    return ids;
+}
+
+// 初期配備の武装。この2つは最初から車両に載っているため、ガチャを引かなくても使える。
+// それ以外の武装はガチャで1つ以上所持しないと使えない。
+const STARTER_WEAPON_IDS = ['mg_vulcan', 'aa_flak'];
+
+// その武装を使えるか。レールガンと初期配備は常に使え、それ以外はガチャ所持が条件。
+function canUseWeapon(weaponId, ownedIds) {
+    if (isRailgunWeapon(weaponId)) return true;
+    if (STARTER_WEAPON_IDS.includes(weaponId)) return true;
+    const owned = ownedIds || getOwnedWeaponIds();
+    return owned.has(weaponId);
+}
+
 function getEffectiveWeaponDamage(weaponId) {
     const base = getWeaponDamage(weaponId);
     if (isRailgunWeapon(weaponId)) {
         const railBonus = getRailgunRarityBonus();
         return railBonus > 0 ? Math.round(base * (1 + railBonus)) : base;
     }
-    if (!state.unlockedWeapons.includes(weaponId)) return base;
+    if (!canUseWeapon(weaponId)) return base;
     const bonus = getBestWeaponInstanceBonus(weaponId);
     return bonus > 0 ? Math.round(base * (1 + bonus)) : base;
 }
@@ -926,10 +946,10 @@ function renderGachaTab() {
     const rareEl = document.getElementById('gacha-rare-tickets');
     const materialEl = document.getElementById('gacha-material-count');
     const moduleEl = document.getElementById('gacha-module-count');
-    if (normalEl) normalEl.textContent = getGachaTicketCount('normal').toLocaleString();
-    if (rareEl) rareEl.textContent = getGachaTicketCount('rare').toLocaleString();
-    if (materialEl) materialEl.textContent = toNonNegativeInt(state.enhanceMaterials).toLocaleString();
-    if (moduleEl) moduleEl.textContent = toNonNegativeInt(state.escortEnhanceModules).toLocaleString();
+    if (normalEl) normalEl.textContent = formatNumber(getGachaTicketCount('normal'));
+    if (rareEl) rareEl.textContent = formatNumber(getGachaTicketCount('rare'));
+    if (materialEl) materialEl.textContent = formatNumber(toNonNegativeInt(state.enhanceMaterials));
+    if (moduleEl) moduleEl.textContent = formatNumber(toNonNegativeInt(state.escortEnhanceModules));
 
     const tabs = ['normal', 'rare', 'pickup'];
     tabs.forEach(tab => {
@@ -992,191 +1012,10 @@ function switchGachaSubTab(tab) {
 // 武装管理UI
 // ==========================================================
 
-function renderWeaponInventoryGrid() {
-    const grid = document.getElementById('weapon-inventory-grid');
-    if (!grid) return;
-    const groups = getWeaponInstanceGroups();
-    if (!groups.length) {
-        grid.innerHTML = `
-            <div class="col-span-full bg-slate-800/70 border border-slate-700 rounded-lg p-6 text-center text-xs text-slate-400">
-                まだガチャ産の武装がありません。ガチャで武装を獲得すると、ここでレアリティ・＋値・Lvを管理できます。
-            </div>
-        `;
-        return;
-    }
-    groups.sort((a, b) => {
-        const activeA = isWeaponGroupActive(a) ? 0 : 1;
-        const activeB = isWeaponGroupActive(b) ? 0 : 1;
-        if (activeA !== activeB) return activeA - activeB;
-        const rarityDiff = WEAPON_RARITY_ORDER.indexOf(b.rarity) - WEAPON_RARITY_ORDER.indexOf(a.rarity);
-        if (rarityDiff !== 0) return rarityDiff;
-        const nameDiff = getWeaponName(a.weaponId).localeCompare(getWeaponName(b.weaponId), 'ja');
-        if (nameDiff !== 0) return nameDiff;
-        return b.plus - a.plus;
-    });
-
-    grid.innerHTML = groups.map(group => {
-        const best = group.best;
-        if (!best) return '';
-        const meta = getRarityMeta(group.rarity);
-        const max = getWeaponInstanceMaxLevel(best);
-        const soft = getWeaponInstanceSoftCap(best);
-        const unlocked = getWeaponInstanceUnlockedMaxLevel(best);
-        const bonusPct = (getWeaponInstanceBonus(best) * 100).toFixed(1);
-        const isUnlockedWeapon = state.unlockedWeapons.includes(group.weaponId);
-        const active = isWeaponGroupActive(group);
-        const status = !isUnlockedWeapon
-            ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700">兵装未解禁</span>'
-            : active
-                ? '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-900 text-emerald-200 border border-emerald-500">適用中</span>'
-                : '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-700">控え</span>';
-        const levelCost = getWeaponInstanceUpgradeCost(best);
-        const capCost = getWeaponInstanceCapUnlockCost(best);
-        const atLevelCap = best.level >= unlocked;
-        const atMaxCap = unlocked >= max;
-        const canMerge = group.count >= 3 && group.plus < WEAPON_MAX_PLUS;
-        const softNote = best.level >= soft
-            ? `<div class="text-[10px] text-amber-300">ソフトキャップ超過: Lvアップ費用×${SOFT_CAP_LEVEL_COST_MULT}</div>`
-            : '';
-        const lockedNote = unlocked < max
-            ? `<div class="text-[10px] text-cyan-300">＋値上限が未解禁: あと${max - unlocked}Lv</div>`
-            : '';
-        return `
-            <div class="bg-slate-800 border-2 rounded-lg p-3 flex flex-col gap-2" style="border-color:${meta.color}77">
-                <div class="flex justify-between items-start gap-2">
-                    <div class="min-w-0">
-                        <div class="text-sm font-bold text-white truncate">${getWeaponName(group.weaponId, group.rarity)}</div>
-                        <div class="flex flex-wrap items-center gap-1.5 mt-1">
-                            <span class="text-[10px] font-black px-1.5 py-0.5 rounded" style="background:${meta.color}22;color:${meta.color};border:1px solid ${meta.color}66">${meta.label}</span>
-                            <span class="text-xs tech-font text-amber-300 font-bold">+${group.plus}</span>
-                            <span class="text-[10px] text-slate-400">所持 ×${group.count}</span>
-                        </div>
-                    </div>
-                    ${status}
-                </div>
-                <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] tech-font text-slate-300">
-                    <div>Lv. <span class="text-white font-bold">${best.level}</span> / ${unlocked}</div>
-                    <div>最大Lv. ${max}</div>
-                    <div>ソフトキャップ ${soft}</div>
-                    <div>適用ボーナス <span class="text-emerald-300">+${bonusPct}%</span></div>
-                </div>
-                ${softNote}
-                ${lockedNote}
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5 pt-1">
-                    <button type="button" onclick="upgradeWeaponInstanceByUid(${best.uid})"
-                        class="weapon-action-btn min-h-[38px] rounded text-[11px] font-bold transition ${atLevelCap ? 'bg-slate-900 text-slate-500 border border-slate-700 cursor-not-allowed' : 'bg-amber-600 hover:bg-amber-500 text-slate-950'}"
-                        ${atLevelCap ? 'disabled' : ''}>
-                        ${atLevelCap ? '上限突破が必要' : `Lvアップ ${Number.isFinite(levelCost) ? levelCost.toLocaleString() : '不可'}G`}
-                    </button>
-                    <button type="button" onclick="unlockWeaponInstanceCap(${best.uid})"
-                        class="weapon-action-btn min-h-[38px] rounded text-[11px] font-bold transition ${atMaxCap ? 'bg-slate-900 text-slate-500 border border-slate-700 cursor-not-allowed' : 'bg-cyan-700 hover:bg-cyan-600 text-white'}"
-                        ${atMaxCap ? 'disabled' : ''}>
-                        ${atMaxCap ? '上限MAX' : `上限突破 (${capCost}素材)`}
-                    </button>
-                    <button type="button" onclick="openWeaponMergeConfirm('${group.weaponId}','${group.rarity}',${group.plus})"
-                        class="weapon-action-btn min-h-[38px] rounded text-[11px] font-bold transition ${canMerge ? 'bg-emerald-700 hover:bg-emerald-600 text-white' : 'bg-slate-900 text-slate-500 border border-slate-700 cursor-not-allowed'}"
-                        ${canMerge ? '' : 'disabled'}>
-                        ${group.plus >= WEAPON_MAX_PLUS ? '＋値MAX' : canMerge ? 'マージ ×3' : `マージ (あと${Math.max(0, 3 - group.count)})`}
-                    </button>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-function renderWeaponMergeGrid() {
-    const grid = document.getElementById('weapon-merge-grid');
-    if (!grid) return;
-    const groups = getWeaponInstanceGroups().filter(group =>
-        group.count >= 3 && group.plus < WEAPON_MAX_PLUS
-    );
-    if (!groups.length) {
-        grid.innerHTML = `
-            <div class="col-span-full bg-slate-800/70 border border-slate-700 rounded-lg p-6 text-center text-xs text-slate-400">
-                マージ可能な武装がありません。同じ武装・レアリティ・＋値を3個以上集めてください。
-            </div>
-        `;
-        return;
-    }
-    groups.sort((a, b) => {
-        const rarityDiff = WEAPON_RARITY_ORDER.indexOf(b.rarity) - WEAPON_RARITY_ORDER.indexOf(a.rarity);
-        if (rarityDiff !== 0) return rarityDiff;
-        return getWeaponName(a.weaponId).localeCompare(getWeaponName(b.weaponId), 'ja');
-    });
-    grid.innerHTML = groups.map(group => {
-        const best = group.best;
-        if (!best) return '';
-        const meta = getRarityMeta(group.rarity);
-        const currentMax = getWeaponInstanceMaxLevel(best);
-        const currentSoft = getWeaponInstanceSoftCap(best);
-        const resultInst = Object.assign({}, best, { plus: group.plus + 1 });
-        const resultMax = getWeaponInstanceMaxLevel(resultInst);
-        const resultSoft = getWeaponInstanceSoftCap(resultInst);
-        const consume = getMergeConsumeCandidates(group);
-        return `
-            <div class="bg-slate-800 border-2 rounded-lg p-3 flex flex-col gap-2" style="border-color:${meta.color}77">
-                <div class="flex justify-between items-center gap-2">
-                    <div class="min-w-0">
-                        <div class="text-sm font-bold text-white truncate">${getWeaponName(group.weaponId, group.rarity)}</div>
-                        <div class="flex items-center gap-1.5 mt-1">
-                            <span class="text-[10px] font-black px-1.5 py-0.5 rounded" style="background:${meta.color}22;color:${meta.color};border:1px solid ${meta.color}66">${meta.label}</span>
-                            <span class="text-xs tech-font text-amber-300 font-bold">+${group.plus} → +${group.plus + 1}</span>
-                            <span class="text-[10px] text-slate-400">所持 ×${group.count}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="text-[10px] tech-font text-slate-300 space-y-0.5">
-                    <div>消費: ${consume.map(inst => `Lv.${inst.level}`).join(' / ')}</div>
-                    <div>最大Lv: ${currentMax} → <span class="text-emerald-300">${resultMax}</span></div>
-                    <div>ソフトキャップ: ${currentSoft} → <span class="text-emerald-300">${resultSoft}</span></div>
-                </div>
-                <button type="button" onclick="openWeaponMergeConfirm('${group.weaponId}','${group.rarity}',${group.plus})"
-                    class="weapon-action-btn min-h-[40px] rounded text-xs font-black bg-emerald-700 hover:bg-emerald-600 text-white transition">
-                    マージ確認へ
-                </button>
-            </div>
-        `;
-    }).join('');
-}
-
+// 武装タブは廃止し、研究開発タブの「武装」セクションへ統合した。
+// 旧名で呼ばれる箇所（ガチャ後の再描画など）は研究開発の再描画に流す。
 function renderWeaponsTab() {
-    if (!document.getElementById('tab-content-weapons')) return;
-    const materialEl = document.getElementById('weapon-material-count');
-    if (materialEl) materialEl.textContent = toNonNegativeInt(state.enhanceMaterials).toLocaleString();
-    const moduleEl = document.getElementById('weapon-module-count');
-    if (moduleEl) moduleEl.textContent = toNonNegativeInt(state.escortEnhanceModules).toLocaleString();
-
-    const isInventory = state.weaponSubTab !== 'merge';
-    const invBtn = document.getElementById('weapon-subtab-inventory');
-    const mergeBtn = document.getElementById('weapon-subtab-merge');
-    if (invBtn) {
-        invBtn.className = isInventory
-            ? 'px-2 py-2 rounded text-xs font-black border-2 border-emerald-400 bg-emerald-950/80 text-emerald-200 transition'
-            : 'px-2 py-2 rounded text-xs font-black border border-slate-600 bg-slate-900 text-slate-300 hover:border-emerald-400 transition';
-    }
-    if (mergeBtn) {
-        mergeBtn.className = !isInventory
-            ? 'px-2 py-2 rounded text-xs font-black border-2 border-emerald-400 bg-emerald-950/80 text-emerald-200 transition'
-            : 'px-2 py-2 rounded text-xs font-black border border-slate-600 bg-slate-900 text-slate-300 hover:border-emerald-400 transition';
-    }
-    const invView = document.getElementById('weapon-subview-inventory');
-    const mergeView = document.getElementById('weapon-subview-merge');
-    if (invView) {
-        invView.classList.toggle('hidden', !isInventory);
-        invView.classList.toggle('flex', isInventory);
-    }
-    if (mergeView) {
-        mergeView.classList.toggle('hidden', isInventory);
-        mergeView.classList.toggle('flex', !isInventory);
-    }
-    renderWeaponInventoryGrid();
-    renderWeaponMergeGrid();
-}
-
-function switchWeaponSubTab(tab) {
-    if (!['inventory', 'merge'].includes(tab)) return;
-    state.weaponSubTab = tab;
-    renderWeaponsTab();
+  if (typeof renderRDTab === 'function') renderRDTab();
 }
 
 // ==========================================================
