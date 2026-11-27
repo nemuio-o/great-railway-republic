@@ -4599,100 +4599,103 @@ function renderRdWeapons() {
     }
 
     ids.forEach(id => {
-        const best = getBestWeaponInstance(id);
-        if (!best) return;
+        // 同じ武器でもレアリティ・＋値が違えば別アイテム。
+        // 1枚にまとめると下位レアリティが「上位に隠れて」強化できなくなるため、
+        // 「レアリティ × ＋値」ごとにカードを分ける。
         const groups = getWeaponInstanceGroups()
             .filter(g => g.weaponId === id)
-            .sort((a, b) => WEAPON_RARITY_ORDER.indexOf(b.rarity) - WEAPON_RARITY_ORDER.indexOf(a.rarity));
+            .sort((a, b) =>
+                WEAPON_RARITY_ORDER.indexOf(b.rarity) - WEAPON_RARITY_ORDER.indexOf(a.rarity)
+                || b.plus - a.plus);
 
-        const meta = getRarityMeta(best.rarity);
-        const bonusPct = Math.round(getWeaponInstanceBonus(best) * 100);
-        const levelCost = getWeaponInstanceUpgradeCost(best);
-        const unlockedMax = getWeaponInstanceUnlockedMaxLevel(best);
-        const maxLevel = getWeaponInstanceMaxLevel(best);
-        const atLevelCap = best.level >= unlockedMax;
-        const mergeGroup = groups.find(g => g.count >= 3 && g.plus < WEAPON_MAX_PLUS);
-
-        // 所持数（装備中も含む）と、そのうち何個を列車に載せているか。
+        // 装備中の個体（どのレアリティ／＋値が載っているか）を先に集める。
         const mountedList = (state.cars || [])
             .flatMap(c => [getCarSlotWeaponInstance(c, CAR_SLOT_UPPER), getCarSlotWeaponInstance(c, CAR_SLOT_SIDE)])
-            .filter(inst => inst && inst.weaponId === id)
-            .sort((a, b) => getWeaponInstanceBonus(b) - getWeaponInstanceBonus(a));
+            .filter(inst => inst && inst.weaponId === id);
         const ownedCount = groups.reduce((n, g) => n + g.count, 0);
         const mountedLine = mountedList.length
             ? `<div class="text-[10px] text-emerald-300">装備中 ${mountedList.map(inst =>
                 `${getRarityMeta(inst.rarity).label}+${inst.plus} Lv.${formatNumber(inst.level)}`).join(' / ')}</div>`
             : `<div class="text-[10px] text-slate-500">未装備</div>`;
 
-        // ＋値は別アイテム扱い。内訳を出さないと「3個あるのに合成できない」理由が分からない。
-        // マージ可能なチップには、予備があるか（装備を消費せずに済むか）も添える。
-        const breakdown = groups.map(g => {
-            const ready = g.count >= 3 && g.plus < WEAPON_MAX_PLUS;
-            return `<span class="rd-plus-chip${ready ? ' is-ready' : ''}">+${g.plus} ×${g.count}</span>`;
-        }).join('');
-        let mergeHint;
-        if (mergeGroup) {
-            // 予備が足りず装備中を消費する場合は、結果をそのスロットへ載せ替える旨を伝える。
-            const mountedInGroup = mergeGroup.instances.filter(inst => mountedList.some(m => m.uid === inst.uid)).length;
-            const spare = mergeGroup.count - mountedInGroup;
-            if (spare >= 3) {
-                mergeHint = `マージ可（+${mergeGroup.plus} が ${mergeGroup.count}個）`;
-            } else if (spare > 0) {
-                mergeHint = `マージ可（+${mergeGroup.plus} が ${mergeGroup.count}個 / 装備中も合成に含まれます）`;
-            } else {
-                mergeHint = `マージ可（+${mergeGroup.plus} が ${mergeGroup.count}個 / 装備中を合成し、結果を装備します）`;
-            }
-        } else if (!groups.length) {
-            mergeHint = '所持していません';
-        } else if (groups.every(g => g.plus >= WEAPON_MAX_PLUS)) {
-            mergeHint = '＋値が上限です';
-        } else {
-            const closest = groups
-                .filter(g => g.plus < WEAPON_MAX_PLUS)
-                .sort((a, b) => b.count - a.count)[0];
-            mergeHint = `同じ＋値が3個必要（+${closest.plus} は${closest.count}個 / あと${3 - closest.count}個）`;
-        }
+        groups.forEach(group => {
+            const best = group.best || group.instances[0];
+            if (!best) return;
+            const meta = getRarityMeta(group.rarity);
+            const bonusPct = Math.round(getWeaponInstanceBonus(best) * 100);
+            const levelCost = getWeaponInstanceUpgradeCost(best);
+            const unlockedMax = getWeaponInstanceUnlockedMaxLevel(best);
+            const atLevelCap = best.level >= unlockedMax;
+            const canMerge = group.count >= 3 && group.plus < WEAPON_MAX_PLUS;
 
-        const card = document.createElement('div');
-        card.className = 'rd-weapon-card';
-        card.style.setProperty('--w-accent', meta.color);
-        card.innerHTML = `
-            <div class="rd-weapon-head">
-                <canvas class="rd-weapon-icon" aria-hidden="true"></canvas>
-                <div class="min-w-0 flex-1">
-                    <div class="rd-weapon-name">${getWeaponName(id, best.rarity)}</div>
-                    <div class="rd-weapon-meta">
-                        <span class="rd-rarity" style="color:${meta.color};border-color:${meta.color}66;background:${meta.color}18">${meta.label}</span>
-                        <span class="tech-font">Lv.${formatNumber(best.level)}/${formatNumber(unlockedMax)}</span>
-                        <span class="tech-font text-amber-300">+${best.plus}</span>
+            let mergeHint;
+            if (canMerge) {
+                const mountedInGroup = group.instances.filter(inst => mountedList.some(m => m.uid === inst.uid)).length;
+                const spare = group.count - mountedInGroup;
+                if (spare >= 3) {
+                    mergeHint = `マージ可（×${group.count}）`;
+                } else if (spare > 0) {
+                    mergeHint = `マージ可（×${group.count} / 装備中も合成に含まれます）`;
+                } else {
+                    mergeHint = `マージ可（×${group.count} / 装備中を合成し、結果を装備します）`;
+                }
+            } else if (group.plus >= WEAPON_MAX_PLUS) {
+                mergeHint = '＋値が上限です';
+            } else {
+                mergeHint = `同レアリティ・同＋値が3個必要（あと${3 - group.count}個）`;
+            }
+
+            const card = document.createElement('div');
+            card.className = 'rd-weapon-card';
+            card.style.setProperty('--w-accent', meta.color);
+            card.innerHTML = `
+                <div class="rd-weapon-head">
+                    <canvas class="rd-weapon-icon" aria-hidden="true"></canvas>
+                    <div class="min-w-0 flex-1">
+                        <div class="rd-weapon-name">${getWeaponName(id, group.rarity)}</div>
+                        <div class="rd-weapon-meta">
+                            <span class="rd-rarity" style="color:${meta.color};border-color:${meta.color}66;background:${meta.color}18">${meta.label}</span>
+                            <span class="tech-font text-amber-300">+${group.plus}</span>
+                            <span class="tech-font">Lv.${formatNumber(best.level)}/${formatNumber(unlockedMax)}</span>
+                        </div>
                     </div>
+                    <span class="rd-count-badge">×${group.count}</span>
                 </div>
-            </div>
-            <div class="rd-weapon-stats">
-                <div>威力 <span class="text-amber-300 font-bold">${formatNumber(getEffectiveWeaponDamage(id))}</span></div>
-                <div>適用ボーナス <span class="text-emerald-300 font-bold">+${bonusPct}%</span></div>
-                <div>所持 <span class="text-slate-300">${formatNumber(ownedCount)}個</span></div>
-                <div>装備 <span class="text-slate-300">${formatNumber(mountedList.length)}個</span></div>
-            </div>
-            ${mountedLine}
-            ${breakdown ? `<div class="rd-plus-row" aria-label="＋値ごとの所持内訳">${breakdown}</div>` : ''}
-            <div class="rd-merge-hint">${mergeHint}</div>
-            <div class="rd-weapon-actions">
-                <button type="button" class="rd-btn-upgrade" ${atLevelCap ? 'disabled' : ''}>
-                    ${atLevelCap ? '上限突破が必要' : `レベルアップ ${Number.isFinite(levelCost) ? formatMoney(levelCost) : '不可'}`}
-                </button>
-                <button type="button" class="rd-btn-merge" ${mergeGroup ? '' : 'disabled'}>
-                    ${mergeGroup ? 'マージ' : 'マージ不可'}
-                </button>
-            </div>
-        `;
-        drawWeaponTopDown(card.querySelector('.rd-weapon-icon'), id);
-        card.querySelector('.rd-btn-upgrade').addEventListener('click', () => upgradeWeaponInstanceByUid(best.uid));
-        const mergeBtn = card.querySelector('.rd-btn-merge');
-        mergeBtn.addEventListener('click', () => {
-            if (mergeGroup) openWeaponMergeConfirm(mergeGroup.weaponId, mergeGroup.rarity, mergeGroup.plus);
+                <div class="rd-weapon-stats">
+                    <div>威力 <span class="text-amber-300 font-bold">${formatNumber(getWeaponInstanceDamage(best))}</span></div>
+                    <div>適用ボーナス <span class="text-emerald-300 font-bold">+${bonusPct}%</span></div>
+                </div>
+                <div class="rd-merge-hint">${mergeHint}</div>
+                <div class="rd-weapon-actions">
+                    <button type="button" class="rd-btn-upgrade" ${atLevelCap ? 'disabled' : ''}>
+                        ${atLevelCap ? '上限突破が必要' : `レベルアップ ${Number.isFinite(levelCost) ? formatMoney(levelCost) : '不可'}`}
+                    </button>
+                    <button type="button" class="rd-btn-merge" ${canMerge ? '' : 'disabled'}>
+                        ${canMerge ? 'マージ' : 'マージ不可'}
+                    </button>
+                </div>
+            `;
+            drawWeaponTopDown(card.querySelector('.rd-weapon-icon'), id);
+            card.querySelector('.rd-btn-upgrade')
+                .addEventListener('click', () => upgradeWeaponInstanceByUid(best.uid));
+            card.querySelector('.rd-btn-merge')
+                .addEventListener('click', () => {
+                    if (canMerge) openWeaponMergeConfirm(id, group.rarity, group.plus);
+                });
+            grid.appendChild(card);
         });
-        grid.appendChild(card);
+
+        // 武器ごとの合計は最後に1行だけ置く（どのカードが何の合計か分かるように）。
+        const summary = document.createElement('div');
+        summary.className = 'rd-weapon-summary';
+        summary.textContent = `${WEAPONS[id] ? WEAPONS[id].name : id}：所持 ${ownedCount}個 / 装備 ${mountedList.length}個`;
+        grid.appendChild(summary);
+        if (mountedLine) {
+            const mounted = document.createElement('div');
+            mounted.className = 'rd-weapon-summary';
+            mounted.innerHTML = mountedLine;
+            grid.appendChild(mounted);
+        }
     });
 }
 
