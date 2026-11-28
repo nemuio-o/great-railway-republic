@@ -3675,7 +3675,7 @@ function hasUnseenTutorialForTab(tabId) {
 // 会話を挟まずにタブを切り替える本体。
 function switchTabNow(tabId) {
     state.activeTab = tabId;
-    const tabs = ['train', 'staff', 'rd', 'skills', 'escort', 'gacha', 'world', 'prestige', 'dex'];
+    const tabs = ['train', 'staff', 'rd', 'skills', 'escort', 'gacha', 'world', 'prestige', 'dex', 'missions'];
     tabs.forEach(t => {
         const btn = document.getElementById(`tab-btn-${t}`);
         const content = document.getElementById(`tab-content-${t}`);
@@ -3710,6 +3710,7 @@ function renderCurrentTab() {
         case 'world': renderWorldTab(); break;
         case 'prestige': renderPrestigeTab(); break;
         case 'dex': renderDexTab(); break;
+        case 'missions': renderMissionTab(); break;
     }
 }
 
@@ -6226,13 +6227,24 @@ function loadGame() {
         });
         if (!state.relics || typeof state.relics !== 'object') state.relics = {};
         if (!Array.isArray(state.unlockedWeapons)) state.unlockedWeapons = ['railgun_tiphareth', 'mg_vulcan', 'aa_flak'];
+        // 任務（Night Watch）の進行。旧セーブには無いので補完する。
+        if (!state.nightWatch || typeof state.nightWatch !== 'object') {
+            state.nightWatch = { clearedDays: [], rewardedFirst: [], log: [] };
+        }
+        ['clearedDays', 'rewardedFirst', 'log'].forEach(k => {
+            if (!Array.isArray(state.nightWatch[k])) state.nightWatch[k] = [];
+        });
+        state.nightWatch.clearedDays = state.nightWatch.clearedDays
+            .map(n => Math.floor(Number(n))).filter(n => n >= 1 && n <= 10);
+        state.nightWatch.rewardedFirst = state.nightWatch.rewardedFirst
+            .map(n => Math.floor(Number(n))).filter(n => n >= 1 && n <= 10);
         if (!Array.isArray(state.hiredSephiroth)) state.hiredSephiroth = ['tiphareth'];
         if (typeof state.gold !== 'number' || !isFinite(state.gold)) state.gold = 300;
         if (typeof state.stage !== 'number' || state.stage < 1) state.stage = 1;
         if (typeof state.armorLevel !== 'number' || state.armorLevel < 1) state.armorLevel = 1;
         state.armorLevel = Math.min(ARMOR_MAX_LEVEL, Math.floor(state.armorLevel));
         if (typeof state.currentFactionId !== 'string') state.currentFactionId = 'pol';
-        if (!['train', 'skills', 'escort', 'rd', 'staff', 'gacha', 'weapons', 'world', 'prestige', 'dex'].includes(state.activeTab)) state.activeTab = 'train';
+        if (!['train', 'skills', 'escort', 'rd', 'staff', 'gacha', 'world', 'prestige', 'dex', 'missions'].includes(state.activeTab)) state.activeTab = 'train';
 
         if (!state.prestigeUpgrades || typeof state.prestigeUpgrades !== 'object') {
             state.prestigeUpgrades = {
@@ -6475,7 +6487,8 @@ const MOBILE_TAB_RAIL = [
     ['gacha', 'ガチャ'],
     ['world', '世界'],
     ['prestige', 'プレステージ'],
-    ['dex', '図鑑']
+    ['dex', '図鑑'],
+    ['missions', '任務']
 ];
 
 function buildMobileTabRail() {

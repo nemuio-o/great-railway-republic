@@ -68,7 +68,9 @@ let state = {
     weaponNextUid: 1,
     manufacturerGachaUnlocked: {},
     // ティファレトの機能説明を既読したメニューID（初回のみ再生する）。
-    tutorialSeen: []
+    tutorialSeen: [],
+    // 任務（Night Watch 夜間警備）の進行と報酬履歴。
+    nightWatch: { clearedDays: [], rewardedFirst: [], log: [] }
 };
 
 function checkAndUnlockAntarcticBase(notify = true) {

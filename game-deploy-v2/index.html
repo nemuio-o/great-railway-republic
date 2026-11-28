@@ -290,6 +290,9 @@
                 <button onclick="switchTab('dex')" id="tab-btn-dex" data-progression-tab="dex" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-amber-300 hover:text-white hover:border-slate-500 transition text-center truncate">
                     📖 図鑑
                 </button>
+                <button onclick="switchTab('missions')" id="tab-btn-missions" data-progression-tab="missions" class="px-1.5 py-1.5 text-[11px] sm:text-xs font-bold rounded border border-slate-700 bg-slate-900/80 text-rose-300 hover:text-white hover:border-slate-500 transition text-center truncate">
+                    🕯 任務
+                </button>
             </div>
         </div>
 
@@ -620,8 +623,55 @@
                     <div id="collectible-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3"></div>
                 </div>
             </div>
+
+            <!-- タブ: 任務（Night Watch 夜間警備） -->
+            <div id="tab-content-missions" class="p-3 sm:p-4 hidden flex-col gap-3">
+                <div class="bg-slate-900/85 border border-rose-800/70 rounded-lg p-3">
+                    <div class="flex items-start justify-between gap-3 flex-wrap">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2 py-0.5 text-[10px] font-bold bg-rose-900 text-rose-200 rounded">機密任務</span>
+                                <h3 class="text-sm sm:text-base font-bold text-rose-200">NIGHT WATCH ― 第13隔離区画 夜間警備</h3>
+                            </div>
+                            <p class="text-[11px] sm:text-xs text-slate-300 mt-1.5 leading-relaxed">
+                                国家元首ティファレト直轄の夜間警備指令です。DAY 1〜5 は怪異編、DAY 6〜10 は古代・架空恐竜編。
+                            </p>
+                            <ul class="text-[11px] text-slate-400 mt-1.5 leading-relaxed list-disc pl-4">
+                                <li>クリア報酬: 通常チケット <strong class="text-amber-300">10枚</strong>／初クリア <strong class="text-amber-300">50枚</strong></li>
+                                <li>DAY 5・DAY 10 の初クリアは レアチケット <strong class="text-cyan-300">100枚</strong></li>
+                                <li>自動監視AIでのクリアは報酬対象外（手動警備のみ）</li>
+                            </ul>
+                        </div>
+                        <div class="flex-shrink-0 text-right">
+                            <div class="text-[10px] tech-font text-slate-400">制圧済み</div>
+                            <div class="text-lg font-black tech-font text-rose-300"><span id="mission-cleared-count">0</span><span class="text-xs text-slate-500">/10</span></div>
+                        </div>
+                    </div>
+                    <button type="button" id="btn-start-shift" onclick="openNightWatch()"
+                        class="mt-3 w-full min-h-[48px] rounded bg-rose-700 hover:bg-rose-600 text-white font-black text-sm tracking-wider transition border border-rose-500 shadow-lg">
+                        🕯 警備シフトに入る
+                    </button>
+                </div>
+                <div id="mission-reward-log" class="flex flex-col gap-1.5"></div>
+            </div>
         </div>
     </section>
+
+    <!-- 任務: Night Watch 全画面オーバーレイ -->
+    <div id="night-watch-overlay" class="fixed inset-0 z-[70] bg-black hidden flex-col">
+        <div class="flex items-center justify-between gap-2 px-3 py-2 bg-slate-950 border-b border-rose-800/70 flex-shrink-0">
+            <div class="min-w-0 text-[11px] tech-font text-slate-400 truncate">
+                <span class="text-rose-300 font-bold">NIGHT WATCH</span>
+                <span class="ml-2">警備中もオート進軍は継続します</span>
+            </div>
+            <button type="button" onclick="closeNightWatch()"
+                class="flex-shrink-0 min-h-[40px] px-3 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-600 transition">
+                任務を中断して戻る
+            </button>
+        </div>
+        <iframe id="night-watch-frame" title="Night Watch 夜間警備"
+            class="flex-1 w-full border-0 bg-black" allow="autoplay"></iframe>
+    </div>
 
     <!-- 車両カスタマイズモーダル -->
     <div id="config-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
@@ -835,6 +885,7 @@
 <script src="js/progression.js"></script>
 <script src="js/weapon-names.js"></script>
 <script src="js/tutorial.js"></script>
+<script src="js/missions.js"></script>
 <script src="js/gacha.js"></script>
 <script src="js/game.js"></script>
 
